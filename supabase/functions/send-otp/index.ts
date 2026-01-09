@@ -68,25 +68,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send OTP via Resend API
-    const defaultFrom = "Sharma Coffee Works <onboarding@resend.dev>";
-    const rawFromEnv = Deno.env.get("RESEND_FROM_EMAIL");
-    const fromCandidate = rawFromEnv ? rawFromEnv.replace(/\s+/g, " ").trim() : "";
+    // Send OTP via Resend API - read from env directly without manipulation
+    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
 
-    const isValidFrom = (value: string) => {
-      if (!value) return false;
-      if (/[\n\r]/.test(value)) return false;
+    // Debug logs before sending
+    console.log("DEBUG FROM:", JSON.stringify(fromEmail));
+    console.log("DEBUG TO:", JSON.stringify(email));
+    console.log("HAS RESEND API KEY:", Boolean(Deno.env.get("RESEND_API_KEY")));
 
-      // email@example.com
-      if (/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value)) return true;
-
-      // Name <email@example.com>
-      if (/^.+ <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/.test(value)) return true;
-
-      return false;
-    };
-
-    const fromAddress = isValidFrom(fromCandidate) ? fromCandidate : defaultFrom;
+    if (!fromEmail) {
+      console.error("RESEND_FROM_EMAIL is not set");
+      return new Response(
+        JSON.stringify({ error: "Email sender not configured", details: "RESEND_FROM_EMAIL environment variable is missing" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -95,7 +91,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: fromAddress,
+        from: fromEmail,
         to: [email],
         subject: "Your Sharma Coffee Works login code",
         html: `
@@ -123,14 +119,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
-      console.error("Resend API error:", errorData);
+      console.error("Resend API full error:", JSON.stringify(errorData, null, 2));
       return new Response(
-        JSON.stringify({ error: "Failed to send OTP email" }),
+        JSON.stringify({ error: "Failed to send OTP email", resendError: errorData }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("OTP email sent successfully");
+    const successData = await emailResponse.json();
+    console.log("OTP email sent successfully:", JSON.stringify(successData));
 
     // Mask email for response
     const [localPart, domain] = email.split("@");
