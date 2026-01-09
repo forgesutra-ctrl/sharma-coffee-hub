@@ -162,7 +162,7 @@ export default function Navigation() {
               </button>
 
               <Link
-                to={user ? '/account' : '/login'}
+                to={user ? '/account' : '/auth'}
                 className={cn('p-2 transition-colors', textColorClass)}
               >
                 <User className="w-5 h-5" />
