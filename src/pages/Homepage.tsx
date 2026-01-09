@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, RefreshCw, Award, Star } from 'lucide-react';
 import HeroVideo from '@/components/coffee/HeroVideo';
 import ProductSectionCard from '@/components/coffee/ProductSectionCard';
-import { filterCoffeeSection, specialtyBlendsSection, categoryCards } from '@/data/productSections';
+import { goldBlendSection, specialtyBlendsSection, categoryCards } from '@/data/productSections';
 import { mockTestimonials } from '@/data/mockData';
 
 export default function Homepage() {
@@ -58,7 +58,7 @@ export default function Homepage() {
       </section>
 
       {/* Filter Coffee Blends Section */}
-      <ProductSectionCard section={filterCoffeeSection} />
+      <ProductSectionCard section={goldBlendSection} />
 
       {/* Shop by Category */}
       <section className="py-20 bg-secondary">
