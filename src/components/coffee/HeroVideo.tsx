@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Pause, Volume2, VolumeX, ArrowRight } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, ArrowRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HeroVideoProps {
@@ -14,6 +14,8 @@ interface HeroVideoProps {
   secondaryCtaLink?: string;
   overlayOpacity?: number;
   height?: 'full' | 'large' | 'medium';
+  showScrollIndicator?: boolean;
+  centered?: boolean;
 }
 
 export default function HeroVideo({
@@ -25,8 +27,10 @@ export default function HeroVideo({
   ctaLink = '/shop',
   secondaryCtaText,
   secondaryCtaLink,
-  overlayOpacity = 60,
+  overlayOpacity = 50,
   height = 'full',
+  showScrollIndicator = true,
+  centered = true,
 }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -59,20 +63,27 @@ export default function HeroVideo({
     }
   };
 
+  const scrollToContent = () => {
+    window.scrollTo({
+      top: window.innerHeight - 100,
+      behavior: 'smooth',
+    });
+  };
+
   const heightClasses = {
     full: 'min-h-screen',
-    large: 'min-h-[85vh]',
-    medium: 'min-h-[65vh]',
+    large: 'min-h-[90vh]',
+    medium: 'min-h-[70vh]',
   };
 
   return (
     <section className={cn('relative w-full flex items-center justify-center overflow-hidden', heightClasses[height])}>
-      {/* Video/Image Background */}
+      {/* Video Background */}
       {videoSrc ? (
         <video
           ref={videoRef}
           className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-opacity duration-1000',
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-1500',
             isLoaded ? 'opacity-100' : 'opacity-0'
           )}
           src={videoSrc}
@@ -90,38 +101,47 @@ export default function HeroVideo({
         src={posterImage}
         alt={title}
         className={cn(
-          'absolute inset-0 w-full h-full object-cover transition-opacity duration-700',
+          'absolute inset-0 w-full h-full object-cover transition-opacity duration-1000',
           videoSrc && isLoaded ? 'opacity-0' : 'opacity-100'
         )}
       />
 
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/40 to-background"
-        style={{ opacity: overlayOpacity / 100 }}
-      />
+      {/* Gradient Overlay */}
+      <div className="hero-overlay" />
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
-        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-foreground mb-6 fade-in-up tracking-wide text-glow">
+      <div className={cn(
+        'relative z-10 px-6 max-w-5xl mx-auto',
+        centered ? 'text-center' : 'text-left'
+      )}>
+        {/* Title */}
+        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-foreground mb-6 fade-in-up tracking-[0.02em] text-glow leading-[0.9]">
           {title}
         </h1>
+
+        {/* Subtitle */}
         {subtitle && (
-          <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 mb-12 fade-in-up delay-200 font-light tracking-[0.2em] uppercase">
+          <p className="text-lg sm:text-xl md:text-2xl text-foreground/70 mb-14 fade-in-up delay-300 font-light tracking-[0.3em] uppercase">
             {subtitle}
           </p>
         )}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center fade-in-up delay-400">
+
+        {/* CTAs */}
+        <div className={cn(
+          'flex flex-col sm:flex-row gap-5 fade-in-up delay-500',
+          centered ? 'justify-center' : 'justify-start'
+        )}>
           <Link 
             to={ctaLink} 
             className="btn-premium-solid inline-flex items-center justify-center gap-3 group"
           >
-            {ctaText}
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <span>{ctaText}</span>
+            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
+          
           {secondaryCtaText && secondaryCtaLink && (
             <Link to={secondaryCtaLink} className="btn-premium">
-              {secondaryCtaText}
+              <span>{secondaryCtaText}</span>
             </Link>
           )}
         </div>
@@ -129,30 +149,39 @@ export default function HeroVideo({
 
       {/* Video Controls */}
       {videoSrc && (
-        <div className="absolute bottom-8 right-8 z-20 flex gap-2">
+        <div className="absolute bottom-8 right-8 z-20 flex gap-3">
           <button
             onClick={togglePlay}
-            className="p-3 bg-background/30 backdrop-blur-sm hover:bg-background/50 transition-all duration-300 rounded-sm border border-foreground/10"
+            className="p-3 glass-dark rounded-sm hover:bg-foreground/10 transition-all duration-300"
             aria-label={isPlaying ? 'Pause video' : 'Play video'}
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {isPlaying ? <Pause className="w-4 h-4 text-foreground/80" /> : <Play className="w-4 h-4 text-foreground/80" />}
           </button>
           <button
             onClick={toggleMute}
-            className="p-3 bg-background/30 backdrop-blur-sm hover:bg-background/50 transition-all duration-300 rounded-sm border border-foreground/10"
+            className="p-3 glass-dark rounded-sm hover:bg-foreground/10 transition-all duration-300"
             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
           >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {isMuted ? <VolumeX className="w-4 h-4 text-foreground/80" /> : <Volume2 className="w-4 h-4 text-foreground/80" />}
           </button>
         </div>
       )}
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-        <div className="w-7 h-12 border-2 border-foreground/30 rounded-full flex justify-center p-2">
-          <div className="w-1.5 h-3 bg-primary rounded-full animate-bounce" />
-        </div>
-      </div>
+      {showScrollIndicator && (
+        <button 
+          onClick={scrollToContent}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 group cursor-pointer"
+          aria-label="Scroll to content"
+        >
+          <div className="flex flex-col items-center gap-3 text-foreground/50 hover:text-primary transition-colors duration-300">
+            <span className="text-xs uppercase tracking-[0.3em] font-medium">Scroll</span>
+            <div className="w-8 h-14 border-2 border-current rounded-full flex justify-center pt-3 group-hover:border-primary transition-colors duration-300">
+              <ChevronDown className="w-4 h-4 animate-bounce" />
+            </div>
+          </div>
+        </button>
+      )}
     </section>
   );
 }
