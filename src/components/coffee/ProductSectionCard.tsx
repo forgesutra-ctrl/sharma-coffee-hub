@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
 import type { ProductSection, ProductVariant, PackSize, GrindOption } from '@/data/productSections';
+import type { Product, CartItem } from '@/types';
 import {
   Accordion,
   AccordionContent,
@@ -18,7 +19,7 @@ interface ProductSectionCardProps {
 }
 
 export default function ProductSectionCard({ section, reversed = false }: ProductSectionCardProps) {
-  const { addItem } = useCart();
+  const { addToCart } = useCart();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(section.variants[0]);
   const [selectedPackSize, setSelectedPackSize] = useState<PackSize | null>(
     section.packSizes.length > 0 ? section.packSizes[0] : null
@@ -46,19 +47,40 @@ export default function ProductSectionCard({ section, reversed = false }: Produc
   };
 
   const handleAddToCart = () => {
-    const item = {
-      id: `${selectedVariant.id}-${selectedPackSize?.weight || 0}-${selectedGrind?.id || 'default'}`,
-      productId: section.id,
-      variantId: selectedVariant.id,
+    // Create a Product object to match the CartItem interface
+    const product: Product = {
+      id: selectedVariant.id,
       name: selectedVariant.name,
-      image: selectedVariant.image,
+      slug: section.slug,
+      description: selectedVariant.description,
+      short_description: selectedVariant.description.substring(0, 100),
       price: calculatePrice(),
-      quantity,
-      weight: selectedPackSize?.weight || 0,
-      grindType: selectedGrind?.name || 'Default',
+      image_url: selectedVariant.image,
+      images: selectedVariant.images || [selectedVariant.image],
+      roast_level: (selectedVariant.roastLevel as 'Light' | 'Medium' | 'Dark') || 'Medium',
+      has_chicory: (selectedVariant.chicoryPercent || 0) > 0,
+      origin: selectedVariant.origin || 'Coorg, Karnataka',
+      flavor_notes: selectedVariant.flavorNotes,
+      available_grinds: section.grindOptions.map(g => g.name),
+      available_weights: section.packSizes.map(p => p.weight),
+      brewing_methods: section.brewingMethods || [],
+      storage_tips: section.storageTips || '',
+      is_featured: true,
+      in_stock: true,
+      sort_order: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    addItem(item);
+    const cartItem: CartItem = {
+      product,
+      grind_type: selectedGrind?.name || 'Whole Bean',
+      weight: selectedPackSize?.weight || 250,
+      quantity,
+      variant_id: selectedVariant.id,
+    };
+
+    addToCart(cartItem);
     toast.success(`${selectedVariant.name} added to cart`);
   };
 
