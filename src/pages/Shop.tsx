@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Layout from '@/components/coffee/Layout';
 import { allProductSections, ProductSection } from '@/data/productSections';
 import ProductSectionCard from '@/components/coffee/ProductSectionCard';
+import OtherProductsSection from '@/components/coffee/OtherProductsSection';
 
 const Shop = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -80,11 +81,15 @@ const Shop = () => {
         {/* Product Sections */}
         <div className="py-8">
           {filteredSections.map((section, index) => (
-            <ProductSectionCard
-              key={section.id}
-              section={section}
-              reversed={index % 2 === 1}
-            />
+            section.slug === 'other-products' ? (
+              <OtherProductsSection key={section.id} section={section} />
+            ) : (
+              <ProductSectionCard
+                key={section.id}
+                section={section}
+                reversed={index % 2 === 1}
+              />
+            )
           ))}
         </div>
 
