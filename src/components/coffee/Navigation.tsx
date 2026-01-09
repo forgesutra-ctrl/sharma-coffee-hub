@@ -18,6 +18,7 @@ const navLinks = [
     ],
   },
   { name: 'Our Story', href: '/about' },
+  { name: 'Processing', href: '/processing' },
   { name: 'Brewing Guide', href: '/brewing-guide' },
   { name: 'Contact', href: '/contact' },
 ];

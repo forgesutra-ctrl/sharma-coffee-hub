@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/coffee/Layout";
+import ScrollToTop from "./components/coffee/ScrollToTop";
 import Homepage from "./pages/Homepage";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -33,6 +34,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <CartProvider>
             <Routes>
