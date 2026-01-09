@@ -69,6 +69,25 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send OTP via Resend API
+    const defaultFrom = "Sharma Coffee Works <onboarding@resend.dev>";
+    const rawFromEnv = Deno.env.get("RESEND_FROM_EMAIL");
+    const fromCandidate = rawFromEnv ? rawFromEnv.replace(/\s+/g, " ").trim() : "";
+
+    const isValidFrom = (value: string) => {
+      if (!value) return false;
+      if (/[\n\r]/.test(value)) return false;
+
+      // email@example.com
+      if (/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value)) return true;
+
+      // Name <email@example.com>
+      if (/^.+ <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/.test(value)) return true;
+
+      return false;
+    };
+
+    const fromAddress = isValidFrom(fromCandidate) ? fromCandidate : defaultFrom;
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -76,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: Deno.env.get("RESEND_FROM_EMAIL") || "Sharma Coffee Works <onboarding@resend.dev>",
+        from: fromAddress,
         to: [email],
         subject: "Your Sharma Coffee Works login code",
         html: `
