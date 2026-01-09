@@ -1,17 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogIn, ChevronDown } from 'lucide-react';
-import { useCart } from '../../context/CartContext';
-import { useAuth } from '../../context/AuthContext';
+import { ShoppingBag, Menu, X, User, ChevronDown, Search } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { cn } from '@/lib/utils';
 
-const Navigation: React.FC = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const navLinks = [
+  { name: 'Home', href: '/' },
+  {
+    name: 'Our Coffee',
+    href: '/shop',
+    children: [
+      { name: 'Filter Coffee Blends', href: '/shop/filter-coffee-blends' },
+      { name: 'Specialty Blends', href: '/shop/specialty-blends' },
+      { name: 'Instant Decoctions', href: '/shop/instant-coffee-decoctions' },
+      { name: 'Beyond Coffee', href: '/shop/other-products' },
+    ],
+  },
+  { name: 'Our Story', href: '/about' },
+  { name: 'Brewing Guide', href: '/brewing-guide' },
+  { name: 'Contact', href: '/contact' },
+];
+
+export default function Navigation() {
+  const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const { getCartCount } = useCart();
-  const { user, isLoading } = useAuth();
-  const cartCount = getCartCount();
+  const { user } = useAuth();
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  const isHomePage = location.pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,237 +41,193 @@ const Navigation: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isHomePage = location.pathname === '/';
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const categories = [
-    { to: '/shop?category=Premium', label: 'Premium Blends' },
-    { to: '/shop?category=Gold', label: 'Gold Blends' },
-    { to: '/shop?category=Specialty', label: 'Specialty Coffee' },
-    { to: '/shop', label: 'All Products' },
-  ];
+  const cartCount = getCartCount();
 
-  const navLinks = [
-    { to: '/', label: 'Home' },
-    { to: '/shop', label: 'Shop', hasDropdown: true },
-    { to: '/about', label: 'About Us' },
-    { to: '/brewing-guide', label: 'Brewing Guide' },
-    { to: '/wholesale', label: 'Wholesale' },
-  ];
+  const textColorClass = isScrolled || !isHomePage 
+    ? 'text-foreground/80 hover:text-primary' 
+    : 'text-foreground/90 hover:text-primary';
 
   return (
     <>
       {/* Announcement Bar */}
-      <div className="bg-gold text-coffee-foreground py-2 text-center text-sm font-medium tracking-wide">
-        <span className="font-semibold">FREE SHIPPING</span> on all orders over ₹500
+      <div className="bg-primary text-primary-foreground py-2.5 text-center text-sm font-medium tracking-[0.15em]">
+        <span className="font-semibold">FREE SHIPPING</span> on all orders over ₹999
       </div>
 
-      {/* Main Navigation */}
-      <nav className={`fixed top-8 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled || !isHomePage
-          ? 'bg-background/95 backdrop-blur-md border-b border-border shadow-lg'
-          : 'bg-transparent'
-      }`}>
+      {/* Navigation */}
+      <nav
+        className={cn(
+          'sticky top-0 z-50 transition-all duration-300 border-b',
+          isScrolled || !isHomePage
+            ? 'bg-background/95 backdrop-blur-md border-border shadow-lg'
+            : 'bg-background/80 backdrop-blur-sm border-transparent'
+        )}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Left Nav Items */}
-            <div className="hidden lg:flex items-center space-x-8 flex-1">
-              <Link
-                to="/"
-                className={`text-sm font-medium tracking-wide uppercase transition-colors hover:text-gold ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
-              >
-                Home
-              </Link>
+          <div className="flex items-center justify-between h-20">
+            {/* Mobile menu button */}
+            <button
+              className={cn('lg:hidden p-2 transition-colors', textColorClass)}
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
 
-              {/* Categories Dropdown */}
-              <div
-                className="relative"
-                onMouseEnter={() => setCategoriesOpen(true)}
-                onMouseLeave={() => setCategoriesOpen(false)}
-              >
-                <Link
-                  to="/shop"
-                  className={`flex items-center gap-1 text-sm font-medium tracking-wide uppercase transition-colors hover:text-gold ${
-                    isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                  }`}
-                >
-                  Our Categories
-                  <ChevronDown className="w-4 h-4" />
-                </Link>
+            {/* Desktop Navigation - Left */}
+            <div className="hidden lg:flex items-center space-x-8 flex-1" ref={dropdownRef}>
+              {navLinks.slice(0, 3).map((link) => (
+                <div key={link.name} className="relative">
+                  {link.children ? (
+                    <button
+                      className={cn(
+                        'flex items-center gap-1.5 text-sm font-medium tracking-[0.1em] uppercase transition-colors',
+                        textColorClass
+                      )}
+                      onClick={() => setActiveDropdown(activeDropdown === link.name ? null : link.name)}
+                    >
+                      {link.name}
+                      <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', activeDropdown === link.name && 'rotate-180')} />
+                    </button>
+                  ) : (
+                    <Link
+                      to={link.href}
+                      className={cn(
+                        'text-sm font-medium tracking-[0.1em] uppercase transition-colors link-underline',
+                        textColorClass
+                      )}
+                    >
+                      {link.name}
+                    </Link>
+                  )}
 
-                {categoriesOpen && (
-                  <div className="absolute top-full left-0 pt-2">
-                    <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[200px]">
-                      {categories.map((cat) => (
-                        <Link
-                          key={cat.to}
-                          to={cat.to}
-                          className="block px-4 py-2 text-sm text-foreground hover:bg-accent hover:text-gold transition-colors"
-                        >
-                          {cat.label}
-                        </Link>
-                      ))}
+                  {/* Dropdown */}
+                  {link.children && activeDropdown === link.name && (
+                    <div className="absolute top-full left-0 mt-3 w-64 bg-card border border-border rounded-sm shadow-2xl animate-fade-in z-50">
+                      <div className="py-2">
+                        {link.children.map((child) => (
+                          <Link
+                            key={child.name}
+                            to={child.href}
+                            className="block px-5 py-3 text-sm text-foreground/80 hover:text-primary hover:bg-muted/50 transition-colors"
+                            onClick={() => setActiveDropdown(null)}
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <Link
-                to="/about"
-                className={`text-sm font-medium tracking-wide uppercase transition-colors hover:text-gold ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
-              >
-                About Us
-              </Link>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* Center Logo */}
+            {/* Logo - Center */}
             <Link to="/" className="flex-shrink-0 group">
-              <h1 className={`font-serif text-2xl lg:text-3xl transition-colors ${
-                isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-              }`}>
-                Sharma Coffee
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-primary tracking-[0.05em] transition-all group-hover:tracking-[0.1em]">
+                SHARMA COFFEE
               </h1>
             </Link>
 
-            {/* Right Nav Items */}
+            {/* Desktop Navigation - Right */}
             <div className="hidden lg:flex items-center space-x-8 flex-1 justify-end">
-              <Link
-                to="/brewing-guide"
-                className={`text-sm font-medium tracking-wide uppercase transition-colors hover:text-gold ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
-              >
-                Brewing Guide
-              </Link>
-
-              <Link
-                to="/wholesale"
-                className={`text-sm font-medium tracking-wide uppercase transition-colors hover:text-gold ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
-              >
-                Wholesale
-              </Link>
-
-              {/* User Actions */}
-              <div className="flex items-center space-x-4">
-                {!isLoading && (
-                  user ? (
-                    <Link
-                      to="/account"
-                      className={`transition-colors hover:text-gold ${
-                        isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                      }`}
-                    >
-                      <User className="w-5 h-5" />
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/auth"
-                      className={`transition-colors hover:text-gold ${
-                        isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                      }`}
-                    >
-                      <LogIn className="w-5 h-5" />
-                    </Link>
-                  )
-                )}
-
+              {navLinks.slice(3).map((link) => (
                 <Link
-                  to="/cart"
-                  className={`relative transition-colors hover:text-gold ${
-                    isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                  }`}
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-gold text-coffee-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {cartCount}
-                    </span>
+                  key={link.name}
+                  to={link.href}
+                  className={cn(
+                    'text-sm font-medium tracking-[0.1em] uppercase transition-colors link-underline',
+                    textColorClass
                   )}
+                >
+                  {link.name}
                 </Link>
-              </div>
+              ))}
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="flex lg:hidden items-center space-x-4">
+            {/* Icons */}
+            <div className="flex items-center gap-5 ml-8">
+              <button className={cn('p-2 transition-colors hidden sm:block', textColorClass)}>
+                <Search className="w-5 h-5" />
+              </button>
+
               <Link
-                to="/cart"
-                className={`relative transition-colors ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
+                to={user ? '/account' : '/login'}
+                className={cn('p-2 transition-colors', textColorClass)}
               >
-                <ShoppingCart className="w-5 h-5" />
+                <User className="w-5 h-5" />
+              </Link>
+
+              <Link to="/cart" className={cn('relative p-2 transition-colors', textColorClass)}>
+                <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-gold text-coffee-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center animate-scale-in">
                     {cartCount}
                   </span>
                 )}
               </Link>
-
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`p-2 transition-colors ${
-                  isScrolled || !isHomePage ? 'text-foreground' : 'text-cream'
-                }`}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden bg-background border-t border-border animate-slide-in-right">
-            <div className="px-4 py-6 space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block text-foreground hover:text-gold transition-colors py-2 text-sm font-medium uppercase tracking-wide"
-                >
-                  {link.label}
-                </Link>
-              ))}
-
-              <div className="border-t border-border pt-4 mt-4">
-                {!isLoading && (
-                  user ? (
-                    <Link
-                      to="/account"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-2 text-gold hover:text-gold-muted transition-colors py-2 text-sm font-medium uppercase tracking-wide"
+        {/* Mobile Navigation */}
+        <div
+          className={cn(
+            'lg:hidden fixed inset-0 top-[calc(2.75rem+5rem)] bg-background z-40 transform transition-transform duration-300 ease-out',
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          )}
+        >
+          <div className="flex flex-col p-6 space-y-1 border-t border-border">
+            {navLinks.map((link) => (
+              <div key={link.name}>
+                {link.children ? (
+                  <>
+                    <button
+                      className="flex items-center justify-between w-full py-4 text-lg font-display font-medium text-foreground border-b border-border/50"
+                      onClick={() => setActiveDropdown(activeDropdown === link.name ? null : link.name)}
                     >
-                      <User className="w-4 h-4" />
-                      My Account
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/auth"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-2 text-gold hover:text-gold-muted transition-colors py-2 text-sm font-medium uppercase tracking-wide"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      Sign In
-                    </Link>
-                  )
+                      {link.name}
+                      <ChevronDown className={cn('w-5 h-5 transition-transform', activeDropdown === link.name && 'rotate-180')} />
+                    </button>
+                    {activeDropdown === link.name && (
+                      <div className="pl-4 py-2 space-y-1 animate-fade-in">
+                        {link.children.map((child) => (
+                          <Link
+                            key={child.name}
+                            to={child.href}
+                            className="block py-3 text-foreground/70 hover:text-primary transition-colors"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    to={link.href}
+                    className="block py-4 text-lg font-display font-medium text-foreground border-b border-border/50"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
                 )}
               </div>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
       </nav>
     </>
   );
-};
-
-export default Navigation;
+}

@@ -1,57 +1,45 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HeroVideoProps {
   videoSrc?: string;
-  posterSrc?: string;
-  fallbackImageSrc: string;
+  posterImage?: string;
   title: string;
   subtitle?: string;
   ctaText?: string;
   ctaLink?: string;
-  secondaryCta?: {
-    text: string;
-    link: string;
-  };
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   overlayOpacity?: number;
   height?: 'full' | 'large' | 'medium';
 }
 
-const HeroVideo: React.FC<HeroVideoProps> = ({
+export default function HeroVideo({
   videoSrc,
-  posterSrc,
-  fallbackImageSrc,
+  posterImage,
   title,
   subtitle,
   ctaText = 'Shop Now',
   ctaLink = '/shop',
-  secondaryCta,
-  overlayOpacity = 50,
+  secondaryCtaText,
+  secondaryCtaLink,
+  overlayOpacity = 60,
   height = 'full',
-}) => {
+}: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [videoError, setVideoError] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current && videoSrc) {
+    if (videoRef.current) {
       videoRef.current.play().catch(() => {
-        // Autoplay was prevented
         setIsPlaying(false);
       });
     }
-  }, [videoSrc]);
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
+  }, []);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -64,129 +52,107 @@ const HeroVideo: React.FC<HeroVideoProps> = ({
     }
   };
 
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   const heightClasses = {
-    full: 'h-screen',
-    large: 'h-[80vh]',
-    medium: 'h-[60vh]',
+    full: 'min-h-screen',
+    large: 'min-h-[85vh]',
+    medium: 'min-h-[65vh]',
   };
 
   return (
-    <section className={cn(
-      "relative flex items-center justify-center overflow-hidden",
-      heightClasses[height],
-      "min-h-[500px]"
-    )}>
+    <section className={cn('relative w-full flex items-center justify-center overflow-hidden', heightClasses[height])}>
       {/* Video/Image Background */}
-      <div className="absolute inset-0">
-        {videoSrc && !videoError ? (
-          <video
-            ref={videoRef}
-            src={videoSrc}
-            poster={posterSrc || fallbackImageSrc}
-            muted={isMuted}
-            loop
-            playsInline
-            autoPlay
-            onLoadedData={() => setVideoLoaded(true)}
-            onError={() => setVideoError(true)}
-            className={cn(
-              "w-full h-full object-cover transition-opacity duration-700",
-              videoLoaded ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-        ) : null}
-
-        {/* Fallback/Poster Image */}
-        <img
-          src={posterSrc || fallbackImageSrc}
-          alt={title}
+      {videoSrc ? (
+        <video
+          ref={videoRef}
           className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-700",
-            videoSrc && videoLoaded && !videoError ? 'opacity-0' : 'opacity-100'
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-1000',
+            isLoaded ? 'opacity-100' : 'opacity-0'
           )}
+          src={videoSrc}
+          poster={posterImage}
+          autoPlay
+          muted
+          loop
+          playsInline
+          onLoadedData={() => setIsLoaded(true)}
         />
+      ) : null}
+      
+      {/* Poster/Fallback Image */}
+      <img
+        src={posterImage}
+        alt={title}
+        className={cn(
+          'absolute inset-0 w-full h-full object-cover transition-opacity duration-700',
+          videoSrc && isLoaded ? 'opacity-0' : 'opacity-100'
+        )}
+      />
 
-        {/* Overlay Gradient */}
-        <div
-          className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70"
-          style={{ opacity: overlayOpacity / 100 }}
-        />
-      </div>
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/40 to-background"
+        style={{ opacity: overlayOpacity / 100 }}
+      />
 
       {/* Content */}
-      <div className="relative z-10 text-center max-w-4xl mx-auto px-4">
-        <h1 className="font-serif text-5xl sm:text-6xl lg:text-8xl text-cream mb-6 animate-fade-in text-shadow">
+      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-foreground mb-6 fade-in-up tracking-wide text-glow">
           {title}
         </h1>
-
         {subtitle && (
-          <p
-            className="text-xl sm:text-2xl text-cream/90 mb-10 font-light tracking-wide animate-fade-in"
-            style={{ animationDelay: '0.2s' }}
-          >
+          <p className="text-lg sm:text-xl md:text-2xl text-foreground/80 mb-12 fade-in-up delay-200 font-light tracking-[0.2em] uppercase">
             {subtitle}
           </p>
         )}
-
-        <div
-          className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in"
-          style={{ animationDelay: '0.4s' }}
-        >
-          <Link
-            to={ctaLink}
-            className="btn-gold px-10 py-4 inline-flex items-center justify-center gap-2 hover:scale-105 transition-transform"
+        <div className="flex flex-col sm:flex-row gap-4 justify-center fade-in-up delay-400">
+          <Link 
+            to={ctaLink} 
+            className="btn-premium-solid inline-flex items-center justify-center gap-3 group"
           >
             {ctaText}
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Link>
-
-          {secondaryCta && (
-            <Link
-              to={secondaryCta.link}
-              className="btn-outline-gold px-10 py-4 inline-flex items-center justify-center gap-2 hover:scale-105 transition-transform"
-            >
-              {secondaryCta.text}
+          {secondaryCtaText && secondaryCtaLink && (
+            <Link to={secondaryCtaLink} className="btn-premium">
+              {secondaryCtaText}
             </Link>
           )}
         </div>
       </div>
 
       {/* Video Controls */}
-      {videoSrc && !videoError && (
-        <div className="absolute bottom-8 right-8 flex gap-2 z-20">
+      {videoSrc && (
+        <div className="absolute bottom-8 right-8 z-20 flex gap-2">
           <button
             onClick={togglePlay}
-            className="w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-cream rounded-full backdrop-blur-sm transition-all"
+            className="p-3 bg-background/30 backdrop-blur-sm hover:bg-background/50 transition-all duration-300 rounded-sm border border-foreground/10"
             aria-label={isPlaying ? 'Pause video' : 'Play video'}
           >
-            {isPlaying ? (
-              <Pause className="w-5 h-5" />
-            ) : (
-              <Play className="w-5 h-5" />
-            )}
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
           <button
             onClick={toggleMute}
-            className="w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-cream rounded-full backdrop-blur-sm transition-all"
+            className="p-3 bg-background/30 backdrop-blur-sm hover:bg-background/50 transition-all duration-300 rounded-sm border border-foreground/10"
             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
           >
-            {isMuted ? (
-              <VolumeX className="w-5 h-5" />
-            ) : (
-              <Volume2 className="w-5 h-5" />
-            )}
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         </div>
       )}
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce z-10">
-        <div className="w-6 h-10 border-2 border-cream/50 rounded-full flex items-start justify-center p-2">
-          <div className="w-1 h-3 bg-cream/50 rounded-full" />
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
+        <div className="w-7 h-12 border-2 border-foreground/30 rounded-full flex justify-center p-2">
+          <div className="w-1.5 h-3 bg-primary rounded-full animate-bounce" />
         </div>
       </div>
     </section>
   );
-};
-
-export default HeroVideo;
+}
