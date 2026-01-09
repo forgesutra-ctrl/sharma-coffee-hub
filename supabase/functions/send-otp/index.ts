@@ -76,7 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Sharma Coffee Works <onboarding@resend.dev>",
+        from: Deno.env.get("RESEND_FROM_EMAIL") || "Sharma Coffee Works <onboarding@resend.dev>",
         to: [email],
         subject: "Your Sharma Coffee Works login code",
         html: `
