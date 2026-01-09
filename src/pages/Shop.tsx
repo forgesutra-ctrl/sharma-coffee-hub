@@ -26,6 +26,7 @@ const Shop = () => {
     { id: 'specialty-blends', name: 'Specialty Blend' },
     { id: 'royal-caffeine', name: 'Royal Caffeine' },
     { id: 'instant-coffee-decoctions', name: 'Instant Coffee' },
+    { id: 'tea-products', name: 'Tea' },
     { id: 'other-products', name: 'Beyond Coffee' },
   ];
 
