@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/coffee/Layout";
 import Homepage from "./pages/Homepage";
 import NotFound from "./pages/NotFound";
+import ShippingPage from "./pages/admin/ShippingPage";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,10 @@ const App = () => (
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Layout><Homepage /></Layout>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/shipping" element={<ShippingPage />} />
+              
               <Route path="*" element={<Layout><NotFound /></Layout>} />
             </Routes>
           </CartProvider>
