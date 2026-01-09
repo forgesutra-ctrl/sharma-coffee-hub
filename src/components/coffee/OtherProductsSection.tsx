@@ -11,11 +11,10 @@ interface OtherProductsSectionProps {
   section: ProductSection;
 }
 
-// Sub-category definitions
+// Sub-category definitions (no tea - tea has its own section now)
 const subCategories = [
   { id: 'all', name: 'All Products', icon: Package },
   { id: 'coffee-based', name: 'Coffee-Based', icon: Coffee, productIds: ['coffee-chocolate', 'coffee-soap', 'coffee-oasis', 'coffee-wine'] },
-  { id: 'tea', name: 'Tea', icon: Leaf, productIds: ['gold-tea', 'premium-tea', 'pan-tea'] },
   { id: 'natural', name: 'Natural Products', icon: Leaf, productIds: ['coorg-honey', 'organic-turmeric', 'coffee-jams'] },
   { id: 'equipment', name: 'Equipment', icon: Wrench, productIds: ['filter-set', 'percolator'] },
 ];

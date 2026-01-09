@@ -1,10 +1,10 @@
 // Product sections with grouped variants - using real Sharma Coffee Works data
-import coorgClassicImg from '@/assets/products/coorg-classic.png';
-import goldBlendImg from '@/assets/products/gold-blend.png';
-import premiumBlendImg from '@/assets/products/premium-blend.png';
-import specialtyBlendImg from '@/assets/products/specialty-blend.png';
-import royalCaffeineImg from '@/assets/products/royal-caffeine.png';
-import coffeeChocolateImg from '@/assets/products/coffee-chocolate.jpg';
+import coorgClassicImg from '@/assets/products/coorg-classic-new.png';
+import goldBlendImg from '@/assets/products/gold-blend-new.png';
+import premiumBlendImg from '@/assets/products/premium-blend-new.png';
+import specialtyBlendImg from '@/assets/products/specialty-blend-new.png';
+import royalCaffeineImg from '@/assets/products/royal-caffeine-new.png';
+import coffeeChocolateImg from '@/assets/products/coffee-chocolate-new.jpg';
 
 export interface ProductVariant {
   id: string;
@@ -49,7 +49,7 @@ export interface ProductSection {
   brewingMethods?: string[];
   storageTips?: string;
   ingredients?: string;
-  category: 'filter-coffee' | 'specialty' | 'royal-caffeine' | 'instant' | 'other';
+  category: 'filter-coffee' | 'specialty' | 'royal-caffeine' | 'instant' | 'tea' | 'other';
 }
 
 // Grind options shared across products
@@ -417,13 +417,65 @@ export const instantCoffeeSection: ProductSection = {
   storageTips: 'Refrigerate after opening. Best consumed within 7 days.',
 };
 
-// OTHER PRODUCTS - Grouped by type (12 products total)
+// TEA PRODUCTS - Dedicated section
+export const teaSection: ProductSection = {
+  id: 'tea-products',
+  slug: 'tea-products',
+  title: 'Coorg Tea Collection',
+  subtitle: 'Premium Tea from the Western Ghats',
+  description: 'Experience the finest tea from Coorg\'s lush plantations. Our tea range offers rich flavors and authentic chai experience.',
+  heroImage: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+  category: 'tea',
+  variants: [
+    {
+      id: 'gold-tea',
+      name: 'Gold Tea Powder',
+      description: 'Premium tea powder from the hills of Coorg. Rich and aromatic with a golden hue. Perfect for a strong, flavorful cup.',
+      price: 320,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Premium', 'Aromatic', 'Golden'],
+      origin: 'Coorg, Karnataka',
+      intensity: 4,
+    },
+    {
+      id: 'premium-tea',
+      name: 'Premium Tea Powder',
+      description: 'Fine quality tea powder for authentic chai experience. Strong, flavorful, and perfect with milk and spices.',
+      price: 400,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Fine', 'Rich', 'Authentic'],
+      origin: 'Coorg, Karnataka',
+      intensity: 5,
+    },
+    {
+      id: 'pan-tea',
+      name: 'Pan Tea Powder',
+      description: 'Traditional pan-roasted tea with unique smoky flavor. A local favorite with distinctive character.',
+      price: 280,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Pan-Roasted', 'Traditional', 'Smoky'],
+      origin: 'Coorg, Karnataka',
+      intensity: 3,
+    },
+  ],
+  packSizes: [
+    { weight: 250, price: 0 },
+    { weight: 500, price: 100 },
+    { weight: 1000, price: 180 },
+  ],
+  grindOptions: [],
+  brewingMethods: ['Traditional Chai', 'Milk Tea', 'Black Tea'],
+  storageTips: 'Store in an airtight container in a cool, dark place. Best consumed within 6 months of opening.',
+  ingredients: 'Premium Tea Leaves from Coorg Plantations',
+};
+
+// OTHER PRODUCTS - Coffee-Based, Natural, and Equipment (No Tea)
 export const otherProductsSection: ProductSection = {
   id: 'other-products',
   slug: 'other-products',
   title: 'Beyond Coffee',
   subtitle: 'Curated Selections',
-  description: 'Explore our carefully curated selection of coffee-based products, tea, wellness items from Coorg, and traditional brewing equipment.',
+  description: 'Explore our carefully curated selection of coffee-based products, wellness items from Coorg, and traditional brewing equipment.',
   heroImage: coffeeChocolateImg,
   category: 'other',
   variants: [
@@ -459,31 +511,6 @@ export const otherProductsSection: ProductSection = {
       price: 650,
       image: 'https://images.pexels.com/photos/2702805/pexels-photo-2702805.jpeg',
       flavorNotes: ['Artisanal', 'Unique', 'Premium'],
-    },
-    // Tea Products
-    {
-      id: 'gold-tea',
-      name: 'Gold Tea Powder',
-      description: 'Premium tea powder from the hills of Coorg. Rich and aromatic with a golden hue.',
-      price: 320,
-      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
-      flavorNotes: ['Premium', 'Aromatic', 'Golden'],
-    },
-    {
-      id: 'premium-tea',
-      name: 'Premium Tea Powder',
-      description: 'Fine quality tea powder for authentic chai experience. Strong and flavorful.',
-      price: 400,
-      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
-      flavorNotes: ['Fine', 'Rich', 'Authentic'],
-    },
-    {
-      id: 'pan-tea',
-      name: 'Pan Tea Powder',
-      description: 'Traditional pan-roasted tea with unique smoky flavor. A local favorite.',
-      price: 280,
-      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
-      flavorNotes: ['Pan-Roasted', 'Traditional', 'Smoky'],
     },
     // Natural Products
     {
@@ -540,6 +567,7 @@ export const allProductSections: ProductSection[] = [
   specialtyBlendsSection,
   royalCaffeineSection,
   instantCoffeeSection,
+  teaSection,
   otherProductsSection,
 ];
 
@@ -584,6 +612,14 @@ export const categoryCards = [
     image: royalCaffeineImg,
     link: '/shop/royal-caffeine',
     price: 'From ₹980/kg',
+  },
+  {
+    id: 'tea-products',
+    title: 'Tea Collection',
+    description: 'Premium Tea from Coorg Hills',
+    image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+    link: '/shop/tea-products',
+    price: 'From ₹280/kg',
   },
   {
     id: 'other',

@@ -14,6 +14,7 @@ const navLinks = [
       { name: 'Filter Coffee Blends', href: '/shop/filter-coffee-blends' },
       { name: 'Specialty Blends', href: '/shop/specialty-blends' },
       { name: 'Instant Decoctions', href: '/shop/instant-coffee-decoctions' },
+      { name: 'Tea Collection', href: '/shop/tea-products' },
       { name: 'Beyond Coffee', href: '/shop/other-products' },
     ],
   },
