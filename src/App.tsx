@@ -9,6 +9,11 @@ import Layout from "./components/coffee/Layout";
 import Homepage from "./pages/Homepage";
 import NotFound from "./pages/NotFound";
 import ShippingPage from "./pages/admin/ShippingPage";
+import Auth from "./pages/Auth";
+import Shop from "./pages/Shop";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -23,9 +28,24 @@ const App = () => (
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Layout><Homepage /></Layout>} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/:slug" element={<Shop />} />
+              <Route path="/cart" element={<Cart />} />
+              
+              {/* Protected Routes */}
+              <Route path="/checkout" element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              } />
               
               {/* Admin Routes */}
-              <Route path="/admin/shipping" element={<ShippingPage />} />
+              <Route path="/admin/shipping" element={
+                <ProtectedRoute requireAdmin>
+                  <ShippingPage />
+                </ProtectedRoute>
+              } />
               
               <Route path="*" element={<Layout><NotFound /></Layout>} />
             </Routes>
