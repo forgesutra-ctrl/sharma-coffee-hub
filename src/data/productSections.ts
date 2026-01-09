@@ -352,21 +352,57 @@ export const royalCaffeineSection: ProductSection = {
   ingredients: '100% Roasted Coffee Beans (No Chicory)',
 };
 
-// INSTANT COFFEE / DECOCTIONS
+// INSTANT COFFEE / DECOCTIONS - 5 variants
 export const instantCoffeeSection: ProductSection = {
   id: 'instant-coffee',
   slug: 'instant-coffee-decoctions',
   title: 'Instant Filter Coffee',
   subtitle: 'Ready-to-Use Decoctions',
-  description: 'Experience authentic filter coffee taste in seconds. Our liquid decoctions capture the essence of freshly brewed filter coffee.',
+  description: 'Experience authentic filter coffee taste in seconds. Our liquid decoctions capture the essence of freshly brewed filter coffee. Available in 5 blend variations.',
   heroImage: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
   category: 'instant',
   variants: [
     {
+      id: 'gold-blend-decoction',
+      name: 'Gold Blend Decoction',
+      description: 'Ready-to-use Gold Blend filter coffee decoction. Rich and bold with traditional taste. Just add hot milk.',
+      price: 180,
+      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
+      flavorNotes: ['Rich', 'Bold', 'Traditional'],
+      intensity: 4,
+    },
+    {
+      id: 'premium-blend-decoction',
+      name: 'Premium Blend Decoction',
+      description: 'Ready-to-use Premium Blend filter coffee decoction with higher Arabica content. Smooth and aromatic.',
+      price: 200,
+      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
+      flavorNotes: ['Smooth', 'Aromatic', 'Premium'],
+      intensity: 3,
+    },
+    {
+      id: 'specialty-blend-decoction',
+      name: 'Specialty Blend Decoction',
+      description: '100% Arabica decoction for the discerning coffee lover. Complex and refined.',
+      price: 220,
+      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
+      flavorNotes: ['Pure', 'Complex', 'Refined'],
+      intensity: 3,
+    },
+    {
+      id: 'royal-caffeine-decoction',
+      name: 'Royal Caffeine Decoction',
+      description: 'No chicory pure coffee decoction for true coffee purists. Intense and bold.',
+      price: 240,
+      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
+      flavorNotes: ['Pure', 'Intense', 'Bold'],
+      intensity: 5,
+    },
+    {
       id: 'classic-decoction',
       name: 'Classic Decoction',
-      description: 'Traditional filter coffee decoction. Just add hot milk and sugar. Ready in seconds.',
-      price: 220,
+      description: 'Traditional Coorg Classic filter coffee decoction. Everyday favorite. Just add hot milk and sugar.',
+      price: 160,
       image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
       flavorNotes: ['Classic', 'Authentic', 'Balanced'],
       intensity: 4,
@@ -381,16 +417,17 @@ export const instantCoffeeSection: ProductSection = {
   storageTips: 'Refrigerate after opening. Best consumed within 7 days.',
 };
 
-// OTHER PRODUCTS - Grouped by type
+// OTHER PRODUCTS - Grouped by type (12 products total)
 export const otherProductsSection: ProductSection = {
   id: 'other-products',
   slug: 'other-products',
   title: 'Beyond Coffee',
   subtitle: 'Curated Selections',
-  description: 'Explore our carefully curated selection of coffee-based products, wellness items from Coorg, and traditional brewing equipment.',
+  description: 'Explore our carefully curated selection of coffee-based products, tea, wellness items from Coorg, and traditional brewing equipment.',
   heroImage: coffeeChocolateImg,
   category: 'other',
   variants: [
+    // Coffee-Based Products
     {
       id: 'coffee-chocolate',
       name: 'Homemade Coffee Chocolate',
@@ -408,6 +445,48 @@ export const otherProductsSection: ProductSection = {
       flavorNotes: ['Natural', 'Exfoliating', 'Aromatic'],
     },
     {
+      id: 'coffee-oasis',
+      name: 'Coffee Oasis',
+      description: 'Refreshing coffee-based drink for a unique experience. A perfect summer beverage.',
+      price: 180,
+      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg',
+      flavorNotes: ['Refreshing', 'Coffee-Infused', 'Unique'],
+    },
+    {
+      id: 'coffee-wine',
+      name: 'Homemade Coffee Wine',
+      description: 'Unique artisanal wine crafted from coffee. A Sharma Coffee specialty and collector\'s delight.',
+      price: 650,
+      image: 'https://images.pexels.com/photos/2702805/pexels-photo-2702805.jpeg',
+      flavorNotes: ['Artisanal', 'Unique', 'Premium'],
+    },
+    // Tea Products
+    {
+      id: 'gold-tea',
+      name: 'Gold Tea Powder',
+      description: 'Premium tea powder from the hills of Coorg. Rich and aromatic with a golden hue.',
+      price: 320,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Premium', 'Aromatic', 'Golden'],
+    },
+    {
+      id: 'premium-tea',
+      name: 'Premium Tea Powder',
+      description: 'Fine quality tea powder for authentic chai experience. Strong and flavorful.',
+      price: 400,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Fine', 'Rich', 'Authentic'],
+    },
+    {
+      id: 'pan-tea',
+      name: 'Pan Tea Powder',
+      description: 'Traditional pan-roasted tea with unique smoky flavor. A local favorite.',
+      price: 280,
+      image: 'https://images.pexels.com/photos/1417945/pexels-photo-1417945.jpeg',
+      flavorNotes: ['Pan-Roasted', 'Traditional', 'Smoky'],
+    },
+    // Natural Products
+    {
       id: 'coorg-honey',
       name: 'Coorg Honey',
       description: 'Pure honey sourced from the forests of Coorg. Natural and unprocessed.',
@@ -418,11 +497,20 @@ export const otherProductsSection: ProductSection = {
     {
       id: 'organic-turmeric',
       name: 'Organic Turmeric Powder',
-      description: 'Pure organic turmeric from Coorg\'s fertile lands.',
+      description: 'Pure organic turmeric from Coorg\'s fertile lands. High curcumin content.',
       price: 180,
       image: 'https://images.pexels.com/photos/1493080/pexels-photo-1493080.jpeg',
       flavorNotes: ['Organic', 'Pure', 'Premium'],
     },
+    {
+      id: 'coffee-jams',
+      name: 'Coffee & Natural Fruit Jams',
+      description: 'Homemade jams combining coffee with natural fruits from Coorg. Perfect for breakfast.',
+      price: 250,
+      image: 'https://images.pexels.com/photos/1493080/pexels-photo-1493080.jpeg',
+      flavorNotes: ['Fruity', 'Coffee-Infused', 'Artisanal'],
+    },
+    // Equipment
     {
       id: 'filter-set',
       name: 'Traditional Filter Set (Double Decker)',
