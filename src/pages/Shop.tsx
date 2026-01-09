@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '@/components/coffee/Layout';
 import { allProductSections, ProductSection } from '@/data/productSections';
@@ -8,14 +8,22 @@ const Shop = () => {
   const { slug } = useParams<{ slug?: string }>();
   const [activeCategory, setActiveCategory] = useState<string | null>(slug || null);
 
+  // Update active category when slug changes
+  useEffect(() => {
+    setActiveCategory(slug || null);
+  }, [slug]);
+
   const filteredSections = activeCategory
     ? allProductSections.filter(s => s.slug === activeCategory)
     : allProductSections;
 
   const categories = [
     { id: null, name: 'All Products' },
-    { id: 'filter-coffee-blends', name: 'Filter Coffee' },
-    { id: 'specialty-blends', name: 'Specialty Blends' },
+    { id: 'coorg-classic', name: 'Coorg Classic' },
+    { id: 'gold-blend', name: 'Gold Blend' },
+    { id: 'premium-blend', name: 'Premium Blend' },
+    { id: 'specialty-blends', name: 'Specialty Blend' },
+    { id: 'royal-caffeine', name: 'Royal Caffeine' },
     { id: 'instant-coffee-decoctions', name: 'Instant Coffee' },
     { id: 'other-products', name: 'Beyond Coffee' },
   ];
@@ -34,11 +42,14 @@ const Shop = () => {
             }}
           />
           <div className="relative z-10 text-center px-4">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
+            <p className="text-primary text-sm font-medium tracking-[0.3em] uppercase mb-4">
+              Premium Coorg Coffee
+            </p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-foreground mb-4">
               Our Coffee Collection
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Crafted with passion since 1985. Premium beans from Coorg, roasted to perfection.
+              Crafted with passion since 1987. Premium beans from Coorg, roasted to perfection.
             </p>
           </div>
         </div>

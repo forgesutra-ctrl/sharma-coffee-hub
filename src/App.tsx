@@ -15,6 +15,7 @@ import Checkout from "./pages/Checkout";
 import About from "./pages/About";
 import BrewingGuide from "./pages/BrewingGuide";
 import Contact from "./pages/Contact";
+import Processing from "./pages/Processing";
 import Account from "./pages/Account";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/about" element={<About />} />
               <Route path="/brewing-guide" element={<BrewingGuide />} />
+              <Route path="/processing" element={<Processing />} />
               <Route path="/contact" element={<Contact />} />
               
               {/* Protected Routes */}
