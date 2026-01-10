@@ -77,34 +77,23 @@ export default function HeroVideo({
   };
 
   return (
-    <section className={cn('relative w-full flex items-center justify-center overflow-hidden', heightClasses[height])}>
+    <section className={cn('relative w-full flex items-center justify-center overflow-hidden bg-background', heightClasses[height])}>
       {/* Video Background */}
-      {videoSrc ? (
+      {videoSrc && (
         <video
           ref={videoRef}
           className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-opacity duration-1500',
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-700',
             isLoaded ? 'opacity-100' : 'opacity-0'
           )}
           src={videoSrc}
-          poster={posterImage}
           autoPlay
           muted
           loop
           playsInline
           onLoadedData={() => setIsLoaded(true)}
         />
-      ) : null}
-      
-      {/* Poster/Fallback Image */}
-      <img
-        src={posterImage}
-        alt={title}
-        className={cn(
-          'absolute inset-0 w-full h-full object-cover transition-opacity duration-1000',
-          videoSrc && isLoaded ? 'opacity-0' : 'opacity-100'
-        )}
-      />
+      )}
 
       {/* Gradient Overlay */}
       <div className="hero-overlay" />
