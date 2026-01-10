@@ -221,7 +221,7 @@
   }
 
   .category-card:hover .category-image {
-    @apply scale-115;
+    @apply scale-110;
     filter: brightness(0.8);
   }
 
