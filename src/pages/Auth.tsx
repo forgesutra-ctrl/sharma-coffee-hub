@@ -22,7 +22,7 @@ const Auth = () => {
   const location = useLocation();
   const { toast } = useToast();
   
-  const redirectTo = (location.state as any)?.from || '/';
+  const redirectTo = (location.state as any)?.from || '/account';
 
   // Resend cooldown timer
   useEffect(() => {
