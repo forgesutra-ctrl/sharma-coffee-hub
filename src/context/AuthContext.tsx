@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import logger from '@/lib/logger';
 
 type AppRole = 'admin' | 'user';
 
@@ -31,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        logger.error('Failed to fetch user role');
         return null;
       }
 
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return roles[0] as AppRole | null;
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      logger.error('Failed to fetch user role');
       return null;
     }
   };

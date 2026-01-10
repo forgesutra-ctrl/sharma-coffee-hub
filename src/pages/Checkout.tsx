@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Check, Loader2, Package, MapPin, CreditCard } from 'lucide-react';
+import { shippingAddressSchema, type ShippingAddressInput } from '@/lib/validation';
+import logger from '@/lib/logger';
 
 type CheckoutStep = 'shipping' | 'review' | 'payment';
 
@@ -60,34 +62,20 @@ const Checkout = () => {
     }));
   };
 
-  const validateShipping = () => {
-    const required = ['fullName', 'phone', 'addressLine1', 'city', 'state', 'pincode'];
-    for (const field of required) {
-      if (!shippingForm[field as keyof ShippingForm]) {
-        toast({
-          title: 'Missing Information',
-          description: `Please fill in all required fields`,
-          variant: 'destructive',
-        });
-        return false;
-      }
-    }
-    if (shippingForm.phone.length < 10) {
+  const validateShipping = (): boolean => {
+    const result = shippingAddressSchema.safeParse(shippingForm);
+    
+    if (!result.success) {
+      // Get the first error to display
+      const firstError = result.error.errors[0];
       toast({
-        title: 'Invalid Phone',
-        description: 'Please enter a valid phone number',
+        title: 'Validation Error',
+        description: firstError?.message || 'Please check your shipping details',
         variant: 'destructive',
       });
       return false;
     }
-    if (shippingForm.pincode.length !== 6) {
-      toast({
-        title: 'Invalid Pincode',
-        description: 'Please enter a valid 6-digit pincode',
-        variant: 'destructive',
-      });
-      return false;
-    }
+    
     return true;
   };
 
@@ -166,11 +154,12 @@ const Checkout = () => {
       // In production, redirect to payment gateway here
       // For now, show success state
       setStep('payment');
-    } catch (error: any) {
-      console.error('Order error:', error);
+    } catch (error: unknown) {
+      logger.error('Order placement failed', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to place order';
       toast({
         title: 'Order Failed',
-        description: error.message || 'Failed to place order',
+        description: errorMessage.includes('Invalid') ? errorMessage : 'An error occurred while placing your order. Please try again.',
         variant: 'destructive',
       });
     } finally {
