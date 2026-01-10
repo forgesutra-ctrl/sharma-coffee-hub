@@ -40,7 +40,8 @@ export async function dtdcApiCall<T>(
     ...headers,
   };
 
-  console.log(`[DTDC] ${method} ${url}`);
+  // Log request without exposing full URL parameters
+  console.log(`[DTDC] ${method} request to ${endpoint}`);
 
   try {
     const response = await fetch(url, {
@@ -49,9 +50,9 @@ export async function dtdcApiCall<T>(
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const responseText = await response.text();
     console.log(`[DTDC] Response status: ${response.status}`);
-    console.log(`[DTDC] Response body: ${responseText.substring(0, 500)}`);
+    const responseText = await response.text();
+    // Don't log response body - may contain PII
 
     if (!response.ok) {
       return {
@@ -68,7 +69,7 @@ export async function dtdcApiCall<T>(
       return { success: true, data: responseText as T };
     }
   } catch (error) {
-    console.error('[DTDC] Request failed:', error);
+    console.error('[DTDC] Request failed');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -84,7 +85,8 @@ export async function dtdcStreamCall(
   const params = new URLSearchParams(queryParams);
   const url = `${config.baseUrl}${endpoint}?${params.toString()}`;
 
-  console.log(`[DTDC] GET (stream) ${url}`);
+  // Log request without exposing parameters
+  console.log(`[DTDC] GET (stream) request to ${endpoint}`);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -110,7 +112,7 @@ const trackingCache = new Map<string, { data: unknown; expiry: number }>();
 export function getCachedTracking(awb: string): unknown | null {
   const cached = trackingCache.get(awb);
   if (cached && cached.expiry > Date.now()) {
-    console.log(`[DTDC] Cache hit for AWB: ${awb}`);
+    console.log(`[DTDC] Cache hit for tracking`);
     return cached.data;
   }
   trackingCache.delete(awb);
