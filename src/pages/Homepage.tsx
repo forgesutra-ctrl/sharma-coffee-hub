@@ -1,33 +1,67 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, RefreshCw, Award, Star } from 'lucide-react';
+import { ArrowRight, Truck, RefreshCw, Award } from 'lucide-react';
 import HeroVideo from '@/components/coffee/HeroVideo';
 import ProductSectionCard from '@/components/coffee/ProductSectionCard';
+import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
+import CategoryGrid from '@/components/coffee/CategoryGrid';
+import TestimonialsCarousel from '@/components/coffee/TestimonialsCarousel';
+import StorySection from '@/components/coffee/StorySection';
 import { goldBlendSection, specialtyBlendsSection, categoryCards } from '@/data/productSections';
-import { mockTestimonials } from '@/data/mockData';
+import { mockTestimonials, mockProducts } from '@/data/mockData';
+import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
+import coffeeBeans from '@/assets/coffee-beans-roasting.jpg';
+
+// Transform mock products to best sellers format
+const bestSellers = mockProducts.map(product => ({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  image: product.image_url,
+  hoverImage: product.images && product.images[1] ? product.images[1] : undefined,
+  href: `/shop/${product.slug}`,
+  badge: product.is_featured ? 'Best Seller' : undefined,
+}));
+
+// Transform category cards for CategoryGrid
+const categories = categoryCards.map(cat => ({
+  id: cat.id,
+  title: cat.title,
+  image: cat.image,
+  href: cat.link,
+}));
+
+// Transform testimonials for carousel
+const testimonials = mockTestimonials.map(t => ({
+  id: t.id,
+  content: t.content,
+  customerName: t.customer_name,
+  location: t.location || '',
+  rating: t.rating,
+}));
 
 export default function Homepage() {
   return (
     <div className="bg-background">
       {/* Hero Video Section */}
       <HeroVideo
+        videoSrc={heroVideo}
         posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
-        videoSrc="https://videos.pexels.com/video-files/5520810/5520810-hd_1920_1080_30fps.mp4"
         title="A SIP OF HOME"
-        subtitle="A Taste of Nostalgia"
+        subtitle="Crafted with Tradition Since 1983"
         ctaText="Shop Now"
         ctaLink="/shop"
         secondaryCtaText="Our Story"
         secondaryCtaLink="/about"
         height="full"
-        overlayOpacity={65}
+        overlayOpacity={60}
       />
 
       {/* Features Bar */}
-      <section className="bg-secondary py-8 border-y border-border">
+      <section className="features-bar py-6 border-y border-border/30">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="w-12 h-12 bg-primary/10 rounded-sm flex items-center justify-center">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
                 <Truck className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -36,7 +70,7 @@ export default function Homepage() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="w-12 h-12 bg-primary/10 rounded-sm flex items-center justify-center">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
                 <RefreshCw className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -45,7 +79,7 @@ export default function Homepage() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="w-12 h-12 bg-primary/10 rounded-sm flex items-center justify-center">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
                 <Award className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -57,51 +91,28 @@ export default function Homepage() {
         </div>
       </section>
 
+      {/* Best Sellers Carousel */}
+      <section className="py-16 bg-background">
+        <div className="max-w-7xl mx-auto px-4">
+          <BestSellersCarousel
+            products={bestSellers}
+            title="Best Sellers"
+            viewAllLink="/shop"
+          />
+        </div>
+      </section>
+
       {/* Filter Coffee Blends Section */}
       <ProductSectionCard section={goldBlendSection} />
 
       {/* Shop by Category */}
-      <section className="py-20 bg-secondary">
+      <section className="py-20 bg-secondary/50">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-3">
-              Explore
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold">
-              Shop by Category
-            </h2>
-            <div className="section-divider mt-6" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {categoryCards.map((category, index) => (
-              <Link
-                key={category.id}
-                to={category.link}
-                className="category-card group aspect-[3/4] relative rounded-sm overflow-hidden"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <img
-                  src={category.image}
-                  alt={category.title}
-                  className="category-image absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="category-overlay" />
-                <div className="absolute inset-0 flex flex-col justify-end p-6 z-10">
-                  <h3 className="font-display text-xl font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                    {category.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {category.description}
-                  </p>
-                  <div className="mt-4 flex items-center gap-2 text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    Shop Now
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <CategoryGrid
+            categories={categories}
+            title="Shop by Category"
+            columns={4}
+          />
         </div>
       </section>
 
@@ -109,106 +120,51 @@ export default function Homepage() {
       <ProductSectionCard section={specialtyBlendsSection} reversed />
 
       {/* Story Section */}
-      <section className="py-24 bg-secondary">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="relative">
-              <div className="aspect-[4/5] overflow-hidden rounded-sm image-shine">
-                <img
-                  src="https://images.pexels.com/photos/4349761/pexels-photo-4349761.jpeg"
-                  alt="Coffee roasting"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/20 rounded-sm -z-10" />
-            </div>
-            <div>
-              <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-4">
-                Our Heritage
-              </p>
-              <h2 className="font-display text-4xl md:text-5xl font-semibold mb-6">
-                Four Decades of Passion
-              </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  Since 1983, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. 
-                  Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.
-                </p>
-                <p>
-                  Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, 
-                  and blended with the finest ghee-roasted chicory from Jamnagar.
-                </p>
-              </div>
-              <Link to="/about" className="btn-premium mt-8 inline-flex items-center gap-2">
-                Learn More
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <StorySection
+        title="Four Decades of Passion"
+        subtitle="Our Heritage"
+        content={[
+          "Since 1983, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
+          "Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, and blended with the finest ghee-roasted chicory from Jamnagar."
+        ]}
+        image={coffeeBeans}
+        ctaText="Learn More"
+        ctaLink="/about"
+        layout="right"
+        theme="dark"
+      />
 
-      {/* Testimonials */}
+      {/* Testimonials Carousel */}
       <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-3">
-              Testimonials
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold">
-              What Our Customers Say
-            </h2>
-            <div className="section-divider mt-6" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {mockTestimonials.map((testimonial) => (
-              <div
-                key={testimonial.id}
-                className="bg-card p-8 border border-border hover:border-primary/30 transition-all duration-300 rounded-sm"
-              >
-                <div className="flex gap-1 mb-6">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-foreground/90 mb-6 leading-relaxed text-lg italic font-display">
-                  "{testimonial.content}"
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary font-display font-bold text-lg">
-                      {testimonial.customer_name.charAt(0)}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{testimonial.customer_name}</p>
-                    {testimonial.location && (
-                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <TestimonialsCarousel
+            testimonials={testimonials}
+            title="What Our Customers Say"
+            subtitle="Join thousands of coffee lovers"
+          />
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-primary">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-semibold text-primary-foreground mb-6">
+      <section className="relative py-32 overflow-hidden">
+        {/* Background with gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-accent" />
+        <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg')] bg-cover bg-center mix-blend-overlay opacity-20" />
+        
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <h2 className="font-display text-4xl md:text-6xl font-bold text-primary-foreground mb-6 tracking-tight">
             Experience the Taste of Coorg
           </h2>
-          <p className="text-primary-foreground/80 mb-10 max-w-2xl mx-auto text-lg">
+          <p className="text-primary-foreground/80 mb-12 max-w-2xl mx-auto text-lg md:text-xl leading-relaxed">
             Join thousands of coffee lovers who've made the switch to freshly roasted,
             traditionally crafted coffee from the hills of Coorg.
           </p>
           <Link
             to="/shop"
-            className="inline-block bg-background text-foreground font-medium tracking-[0.15em] uppercase text-sm px-12 py-4 hover:bg-foreground hover:text-background transition-all duration-300"
+            className="inline-flex items-center gap-3 bg-background text-foreground font-medium tracking-[0.15em] uppercase text-sm px-12 py-5 hover:bg-foreground hover:text-background transition-all duration-300 group"
           >
-            Shop Now
+            <span>Shop Now</span>
+            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>
       </section>
