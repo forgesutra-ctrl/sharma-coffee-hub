@@ -119,27 +119,28 @@ const Auth = () => {
 
       // Use the token hash to verify the session
       if (response.data?.tokenHash) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email,
-          token: response.data.tokenHash,
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: response.data.tokenHash,
           type: 'magiclink',
         });
 
         if (verifyError) {
-          // Fallback: just refresh session
-          console.log('Token verification failed, using session refresh');
+          throw new Error(verifyError.message || 'Session verification failed');
         }
+
+        if (!verifyData?.session) {
+          throw new Error('No session created. Please try again.');
+        }
+
+        toast({
+          title: response.data?.isNewUser ? 'Account Created' : 'Welcome Back',
+          description: 'You have been successfully logged in',
+        });
+
+        navigate(redirectTo, { replace: true });
+      } else {
+        throw new Error('Invalid verification response');
       }
-
-      // Refresh session to get the updated auth state
-      await supabase.auth.refreshSession();
-
-      toast({
-        title: response.data?.isNewUser ? 'Account Created' : 'Welcome Back',
-        description: 'You have been successfully logged in',
-      });
-
-      navigate(redirectTo, { replace: true });
     } catch (error: any) {
       toast({
         title: 'Invalid OTP',
