@@ -17,8 +17,12 @@ import About from "./pages/About";
 import BrewingGuide from "./pages/BrewingGuide";
 import Contact from "./pages/Contact";
 import Processing from "./pages/Processing";
-import Account from "./pages/Account";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AccountLayout from "./components/account/AccountLayout";
+import AccountDashboard from "./pages/account/Dashboard";
+import AccountOrders from "./pages/account/Orders";
+import AccountAddresses from "./pages/account/Addresses";
+import AccountSubscriptions from "./pages/account/Subscriptions";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -57,11 +61,18 @@ const App = () => (
                   <Checkout />
                 </ProtectedRoute>
               } />
+              
+              {/* Account Routes */}
               <Route path="/account" element={
                 <ProtectedRoute>
-                  <Account />
+                  <AccountLayout />
                 </ProtectedRoute>
-              } />
+              }>
+                <Route index element={<AccountDashboard />} />
+                <Route path="orders" element={<AccountOrders />} />
+                <Route path="addresses" element={<AccountAddresses />} />
+                <Route path="subscriptions" element={<AccountSubscriptions />} />
+              </Route>
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
