@@ -11,6 +11,17 @@ interface VerifyOtpRequest {
   otp: string;
 }
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
+// Validate OTP format (6 digits)
+function isValidOtp(otp: string): boolean {
+  return /^\d{6}$/.test(otp);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,23 +30,34 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email, otp }: VerifyOtpRequest = await req.json();
 
-    if (!email || !otp) {
+    // Validate inputs
+    if (!email || !isValidEmail(email)) {
       return new Response(
-        JSON.stringify({ error: "Email and OTP are required" }),
+        JSON.stringify({ error: "Invalid email format" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    if (!otp || !isValidOtp(otp)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid verification code format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Find valid OTP
+    // Find valid OTP using service role (bypasses RLS)
     const { data: otpRecord, error: fetchError } = await supabase
       .from("otp_verifications")
       .select("*")
-      .eq("phone", email)
+      .eq("phone", normalizedEmail)
       .eq("otp", otp)
       .eq("verified", false)
       .gte("expires_at", new Date().toISOString())
@@ -44,36 +66,40 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (fetchError || !otpRecord) {
+      // Use generic error to prevent enumeration
       return new Response(
-        JSON.stringify({ error: "Invalid or expired OTP" }),
+        JSON.stringify({ error: "Invalid or expired verification code" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
     // Mark OTP as verified
-    await supabase
+    const { error: updateError } = await supabase
       .from("otp_verifications")
       .update({ verified: true })
       .eq("id", otpRecord.id);
 
+    if (updateError) {
+      console.error("Error marking OTP as verified:", updateError);
+    }
+
     // Check if user exists
     const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const user = existingUser?.users?.find((u) => u.email === email);
+    const user = existingUser?.users?.find((u) => u.email?.toLowerCase() === normalizedEmail);
 
-    let session = null;
     let userId = null;
 
     if (user) {
       // Existing user - create session using magic link token
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
         type: "magiclink",
-        email: email,
+        email: normalizedEmail,
       });
 
       if (linkError) {
         console.error("Error generating magic link:", linkError);
         return new Response(
-          JSON.stringify({ error: "Failed to authenticate" }),
+          JSON.stringify({ error: "Authentication failed. Please try again." }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
@@ -89,14 +115,14 @@ const handler = async (req: Request): Promise<Response> => {
           isNewUser: false,
           userId,
           tokenHash,
-          email
+          email: normalizedEmail
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     } else {
       // New user - create account
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: email,
+        email: normalizedEmail,
         email_confirm: true,
         user_metadata: { email_verified: true }
       });
@@ -104,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (createError) {
         console.error("Error creating user:", createError);
         return new Response(
-          JSON.stringify({ error: "Failed to create account" }),
+          JSON.stringify({ error: "Account creation failed. Please try again." }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
@@ -114,13 +140,13 @@ const handler = async (req: Request): Promise<Response> => {
       // Generate magic link for new user
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
         type: "magiclink",
-        email: email,
+        email: normalizedEmail,
       });
 
       if (linkError) {
         console.error("Error generating magic link:", linkError);
         return new Response(
-          JSON.stringify({ error: "Failed to authenticate" }),
+          JSON.stringify({ error: "Authentication failed. Please try again." }),
           { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
@@ -133,15 +159,15 @@ const handler = async (req: Request): Promise<Response> => {
           isNewUser: true,
           userId,
           tokenHash,
-          email
+          email: normalizedEmail
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in verify-otp function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
