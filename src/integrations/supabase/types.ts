@@ -474,6 +474,89 @@ export type Database = {
           },
         ]
       }
+      shipping_escalation_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string
+          shipment_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          note: string
+          shipment_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          shipment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_escalation_notes_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_change_logs: {
+        Row: {
+          change_amount: number
+          changed_by: string
+          created_at: string
+          id: string
+          new_quantity: number
+          previous_quantity: number
+          product_id: string
+          reason: string
+          variant_id: string
+        }
+        Insert: {
+          change_amount: number
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_quantity: number
+          previous_quantity: number
+          product_id: string
+          reason: string
+          variant_id: string
+        }
+        Update: {
+          change_amount?: number
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_quantity?: number
+          previous_quantity?: number
+          product_id?: string
+          reason?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_change_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_change_logs_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string

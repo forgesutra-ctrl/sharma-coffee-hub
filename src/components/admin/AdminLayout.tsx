@@ -6,7 +6,7 @@ import {
   ShoppingCart, 
   Users, 
   Truck, 
-  Settings,
+  Wrench,
   ChevronLeft,
   LogOut
 } from 'lucide-react';
@@ -20,6 +20,7 @@ const sidebarLinks = [
   { name: 'Products', href: '/admin/products', icon: Package },
   { name: 'Customers', href: '/admin/customers', icon: Users },
   { name: 'Shipping', href: '/admin/shipping', icon: Truck },
+  { name: 'Operations', href: '/admin/operations', icon: Wrench },
 ];
 
 export default function AdminLayout() {
