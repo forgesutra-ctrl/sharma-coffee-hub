@@ -12,6 +12,12 @@ interface SendOtpRequest {
   email: string;
 }
 
+// Validate email format more strictly
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,12 +26,16 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email }: SendOtpRequest = await req.json();
 
-    if (!email || !email.includes("@")) {
+    // Validate email format
+    if (!email || !isValidEmail(email)) {
       return new Response(
-        JSON.stringify({ error: "Valid email is required" }),
+        JSON.stringify({ error: "Please enter a valid email address" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -37,12 +47,12 @@ const handler = async (req: Request): Promise<Response> => {
     const { count } = await supabase
       .from("otp_verifications")
       .select("*", { count: "exact", head: true })
-      .eq("phone", email) // Using phone column for email (legacy schema)
+      .eq("phone", normalizedEmail) // Using phone column for email (legacy schema)
       .gte("created_at", oneHourAgo);
 
     if (count && count >= 5) {
       return new Response(
-        JSON.stringify({ error: "Too many OTP requests. Please try again later." }),
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -53,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Store OTP in database
     const { error: insertError } = await supabase.from("otp_verifications").insert({
-      phone: email, // Using phone column for email (legacy schema)
+      phone: normalizedEmail, // Using phone column for email (legacy schema)
       otp,
       expires_at: expiresAt,
       verification_type: "email_login",
@@ -63,23 +73,18 @@ const handler = async (req: Request): Promise<Response> => {
     if (insertError) {
       console.error("Error storing OTP:", insertError);
       return new Response(
-        JSON.stringify({ error: "Failed to generate OTP" }),
+        JSON.stringify({ error: "Unable to process request. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Send OTP via Resend API - read from env directly without manipulation
+    // Send OTP via Resend API
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-
-    // Debug logs before sending
-    console.log("DEBUG FROM:", JSON.stringify(fromEmail));
-    console.log("DEBUG TO:", JSON.stringify(email));
-    console.log("HAS RESEND API KEY:", Boolean(Deno.env.get("RESEND_API_KEY")));
 
     if (!fromEmail) {
       console.error("RESEND_FROM_EMAIL is not set");
       return new Response(
-        JSON.stringify({ error: "Email sender not configured", details: "RESEND_FROM_EMAIL environment variable is missing" }),
+        JSON.stringify({ error: "Email service not configured. Please contact support." }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -92,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: fromEmail,
-        to: [email],
+        to: [normalizedEmail],
         subject: "Your Sharma Coffee Works login code",
         html: `
           <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #f5f5f5; padding: 40px;">
@@ -119,32 +124,31 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
-      console.error("Resend API full error:", JSON.stringify(errorData, null, 2));
+      console.error("Resend API error:", JSON.stringify(errorData));
       return new Response(
-        JSON.stringify({ error: "Failed to send OTP email", resendError: errorData }),
+        JSON.stringify({ error: "Unable to send verification email. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const successData = await emailResponse.json();
-    console.log("OTP email sent successfully:", JSON.stringify(successData));
+    console.log("OTP email sent successfully to:", normalizedEmail.replace(/(.{2}).*@/, "$1****@"));
 
     // Mask email for response
-    const [localPart, domain] = email.split("@");
+    const [localPart, domain] = normalizedEmail.split("@");
     const maskedEmail = localPart.charAt(0) + "****@" + domain;
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "OTP sent successfully",
+        message: "Verification code sent",
         maskedEmail 
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-otp function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
