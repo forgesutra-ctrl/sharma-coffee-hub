@@ -130,7 +130,6 @@ const Checkout = () => {
       const orderItems = cartItems.map(item => ({
         order_id: order.id,
         product_name: item.product.name,
-        grind_type: item.grind_type,
         weight: item.weight,
         quantity: item.quantity,
         unit_price: item.product.price,
@@ -368,12 +367,12 @@ const Checkout = () => {
                     <div className="space-y-4">
                       {cartItems.map((item) => (
                         <div
-                          key={`${item.product.id}-${item.grind_type}-${item.weight}`}
+                          key={`${item.product.id}-${item.weight}`}
                           className="flex gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
                         >
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                             <img
-                              src={item.product.images?.[0] || ''}
+                              src={item.product.image_url || item.product.images?.[0] || ''}
                               alt={item.product.name}
                               className="w-full h-full object-cover"
                             />
@@ -381,7 +380,7 @@ const Checkout = () => {
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground truncate">{item.product.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {item.weight}g • {item.grind_type} • Qty: {item.quantity}
+                              {item.weight >= 1000 ? `${item.weight / 1000} kg` : `${item.weight}g`} • Qty: {item.quantity}
                             </p>
                           </div>
                           <p className="font-semibold text-foreground">

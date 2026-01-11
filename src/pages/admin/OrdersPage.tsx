@@ -279,7 +279,7 @@ export default function OrdersPage() {
                       <div>
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.weight}g | {item.grind_type} | Qty: {item.quantity}
+                          {item.weight}g | Qty: {item.quantity}
                         </p>
                       </div>
                       <p className="font-semibold">₹{Number(item.total_price).toLocaleString()}</p>

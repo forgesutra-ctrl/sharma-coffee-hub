@@ -4,8 +4,8 @@ import { CartItem } from '../types';
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: CartItem) => void;
-  removeFromCart: (productId: string, grindType: string, weight: number) => void;
-  updateQuantity: (productId: string, grindType: string, weight: number, quantity: number) => void;
+  removeFromCart: (productId: string, weight: number) => void;
+  updateQuantity: (productId: string, weight: number, quantity: number) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
@@ -28,7 +28,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingItemIndex = prev.findIndex(
         (item) =>
           item.product.id === newItem.product.id &&
-          item.grind_type === newItem.grind_type &&
           item.weight === newItem.weight
       );
 
@@ -42,24 +41,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const removeFromCart = (productId: string, grindType: string, weight: number) => {
+  const removeFromCart = (productId: string, weight: number) => {
     setCartItems((prev) =>
       prev.filter(
         (item) =>
-          !(item.product.id === productId && item.grind_type === grindType && item.weight === weight)
+          !(item.product.id === productId && item.weight === weight)
       )
     );
   };
 
-  const updateQuantity = (productId: string, grindType: string, weight: number, quantity: number) => {
+  const updateQuantity = (productId: string, weight: number, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId, grindType, weight);
+      removeFromCart(productId, weight);
       return;
     }
 
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId && item.grind_type === grindType && item.weight === weight
+        item.product.id === productId && item.weight === weight
           ? { ...item, quantity }
           : item
       )

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Check } from 'lucide-react';
 import Layout from '@/components/coffee/Layout';
-import { allProductSections, grindOptions as availableGrinds } from '@/data/productSections';
+import { allProductSections } from '@/data/productSections';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ const ProductDetail = () => {
   const variant = section?.variants.find(v => v.id === productId);
 
   const [selectedWeight, setSelectedWeight] = useState<number>(500);
-  const [selectedGrind, setSelectedGrind] = useState<string>('filter-grind');
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
 
@@ -49,9 +48,6 @@ const ProductDetail = () => {
   const calculatedPrice = selectedPackSize.price;
   const totalPrice = calculatedPrice * quantity;
 
-  // Get grind options
-  const grindOpts = section.grindOptions.length > 0 ? section.grindOptions : availableGrinds;
-
   // Get all images
   const images = variant.images && variant.images.length > 0 
     ? [variant.image, ...variant.images] 
@@ -71,7 +67,6 @@ const ProductDetail = () => {
       has_chicory: (variant.chicoryPercent || 0) > 0,
       origin: variant.origin || 'Coorg, Karnataka',
       flavor_notes: variant.flavorNotes,
-      available_grinds: grindOpts.map(g => g.name),
       available_weights: packSizes.map(ps => ps.weight),
       brewing_methods: section.brewingMethods || [],
       storage_tips: section.storageTips || '',
@@ -84,7 +79,6 @@ const ProductDetail = () => {
 
     addToCart({
       product,
-      grind_type: selectedGrind,
       weight: selectedWeight,
       quantity,
     });
@@ -226,28 +220,6 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Grind Selection */}
-              {grindOpts.length > 0 && section.category !== 'instant' && section.category !== 'tea' && section.category !== 'other' && (
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-foreground mb-3">Grind</p>
-                  <div className="flex flex-wrap gap-3">
-                    {grindOpts.map((grind) => (
-                      <button
-                        key={grind.id}
-                        onClick={() => setSelectedGrind(grind.id)}
-                        className={cn(
-                          "px-4 py-2 border text-sm transition-all",
-                          selectedGrind === grind.id
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        {grind.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Quantity & Add to Cart */}
               <div className="flex flex-col sm:flex-row gap-4 mb-8">

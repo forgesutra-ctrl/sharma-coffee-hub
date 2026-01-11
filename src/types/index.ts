@@ -22,7 +22,6 @@ export interface ProductV2 {
   status: 'active' | 'discontinued';
   has_chicory_variants: boolean;
   has_weight_variants: boolean;
-  has_grind_variants: boolean;
   meta_title: string | null;
   meta_description: string | null;
   tags: string[];
@@ -53,14 +52,6 @@ export interface ProductVariant {
   updated_at: string;
 }
 
-export interface VariantGrindType {
-  id: string;
-  variant_id: string;
-  grind_type: 'Whole Bean' | 'Coarse' | 'Medium' | 'Fine' | 'Extra Fine' | 'Powder';
-  is_default: boolean;
-  created_at: string;
-}
-
 export interface ProductWithVariants {
   product_id: string;
   product_name: string;
@@ -76,7 +67,6 @@ export interface ProductWithVariants {
   subscription_eligible: boolean;
   has_chicory_variants: boolean;
   has_weight_variants: boolean;
-  has_grind_variants: boolean;
   variant_id: string;
   sku: string;
   variant_name: string;
@@ -88,8 +78,6 @@ export interface ProductWithVariants {
   stock_quantity: number;
   variant_status: 'active' | 'out_of_stock' | 'discontinued';
   is_default: boolean;
-  available_grind_types: string[] | null;
-  default_grind_type: string | null;
 }
 
 export interface Product {
@@ -105,7 +93,6 @@ export interface Product {
   has_chicory: boolean;
   origin: string;
   flavor_notes: string[];
-  available_grinds: string[];
   available_weights: number[];
   brewing_methods: string[];
   storage_tips: string;
@@ -118,7 +105,6 @@ export interface Product {
 
 export interface CartItem {
   product: Product;
-  grind_type: string;
   weight: number;
   quantity: number;
   sku?: string;
@@ -202,7 +188,6 @@ export interface Subscription {
   customer_phone: string;
   product_id: string;
   product_name: string;
-  grind_type: string;
   weight: number;
   quantity: number;
   frequency: '15_days' | 'monthly' | '2_months';

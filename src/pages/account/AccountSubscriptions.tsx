@@ -234,7 +234,7 @@ export default function SubscriptionsPage() {
                       <div>
                         <CardTitle className="text-base">{subscription.product_name}</CardTitle>
                         <CardDescription>
-                          {subscription.weight}g • {subscription.grind_type}
+                          {subscription.weight}g
                         </CardDescription>
                       </div>
                     </div>

@@ -61,7 +61,6 @@ export default function ProductSectionCard({ section, reversed = false }: Produc
       has_chicory: (selectedVariant.chicoryPercent || 0) > 0,
       origin: selectedVariant.origin || 'Coorg, Karnataka',
       flavor_notes: selectedVariant.flavorNotes,
-      available_grinds: section.grindOptions.map(g => g.name),
       available_weights: section.packSizes.map(p => p.weight),
       brewing_methods: section.brewingMethods || [],
       storage_tips: section.storageTips || '',
@@ -74,7 +73,6 @@ export default function ProductSectionCard({ section, reversed = false }: Produc
 
     const cartItem: CartItem = {
       product,
-      grind_type: selectedGrind?.name || 'Whole Bean',
       weight: selectedPackSize?.weight || 250,
       quantity,
       variant_id: selectedVariant.id,
