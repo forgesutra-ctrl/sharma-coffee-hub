@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          is_positive: boolean
+          message_content: string
+          page_context: string | null
+          response_content: string
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_positive: boolean
+          message_content: string
+          page_context?: string | null
+          response_content: string
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_positive?: boolean
+          message_content?: string
+          page_context?: string | null
+          response_content?: string
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       customer_addresses: {
         Row: {
           address_line1: string
