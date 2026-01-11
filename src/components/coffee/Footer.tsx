@@ -170,7 +170,7 @@ export default function Footer() {
                 { name: 'Brewing Guide', link: '/brewing-guide' },
                 { name: 'Our Stores', link: '/processing' },
                 { name: 'Contact Us', link: '/contact' },
-                { name: 'Wholesale', link: '/contact' },
+                { name: 'Wholesale', link: '/wholesale' },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
