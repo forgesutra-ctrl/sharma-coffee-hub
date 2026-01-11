@@ -19,6 +19,11 @@ import BrewingGuide from "./pages/BrewingGuide";
 import Contact from "./pages/Contact";
 import Processing from "./pages/Processing";
 import Wholesale from "./pages/Wholesale";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import RefundPolicy from "./pages/RefundPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import FAQ from "./pages/FAQ";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AccountLayout from "./components/account/AccountLayout";
 import AccountDashboard from "./pages/account/AccountDashboard";
@@ -58,6 +63,11 @@ const App = () => (
               <Route path="/processing" element={<Processing />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/wholesale" element={<Wholesale />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/faq" element={<FAQ />} />
               
               {/* Protected Routes */}
               <Route path="/checkout" element={

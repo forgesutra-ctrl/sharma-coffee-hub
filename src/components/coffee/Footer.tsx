@@ -193,10 +193,10 @@ export default function Footer() {
             <ul className="space-y-3">
               {[
                 { name: 'Track Order', link: '/account' },
-                { name: 'Shipping Info', link: '#' },
-                { name: 'Returns', link: '#' },
-                { name: 'FAQ', link: '#' },
-                { name: 'Privacy Policy', link: '#' },
+                { name: 'Shipping Info', link: '/shipping-policy' },
+                { name: 'Returns & Refunds', link: '/refund-policy' },
+                { name: 'FAQ', link: '/faq' },
+                { name: 'Privacy Policy', link: '/privacy-policy' },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
@@ -245,9 +245,9 @@ export default function Footer() {
             © {currentYear} Sharma Coffee Works. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-white/40">
-            <Link to="#" className="hover:text-coffee-gold transition-colors">Privacy Policy</Link>
-            <Link to="#" className="hover:text-coffee-gold transition-colors">Terms of Service</Link>
-            <Link to="#" className="hover:text-coffee-gold transition-colors">Refund Policy</Link>
+            <Link to="/privacy-policy" className="hover:text-coffee-gold transition-colors">Privacy Policy</Link>
+            <Link to="/terms-of-service" className="hover:text-coffee-gold transition-colors">Terms of Service</Link>
+            <Link to="/refund-policy" className="hover:text-coffee-gold transition-colors">Refund Policy</Link>
             <Link to="/admin/login" className="hover:text-coffee-gold transition-colors">Admin</Link>
           </div>
         </div>
