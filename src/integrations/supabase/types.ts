@@ -650,6 +650,54 @@ export type Database = {
         }
         Relationships: []
       }
+      wholesale_inquiries: {
+        Row: {
+          business_name: string
+          business_type: string
+          contact_person: string
+          created_at: string
+          delivery_location: string | null
+          email: string
+          estimated_volume: string | null
+          id: string
+          message: string | null
+          phone: string
+          products_interested: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_name: string
+          business_type: string
+          contact_person: string
+          created_at?: string
+          delivery_location?: string | null
+          email: string
+          estimated_volume?: string | null
+          id?: string
+          message?: string | null
+          phone: string
+          products_interested?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_name?: string
+          business_type?: string
+          contact_person?: string
+          created_at?: string
+          delivery_location?: string | null
+          email?: string
+          estimated_volume?: string | null
+          id?: string
+          message?: string | null
+          phone?: string
+          products_interested?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

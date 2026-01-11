@@ -6,6 +6,7 @@ import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
 import CategoryGrid from '@/components/coffee/CategoryGrid';
 import TestimonialsCarousel from '@/components/coffee/TestimonialsCarousel';
 import StorySection from '@/components/coffee/StorySection';
+import InstagramFeed from '@/components/coffee/InstagramFeed';
 import { goldBlendSection, specialtyBlendsSection, categoryCards } from '@/data/productSections';
 import { mockTestimonials, mockProducts } from '@/data/mockData';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
@@ -144,6 +145,9 @@ export default function Homepage() {
           />
         </div>
       </section>
+
+      {/* Instagram Feed */}
+      <InstagramFeed />
 
       {/* Final CTA */}
       <section className="relative py-32 overflow-hidden">

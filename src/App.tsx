@@ -17,6 +17,7 @@ import About from "./pages/About";
 import BrewingGuide from "./pages/BrewingGuide";
 import Contact from "./pages/Contact";
 import Processing from "./pages/Processing";
+import Wholesale from "./pages/Wholesale";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AccountLayout from "./components/account/AccountLayout";
 import AccountDashboard from "./pages/account/AccountDashboard";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/brewing-guide" element={<BrewingGuide />} />
               <Route path="/processing" element={<Processing />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/wholesale" element={<Wholesale />} />
               
               {/* Protected Routes */}
               <Route path="/checkout" element={
