@@ -2,7 +2,7 @@ import React from 'react';
 import Navigation from './Navigation';
 import Footer from './Footer';
 import AnnouncementBar from './AnnouncementBar';
-import WhatsAppButton from './WhatsAppButton';
+import AIChatBot from './AIChatBot';
 import BackToTop from './BackToTop';
 import CookieConsent from './CookieConsent';
 
@@ -20,7 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showAnnouncement = true }) =>
         {children}
       </main>
       <Footer />
-      <WhatsAppButton />
+      <AIChatBot />
       <BackToTop />
       <CookieConsent />
     </div>
