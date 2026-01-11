@@ -21,7 +21,11 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const inStock = product.inStock !== false;
+
+  // Navigate to product detail page using slug
+  const productUrl = `/shop/${product.slug}`;
 
   return (
     <div 
@@ -31,13 +35,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     >
       {/* Image Container */}
       <Link 
-        to={`/product/${product.categorySlug}/${product.id}`} 
+        to={productUrl}
         className="block relative overflow-hidden bg-card aspect-square"
       >
         {/* Primary Image */}
         <img
-          src={product.image}
+          src={imageError ? '/placeholder.svg' : product.image}
           alt={product.name}
+          onError={() => setImageError(true)}
           className={cn(
             "w-full h-full object-cover transition-all duration-500",
             isHovered && product.secondaryImage ? "opacity-0" : "opacity-100"
@@ -61,7 +66,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Add to cart logic here
+            // Navigate to product page for variant selection
+            window.location.href = productUrl;
           }}
           disabled={!inStock}
           className={cn(
@@ -104,7 +110,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Product Info */}
       <div className="pt-4 text-center">
         <Link 
-          to={`/product/${product.categorySlug}/${product.id}`}
+          to={productUrl}
           className="block"
         >
           <h3 className="font-serif text-base md:text-lg font-medium text-foreground line-clamp-2 hover:text-primary transition-colors">
@@ -115,7 +121,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <p className="mt-2 text-sm text-muted-foreground">
           {inStock ? (
             <>
-              <span className="text-foreground">from ₹ {product.price.toFixed(2)}</span>
+              <span className="text-foreground font-medium">from ₹{product.price.toLocaleString()}</span>
             </>
           ) : (
             <span className="text-muted-foreground">Sold Out</span>
