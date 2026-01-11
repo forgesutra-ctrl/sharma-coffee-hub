@@ -1,35 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, RefreshCw, Award } from 'lucide-react';
+import { ArrowRight, Truck, RefreshCw, Award, Loader2 } from 'lucide-react';
 import HeroVideo from '@/components/coffee/HeroVideo';
-import ProductSectionCard from '@/components/coffee/ProductSectionCard';
 import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
 import CategoryGrid from '@/components/coffee/CategoryGrid';
 import TestimonialsCarousel from '@/components/coffee/TestimonialsCarousel';
 import StorySection from '@/components/coffee/StorySection';
 import InstagramFeed from '@/components/coffee/InstagramFeed';
-import { goldBlendSection, specialtyBlendsSection, categoryCards } from '@/data/productSections';
-import { mockTestimonials, mockProducts } from '@/data/mockData';
+import { mockTestimonials } from '@/data/mockData';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
 import coffeeBeans from '@/assets/coffee-beans-roasting.jpg';
-
-// Transform mock products to best sellers format
-const bestSellers = mockProducts.map(product => ({
-  id: product.id,
-  name: product.name,
-  price: product.price,
-  image: product.image_url,
-  hoverImage: product.images && product.images[1] ? product.images[1] : undefined,
-  href: `/shop/${product.slug}`,
-  badge: product.is_featured ? 'Best Seller' : undefined,
-}));
-
-// Transform category cards for CategoryGrid
-const categories = categoryCards.map(cat => ({
-  id: cat.id,
-  title: cat.title,
-  image: cat.image,
-  href: cat.link,
-}));
+import { useFeaturedProducts, useProducts, getCategories } from '@/hooks/useProducts';
 
 // Transform testimonials for carousel
 const testimonials = mockTestimonials.map(t => ({
@@ -41,6 +21,30 @@ const testimonials = mockTestimonials.map(t => ({
 }));
 
 export default function Homepage() {
+  const { data: featuredProducts, isLoading: loadingFeatured } = useFeaturedProducts();
+  const { data: allProducts, isLoading: loadingProducts } = useProducts();
+
+  // Transform featured products for BestSellersCarousel
+  const bestSellers = featuredProducts?.map(product => ({
+    id: product.productId,
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    hoverImage: undefined, // Could add secondary images later
+    href: `/shop/${product.slug}`,
+    badge: product.isFeatured ? 'Best Seller' : undefined,
+  })) || [];
+
+  // Get unique categories for CategoryGrid
+  const categories = allProducts 
+    ? getCategories(allProducts).slice(0, 4).map(cat => ({
+        id: cat.id,
+        title: cat.name,
+        image: allProducts.find(p => p.category === cat.name)?.image_url || '/placeholder.svg',
+        href: `/shop?category=${encodeURIComponent(cat.id)}`,
+      }))
+    : [];
+
   return (
     <div className="bg-background">
       {/* Hero Video Section */}
@@ -48,7 +52,7 @@ export default function Homepage() {
         videoSrc={heroVideo}
         posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
         title="A SIP OF HOME"
-        subtitle="Crafted with Tradition Since 1983"
+        subtitle="Crafted with Tradition Since 1987"
         ctaText="Shop Now"
         ctaLink="/shop"
         secondaryCtaText="Our Story"
@@ -67,7 +71,7 @@ export default function Homepage() {
               </div>
               <div>
                 <p className="font-medium text-foreground">Free Shipping</p>
-                <p className="text-sm text-muted-foreground">On orders over ₹999</p>
+                <p className="text-sm text-muted-foreground">On orders over ₹499</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
@@ -76,7 +80,7 @@ export default function Homepage() {
               </div>
               <div>
                 <p className="font-medium text-foreground">Easy Returns</p>
-                <p className="text-sm text-muted-foreground">30-day hassle-free returns</p>
+                <p className="text-sm text-muted-foreground">7-day hassle-free returns</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
@@ -85,7 +89,7 @@ export default function Homepage() {
               </div>
               <div>
                 <p className="font-medium text-foreground">Premium Quality</p>
-                <p className="text-sm text-muted-foreground">Since 1983</p>
+                <p className="text-sm text-muted-foreground">Since 1987</p>
               </div>
             </div>
           </div>
@@ -95,37 +99,46 @@ export default function Homepage() {
       {/* Best Sellers Carousel */}
       <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4">
-          <BestSellersCarousel
-            products={bestSellers}
-            title="Best Sellers"
-            viewAllLink="/shop"
-          />
+          {loadingFeatured ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : bestSellers.length > 0 ? (
+            <BestSellersCarousel
+              products={bestSellers}
+              title="Best Sellers"
+              viewAllLink="/shop"
+            />
+          ) : (
+            <div className="text-center py-12">
+              <h2 className="font-display text-4xl md:text-5xl font-semibold text-foreground mb-4">
+                Best Sellers
+              </h2>
+              <p className="text-muted-foreground">Check back soon for our featured products!</p>
+            </div>
+          )}
         </div>
       </section>
-
-      {/* Filter Coffee Blends Section */}
-      <ProductSectionCard section={goldBlendSection} />
 
       {/* Shop by Category */}
-      <section className="py-20 bg-secondary/50">
-        <div className="max-w-7xl mx-auto px-4">
-          <CategoryGrid
-            categories={categories}
-            title="Shop by Category"
-            columns={4}
-          />
-        </div>
-      </section>
-
-      {/* Specialty Blends Section */}
-      <ProductSectionCard section={specialtyBlendsSection} reversed />
+      {categories.length > 0 && (
+        <section className="py-20 bg-secondary/50">
+          <div className="max-w-7xl mx-auto px-4">
+            <CategoryGrid
+              categories={categories}
+              title="Shop by Category"
+              columns={4}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Story Section */}
       <StorySection
         title="Four Decades of Passion"
         subtitle="Our Heritage"
         content={[
-          "Since 1983, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
+          "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
           "Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, and blended with the finest ghee-roasted chicory from Jamnagar."
         ]}
         image={coffeeBeans}
