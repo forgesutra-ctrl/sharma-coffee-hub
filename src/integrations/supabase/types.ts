@@ -134,7 +134,6 @@ export type Database = {
       order_items: {
         Row: {
           created_at: string
-          grind_type: string
           id: string
           order_id: string
           product_id: string | null
@@ -147,7 +146,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          grind_type: string
           id?: string
           order_id: string
           product_id?: string | null
@@ -160,7 +158,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          grind_type?: string
           id?: string
           order_id?: string
           product_id?: string | null
@@ -291,7 +288,6 @@ export type Database = {
         Row: {
           compare_at_price: number | null
           created_at: string
-          grind_types: string[] | null
           id: string
           price: number
           product_id: string
@@ -302,7 +298,6 @@ export type Database = {
         Insert: {
           compare_at_price?: number | null
           created_at?: string
-          grind_types?: string[] | null
           id?: string
           price: number
           product_id: string
@@ -313,7 +308,6 @@ export type Database = {
         Update: {
           compare_at_price?: number | null
           created_at?: string
-          grind_types?: string[] | null
           id?: string
           price?: number
           product_id?: string
@@ -562,7 +556,6 @@ export type Database = {
           created_at: string
           delivery_day: number | null
           frequency: string
-          grind_type: string
           id: string
           next_delivery_date: string | null
           product_id: string | null
@@ -580,7 +573,6 @@ export type Database = {
           created_at?: string
           delivery_day?: number | null
           frequency: string
-          grind_type: string
           id?: string
           next_delivery_date?: string | null
           product_id?: string | null
@@ -598,7 +590,6 @@ export type Database = {
           created_at?: string
           delivery_day?: number | null
           frequency?: string
-          grind_type?: string
           id?: string
           next_delivery_date?: string | null
           product_id?: string | null
