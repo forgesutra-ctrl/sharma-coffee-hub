@@ -50,7 +50,6 @@ export default function OtherProductsSection({ section }: OtherProductsSectionPr
       has_chicory: false,
       origin: variant.origin || 'Coorg, Karnataka',
       flavor_notes: variant.flavorNotes,
-      available_grinds: [],
       available_weights: [],
       brewing_methods: [],
       storage_tips: '',
@@ -63,7 +62,6 @@ export default function OtherProductsSection({ section }: OtherProductsSectionPr
 
     const cartItem: CartItem = {
       product,
-      grind_type: 'N/A',
       weight: 0,
       quantity: getQuantity(variant.id),
       variant_id: variant.id,

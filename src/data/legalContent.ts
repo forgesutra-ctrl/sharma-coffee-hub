@@ -294,15 +294,11 @@ export const faqContent = {
   lastUpdated: "January 2026",
   categories: [
     {
-      name: "Products & Grinding",
+      name: "Products",
       questions: [
         {
-          question: "What grind options are available?",
-          answer: "We offer three grind options: Whole Bean (for home grinding), Filter Grind (coarse, ideal for South Indian filter coffee), and Espresso Grind (fine, for espresso machines and moka pots). If unsure, Filter Grind works for most traditional brewing methods."
-        },
-        {
           question: "How do I choose the right coffee for me?",
-          answer: "Our Gold Blend is perfect for traditional filter coffee lovers. Premium Blend offers a bolder taste. Specialty Blend is for those who prefer single-origin flavours. Royal Caffeine has higher caffeine content for extra energy. Check our product descriptions for detailed flavour notes."
+          answer: "Our Gold Blend is perfect for traditional filter coffee lovers. Premium Blend offers a bolder taste. Specialty Blend is for those who prefer single-origin flavours. Royal Caffeine has higher caffeine content with no chicory. Check our product descriptions for detailed flavour notes."
         },
         {
           question: "How long does coffee stay fresh?",
@@ -361,11 +357,11 @@ export const faqContent = {
       questions: [
         {
           question: "How does the subscription work?",
-          answer: "Choose your preferred coffee, grind, and frequency (weekly, bi-weekly, or monthly). Your subscription renews automatically, and you can pause, skip, or cancel anytime from your account dashboard."
+          answer: "Choose your preferred coffee, weight, and frequency (weekly, bi-weekly, or monthly). Your subscription renews automatically, and you can pause, skip, or cancel anytime from your account dashboard."
         },
         {
           question: "Can I change my subscription?",
-          answer: "Yes! You can change your coffee, grind type, quantity, delivery address, or frequency anytime. Changes made before the billing date apply to the next delivery."
+          answer: "Yes! You can change your coffee, quantity, delivery address, or frequency anytime. Changes made before the billing date apply to the next delivery."
         },
         {
           question: "Is there a discount for subscribers?",

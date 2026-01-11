@@ -41,7 +41,6 @@ interface ProductWithVariants {
     weight: number;
     price: number;
     stock_quantity: number | null;
-    grind_types: string[] | null;
   }[];
 }
 
@@ -65,7 +64,6 @@ interface OrderItem {
   id: string;
   product_name: string;
   weight: number;
-  grind_type: string;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -154,7 +152,7 @@ export default function OperationsPage() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, slug, category, is_active, product_variants(id, weight, price, stock_quantity, grind_types)')
+        .select('id, name, slug, category, is_active, product_variants(id, weight, price, stock_quantity)')
         .eq('is_active', true)
         .order('name');
 
@@ -535,7 +533,7 @@ export default function OperationsPage() {
                             </TableCell>
                             <TableCell>{variant.weight}g @ ₹{Number(variant.price).toLocaleString()}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">
-                              {variant.grind_types?.join(', ') || 'N/A'}
+                              -
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge variant={isLowStock ? 'destructive' : 'outline'}>
@@ -925,7 +923,7 @@ export default function OperationsPage() {
                       <div>
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.weight}g | {item.grind_type} | Qty: {item.quantity}
+                          {item.weight}g | Qty: {item.quantity}
                         </p>
                       </div>
                       <p className="font-semibold">₹{Number(item.total_price).toLocaleString()}</p>

@@ -308,7 +308,7 @@ export default function OrdersPage() {
                     <div>
                       <p>{item.product_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.weight}g • {item.grind_type} • Qty: {item.quantity}
+                        {item.weight}g • Qty: {item.quantity}
                       </p>
                     </div>
                     <span className="font-medium">₹{item.total_price}</span>

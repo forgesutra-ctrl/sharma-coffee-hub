@@ -57,13 +57,13 @@ const Cart = () => {
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item) => (
                 <div
-                  key={`${item.product.id}-${item.grind_type}-${item.weight}`}
+                  key={`${item.product.id}-${item.weight}`}
                   className="bg-card border border-border rounded-xl p-4 flex gap-4"
                 >
                   {/* Product Image */}
                   <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     <img
-                      src={item.product.images?.[0] || ''}
+                      src={item.product.image_url || item.product.images?.[0] || ''}
                       alt={item.product.name}
                       className="w-full h-full object-cover"
                     />
@@ -75,7 +75,7 @@ const Cart = () => {
                       {item.product.name}
                     </h3>
                     <div className="text-sm text-muted-foreground mt-1 space-y-0.5">
-                      <p>{item.weight}g • {item.grind_type}</p>
+                      <p>{item.weight >= 1000 ? `${item.weight / 1000} kg` : `${item.weight}g`}</p>
                     </div>
                     <p className="text-primary font-semibold mt-2">
                       ₹{item.product.price}
@@ -85,7 +85,7 @@ const Cart = () => {
                   {/* Quantity Controls */}
                   <div className="flex flex-col items-end justify-between">
                     <button
-                      onClick={() => removeFromCart(item.product.id, item.grind_type, item.weight)}
+                      onClick={() => removeFromCart(item.product.id, item.weight)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -93,7 +93,7 @@ const Cart = () => {
 
                     <div className="flex items-center gap-2 bg-muted rounded-lg">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.grind_type, item.weight, Math.max(1, item.quantity - 1))}
+                        onClick={() => updateQuantity(item.product.id, item.weight, Math.max(1, item.quantity - 1))}
                         className="p-2 hover:bg-background/50 rounded-l-lg transition-colors"
                         disabled={item.quantity <= 1}
                       >
@@ -101,7 +101,7 @@ const Cart = () => {
                       </button>
                       <span className="w-8 text-center font-medium">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.grind_type, item.weight, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.weight, item.quantity + 1)}
                         className="p-2 hover:bg-background/50 rounded-r-lg transition-colors"
                       >
                         <Plus className="w-4 h-4" />
