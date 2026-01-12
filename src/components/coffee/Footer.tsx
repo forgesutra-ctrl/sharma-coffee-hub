@@ -226,13 +226,13 @@ export default function Footer() {
                 <span>Sharma Coffee Works, Near Bus Stand, Madikeri, Coorg, Karnataka 571201</span>
               </li>
               <li>
-                <a href="tel:+919876543210" className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors">+91 87629 88145<Phone className="w-4 h-4 text-coffee-gold flex-shrink-0" />
-                  +91 98765 43210
+                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors" href="tel:+918762988145">​<Phone className="w-4 h-4 text-coffee-gold flex-shrink-0" />
+                  ​+91 87629 88145
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@sharmacoffee.com" className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors">ask@sharmacoffeeworks.com<Mail className="w-4 h-4 text-coffee-gold flex-shrink-0" />
-                  hello@sharmacoffee.com
+                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors" href="mailto:ask@sharmacoffeeworks.com">​<Mail className="w-4 h-4 text-coffee-gold flex-shrink-0" />
+                  ask@sharmacoffeeworks.com
                 </a>
               </li>
             </ul>
