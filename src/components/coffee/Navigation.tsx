@@ -168,7 +168,7 @@ export default function Navigation() {
           {/* Contact - Right */}
           <div className="hidden md:flex items-center gap-2 text-xs text-white/70">
             <Phone className="w-3 h-3" />
-            <span>+91 98765 43210</span>
+            <span>+91-8762988145</span>
           </div>
         </div>
       </div>
