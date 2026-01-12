@@ -35,6 +35,7 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
 import OrdersPage from "./pages/admin/OrdersPage";
 import ProductsPage from "./pages/admin/ProductsPage";
+import CategoriesPage from "./pages/admin/CategoriesPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import ShippingPage from "./pages/admin/ShippingPage";
 import OperationsPage from "./pages/admin/OperationsPage";
@@ -97,6 +98,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="orders" element={<OrdersPage />} />
                 <Route path="products" element={<ProductsPage />} />
+                <Route path="categories" element={<CategoriesPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="shipping" element={<ShippingPage />} />
                 <Route path="operations" element={<OperationsPage />} />

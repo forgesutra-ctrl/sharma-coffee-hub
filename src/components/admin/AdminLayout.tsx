@@ -8,7 +8,8 @@ import {
   Truck, 
   Wrench,
   ChevronLeft,
-  LogOut
+  LogOut,
+  FolderTree
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +19,7 @@ const sidebarLinks = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
   { name: 'Products', href: '/admin/products', icon: Package },
+  { name: 'Categories', href: '/admin/categories', icon: FolderTree },
   { name: 'Customers', href: '/admin/customers', icon: Users },
   { name: 'Shipping', href: '/admin/shipping', icon: Truck },
   { name: 'Operations', href: '/admin/operations', icon: Wrench },
