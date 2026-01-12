@@ -4,38 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
+import ProductEditor from '@/components/admin/ProductEditor';
 
 type Product = Tables<'products'>;
-type ProductVariant = Tables<'product_variants'>;
 
 interface ProductWithVariants extends Product {
-  product_variants?: ProductVariant[];
+  product_variants?: { id: string; price: number }[];
+  categories?: { name: string } | null;
 }
+
+const ITEMS_PER_PAGE = 10;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductWithVariants | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    description: '',
-    category: 'Premium',
-    origin: '',
-    roast_level: '',
-    is_active: true,
-    is_featured: false,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -45,8 +36,8 @@ export default function ProductsPage() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*, product_variants(*)')
-        .order('created_at', { ascending: false });
+        .select('*, product_variants(id, price), categories(name)')
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
       setProducts(data || []);
@@ -63,72 +54,35 @@ export default function ProductsPage() {
     product.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const openAddDialog = () => {
-    setEditingProduct(null);
-    setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      category: 'Premium',
-      origin: '',
-      roast_level: '',
-      is_active: true,
-      is_featured: false,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (product: ProductWithVariants) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      slug: product.slug,
-      description: product.description || '',
-      category: product.category,
-      origin: product.origin || '',
-      roast_level: product.roast_level || '',
-      is_active: product.is_active ?? true,
-      is_featured: product.is_featured ?? false,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const productData = {
-        ...formData,
-        slug: formData.slug || generateSlug(formData.name),
-      };
-
-      if (editingProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProduct.id);
-
-        if (error) throw error;
-        toast.success('Product updated');
-      } else {
-        const { error } = await supabase.from('products').insert(productData);
-        if (error) throw error;
-        toast.success('Product created');
-      }
-
-      setIsDialogOpen(false);
-      fetchProducts();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save product');
-    }
-  };
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const toggleProductStatus = async (product: Product, field: 'is_active' | 'is_featured') => {
+    // Validation: can't activate without variants
+    if (field === 'is_active' && !product.is_active) {
+      const { data: variants } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('product_id', product.id)
+        .limit(1);
+
+      if (!variants || variants.length === 0) {
+        toast.error('Add at least one variant before activating');
+        return;
+      }
+    }
+
+    // Validation: can't feature without image
+    if (field === 'is_featured' && !product.is_featured) {
+      if (!product.image_url) {
+        toast.error('Add at least one image before featuring');
+        return;
+      }
+    }
+
     try {
       const { error } = await supabase
         .from('products')
@@ -143,23 +97,21 @@ export default function ProductsPage() {
     }
   };
 
-  const deleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-
-    try {
-      const { error } = await supabase.from('products').delete().eq('id', productId);
-      if (error) throw error;
-      setProducts(products.filter((p) => p.id !== productId));
-      toast.success('Product deleted');
-    } catch (error) {
-      toast.error('Failed to delete product');
-    }
+  const handleCloseEditor = () => {
+    setEditingProductId(null);
+    setIsCreating(false);
+    fetchProducts();
   };
 
-  const getLowestPrice = (variants?: ProductVariant[]) => {
-    if (!variants || variants.length === 0) return null;
-    return Math.min(...variants.map((v) => Number(v.price)));
-  };
+  // Show editor if creating or editing
+  if (isCreating || editingProductId) {
+    return (
+      <ProductEditor
+        productId={editingProductId || undefined}
+        onClose={handleCloseEditor}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -173,7 +125,7 @@ export default function ProductsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Products</h1>
-        <Button onClick={openAddDialog}>
+        <Button onClick={() => setIsCreating(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Product
         </Button>
@@ -185,7 +137,10 @@ export default function ProductsPage() {
         <Input
           placeholder="Search products..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           className="pl-10"
         />
       </div>
@@ -197,170 +152,103 @@ export default function ProductsPage() {
           <CardDescription>{filteredProducts.length} products</CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredProducts.length === 0 ? (
+          {paginatedProducts.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No products found</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Price (from)</TableHead>
-                  <TableHead>Variants</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Featured</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.slug}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getLowestPrice(product.product_variants)
-                        ? `₹${getLowestPrice(product.product_variants)}`
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>{product.product_variants?.length || 0}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={product.is_active ?? true}
-                        onCheckedChange={() => toggleProductStatus(product, 'is_active')}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={product.is_featured ?? false}
-                        onCheckedChange={() => toggleProductStatus(product, 'is_featured')}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(product)}>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead>Featured</TableHead>
+                    <TableHead>Updated At</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {product.image_url && (
+                            <img
+                              src={product.image_url}
+                              alt=""
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                          )}
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">{product.slug}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {product.categories?.name || product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={product.is_active ?? true}
+                          onCheckedChange={() => toggleProductStatus(product, 'is_active')}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={product.is_featured ?? false}
+                          onCheckedChange={() => toggleProductStatus(product, 'is_featured')}
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(product.updated_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingProductId(product.id)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteProduct(product.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
-
-      {/* Add/Edit Product Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
-            <DialogDescription>
-              {editingProduct ? 'Update product details' : 'Create a new product'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Product Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Premium Blend"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug (URL)</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="premium-blend"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="A rich, full-bodied blend..."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="Premium"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="origin">Origin</Label>
-                <Input
-                  id="origin"
-                  value={formData.origin}
-                  onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                  placeholder="Coorg, Karnataka"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="roast_level">Roast Level</Label>
-              <Input
-                id="roast_level"
-                value={formData.roast_level}
-                onChange={(e) => setFormData({ ...formData, roast_level: e.target.value })}
-                placeholder="Medium-Dark"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label>Active</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.is_featured}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
-                />
-                <Label>Featured</Label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingProduct ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
