@@ -268,6 +268,9 @@ export type Database = {
       }
       orders: {
         Row: {
+          cod_advance_paid: number | null
+          cod_balance: number | null
+          cod_handling_fee: number | null
           created_at: string
           discount_amount: number | null
           guest_session_id: string | null
@@ -276,8 +279,14 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_status: string | null
+          payment_type: string | null
+          pincode: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
           shipping_address: Json | null
           shipping_amount: number | null
+          shipping_charge: number | null
+          shipping_region: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
           total_amount: number
@@ -285,6 +294,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cod_advance_paid?: number | null
+          cod_balance?: number | null
+          cod_handling_fee?: number | null
           created_at?: string
           discount_amount?: number | null
           guest_session_id?: string | null
@@ -293,8 +305,14 @@ export type Database = {
           order_number: string
           payment_method?: string | null
           payment_status?: string | null
+          payment_type?: string | null
+          pincode?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           shipping_address?: Json | null
           shipping_amount?: number | null
+          shipping_charge?: number | null
+          shipping_region?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
           total_amount: number
@@ -302,6 +320,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cod_advance_paid?: number | null
+          cod_balance?: number | null
+          cod_handling_fee?: number | null
           created_at?: string
           discount_amount?: number | null
           guest_session_id?: string | null
@@ -310,8 +331,14 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_status?: string | null
+          payment_type?: string | null
+          pincode?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           shipping_address?: Json | null
           shipping_amount?: number | null
+          shipping_charge?: number | null
+          shipping_region?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
           total_amount?: number
@@ -395,6 +422,7 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          cod_enabled: boolean | null
           compare_at_price: number | null
           created_at: string
           id: string
@@ -405,6 +433,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          cod_enabled?: boolean | null
           compare_at_price?: number | null
           created_at?: string
           id?: string
@@ -415,6 +444,7 @@ export type Database = {
           weight: number
         }
         Update: {
+          cod_enabled?: boolean | null
           compare_at_price?: number | null
           created_at?: string
           id?: string

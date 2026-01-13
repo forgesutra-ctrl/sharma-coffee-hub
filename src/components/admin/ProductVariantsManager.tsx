@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -16,6 +17,7 @@ interface ProductVariant {
   price: number;
   compare_at_price: number | null;
   stock_quantity: number;
+  cod_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +36,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
     price: '',
     compare_at_price: '',
     stock_quantity: '0',
+    cod_enabled: true,
   });
 
   useEffect(() => {
@@ -49,7 +52,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
         .order('weight', { ascending: true });
 
       if (error) throw error;
-      setVariants(data || []);
+      setVariants((data as ProductVariant[]) || []);
     } catch (error) {
       console.error('Error fetching variants:', error);
       toast.error('Failed to load variants');
@@ -65,6 +68,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
       price: '',
       compare_at_price: '',
       stock_quantity: '0',
+      cod_enabled: true,
     });
     setIsDialogOpen(true);
   };
@@ -76,6 +80,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
       price: variant.price.toString(),
       compare_at_price: variant.compare_at_price?.toString() || '',
       stock_quantity: variant.stock_quantity.toString(),
+      cod_enabled: variant.cod_enabled ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -100,6 +105,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
         price,
         compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
         stock_quantity: parseInt(formData.stock_quantity) || 0,
+        cod_enabled: formData.cod_enabled,
       };
 
       if (editingVariant) {
@@ -118,8 +124,9 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
 
       setIsDialogOpen(false);
       fetchVariants();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save variant');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to save variant';
+      toast.error(message);
     }
   };
 
@@ -137,6 +144,23 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
       toast.success('Variant deleted');
     } catch (error) {
       toast.error('Failed to delete variant');
+    }
+  };
+
+  const toggleCod = async (variant: ProductVariant) => {
+    try {
+      const { error } = await supabase
+        .from('product_variants')
+        .update({ cod_enabled: !variant.cod_enabled })
+        .eq('id', variant.id);
+
+      if (error) throw error;
+      setVariants(variants.map(v => 
+        v.id === variant.id ? { ...v, cod_enabled: !v.cod_enabled } : v
+      ));
+      toast.success(`COD ${!variant.cod_enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      toast.error('Failed to update COD status');
     }
   };
 
@@ -175,6 +199,7 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
                   <TableHead>Price</TableHead>
                   <TableHead>Compare Price</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead>COD</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -187,6 +212,12 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
                       {variant.compare_at_price ? `₹${variant.compare_at_price}` : '—'}
                     </TableCell>
                     <TableCell>{variant.stock_quantity}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={variant.cod_enabled ?? true}
+                        onCheckedChange={() => toggleCod(variant)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openEditDialog(variant)}>
@@ -258,6 +289,20 @@ export default function ProductVariantsManager({ productId }: ProductVariantsMan
                   placeholder="100"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+              <div>
+                <Label htmlFor="cod_enabled" className="font-medium">COD Enabled</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow Cash on Delivery for this variant
+                </p>
+              </div>
+              <Switch
+                id="cod_enabled"
+                checked={formData.cod_enabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, cod_enabled: checked })}
+              />
             </div>
           </div>
 

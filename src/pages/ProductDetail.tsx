@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2 } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin } from 'lucide-react';
 import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,11 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Product } from '@/types';
 import { useProducts, DatabaseProduct } from '@/hooks/useProducts';
+import { PincodeDialog } from '@/components/PincodeDialog';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string; categorySlug?: string; productId?: string }>();
-  const { addToCart } = useCart();
+  const { addToCart, shippingInfo, setShippingPincode, getShippingCharge } = useCart();
 
   const { data: products, isLoading, error } = useProducts();
 
@@ -23,6 +24,8 @@ const ProductDetail = () => {
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [imageError, setImageError] = useState(false);
+  const [showPincodeDialog, setShowPincodeDialog] = useState(false);
+  const [pendingAddToCart, setPendingAddToCart] = useState(false);
 
   // Set default selected weight when product loads
   if (product && variants.length > 0 && selectedWeight === null) {
@@ -84,7 +87,7 @@ const ProductDetail = () => {
     ?.filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4) || [];
 
-  const handleAddToCart = () => {
+  const executeAddToCart = () => {
     if (!selectedVariant) return;
 
     const cartProduct: Product = {
@@ -117,6 +120,29 @@ const ProductDetail = () => {
       variant_id: selectedVariant.id,
     });
     toast.success(`${product.name} added to cart`);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedVariant) return;
+
+    // Check if PIN code is already validated
+    if (!shippingInfo) {
+      setPendingAddToCart(true);
+      setShowPincodeDialog(true);
+      return;
+    }
+
+    executeAddToCart();
+  };
+
+  const handlePincodeValidated = (pincode: string, shippingCharge: number, region: string) => {
+    setShippingPincode(pincode);
+    
+    // If add to cart was pending, execute it now
+    if (pendingAddToCart) {
+      setPendingAddToCart(false);
+      executeAddToCart();
+    }
   };
 
   return (
@@ -228,6 +254,38 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* PIN Code Check */}
+              <div className="mb-6 p-4 bg-muted/20 border border-border/50">
+                {shippingInfo ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span>Delivering to <strong>{shippingInfo.pincode}</strong></span>
+                      <span className="text-muted-foreground">({shippingInfo.region})</span>
+                    </div>
+                    <button
+                      onClick={() => setShowPincodeDialog(true)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowPincodeDialog(true)}
+                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Check delivery availability
+                  </button>
+                )}
+                {shippingInfo && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Shipping: ₹{getShippingCharge()}
+                  </p>
+                )}
+              </div>
 
               {/* Size/Weight Selection */}
               {variants.length > 0 && (
@@ -363,6 +421,14 @@ const ProductDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Pincode Dialog */}
+      <PincodeDialog
+        open={showPincodeDialog}
+        onOpenChange={setShowPincodeDialog}
+        onPincodeValidated={handlePincodeValidated}
+        currentPincode={shippingInfo?.pincode}
+      />
     </Layout>
   );
 };
