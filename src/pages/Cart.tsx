@@ -3,19 +3,41 @@ import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Truck } from 'lucide-react';
+import { useState } from 'react';
+import { PincodeDialog } from '@/components/PincodeDialog';
 
 const Cart = () => {
-  const { cartItems, updateQuantity, removeFromCart, getCartTotal, clearCart } = useCart();
+  const { 
+    cartItems, 
+    updateQuantity, 
+    removeFromCart, 
+    getCartTotal, 
+    clearCart,
+    shippingInfo,
+    setShippingPincode,
+    getShippingCharge,
+    getGrandTotal,
+  } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showPincodeDialog, setShowPincodeDialog] = useState(false);
 
   const handleCheckout = () => {
+    if (!shippingInfo) {
+      setShowPincodeDialog(true);
+      return;
+    }
+    
     if (!user) {
       navigate('/auth', { state: { from: '/checkout' } });
     } else {
       navigate('/checkout');
     }
+  };
+
+  const handlePincodeValidated = (pincode: string) => {
+    setShippingPincode(pincode);
   };
 
   if (cartItems.length === 0) {
@@ -43,6 +65,10 @@ const Cart = () => {
       </Layout>
     );
   }
+
+  const subtotal = getCartTotal();
+  const shipping = getShippingCharge();
+  const grandTotal = getGrandTotal('prepaid');
 
   return (
     <Layout>
@@ -126,19 +152,55 @@ const Cart = () => {
                   Order Summary
                 </h2>
 
+                {/* Delivery Location */}
+                <div className="mb-4 p-3 bg-muted/30 border border-border/50 rounded-lg">
+                  {shippingInfo ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-primary" />
+                          <span>{shippingInfo.pincode}</span>
+                        </div>
+                        <button
+                          onClick={() => setShowPincodeDialog(true)}
+                          className="text-primary text-xs hover:underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{shippingInfo.region}</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowPincodeDialog(true)}
+                      className="flex items-center gap-2 text-sm text-primary hover:underline w-full"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      Enter delivery PIN code
+                    </button>
+                  )}
+                </div>
+
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">₹{getCartTotal()}</span>
+                    <span className="font-medium">₹{subtotal}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-medium text-green-600">Free</span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      Shipping
+                    </span>
+                    {shippingInfo ? (
+                      <span className="font-medium">₹{shipping}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Enter PIN</span>
+                    )}
                   </div>
                   <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between text-base">
                       <span className="font-semibold">Total</span>
-                      <span className="font-bold text-primary">₹{getCartTotal()}</span>
+                      <span className="font-bold text-primary">₹{grandTotal}</span>
                     </div>
                   </div>
                 </div>
@@ -147,11 +209,16 @@ const Cart = () => {
                   onClick={handleCheckout}
                   className="w-full mt-6 h-12 text-base font-medium gap-2"
                 >
-                  {user ? 'Proceed to Checkout' : 'Login to Checkout'}
+                  {!shippingInfo 
+                    ? 'Enter PIN to Continue'
+                    : user 
+                      ? 'Proceed to Checkout' 
+                      : 'Login to Checkout'
+                  }
                   <ArrowRight className="w-4 h-4" />
                 </Button>
 
-                {!user && (
+                {!user && shippingInfo && (
                   <p className="text-xs text-muted-foreground text-center mt-3">
                     You'll need to login to complete your order
                   </p>
@@ -161,6 +228,14 @@ const Cart = () => {
           </div>
         </div>
       </div>
+
+      {/* Pincode Dialog */}
+      <PincodeDialog
+        open={showPincodeDialog}
+        onOpenChange={setShowPincodeDialog}
+        onPincodeValidated={handlePincodeValidated}
+        currentPincode={shippingInfo?.pincode}
+      />
     </Layout>
   );
 };

@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem } from '../types';
+import { getShippingCharge, getShippingRegion, getShippingRegionLabel, COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from '@/lib/shipping';
+
+interface ShippingInfo {
+  pincode: string;
+  region: string;
+  charge: number;
+}
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -9,6 +16,16 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
+  // Shipping
+  shippingInfo: ShippingInfo | null;
+  setShippingPincode: (pincode: string) => boolean;
+  getShippingCharge: () => number;
+  // COD
+  isCodAvailable: () => boolean;
+  getCodAdvance: () => number;
+  getCodHandlingFee: () => number;
+  getCodBalance: (paymentType: 'prepaid' | 'cod') => number;
+  getGrandTotal: (paymentType: 'prepaid' | 'cod') => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -19,9 +36,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
+  const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(() => {
+    const saved = localStorage.getItem('sharma-coffee-shipping');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   useEffect(() => {
     localStorage.setItem('sharma-coffee-cart', JSON.stringify(cartItems));
   }, [cartItems]);
+
+  useEffect(() => {
+    if (shippingInfo) {
+      localStorage.setItem('sharma-coffee-shipping', JSON.stringify(shippingInfo));
+    } else {
+      localStorage.removeItem('sharma-coffee-shipping');
+    }
+  }, [shippingInfo]);
+
+  const setShippingPincode = useCallback((pincode: string): boolean => {
+    const region = getShippingRegion(pincode);
+    if (!region) return false;
+    
+    const charge = getShippingCharge(pincode);
+    setShippingInfo({
+      pincode,
+      region: getShippingRegionLabel(region),
+      charge,
+    });
+    return true;
+  }, []);
 
   const addToCart = (newItem: CartItem) => {
     setCartItems((prev) => {
@@ -67,6 +110,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCartItems([]);
+    setShippingInfo(null);
+    localStorage.removeItem('sharma-coffee-shipping');
   };
 
   const getCartTotal = () => {
@@ -75,6 +120,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getCartCount = () => {
     return cartItems.reduce((count, item) => count + item.quantity, 0);
+  };
+
+  const getShippingChargeValue = () => {
+    return shippingInfo?.charge || 0;
+  };
+
+  // Check if all items in cart support COD
+  const isCodAvailable = useCallback(() => {
+    // For now, assume all items support COD unless variant specifies otherwise
+    // This can be enhanced when variant cod_enabled field is populated
+    return cartItems.length > 0;
+  }, [cartItems]);
+
+  const getCodAdvance = () => COD_ADVANCE_AMOUNT;
+  const getCodHandlingFee = () => COD_HANDLING_FEE;
+
+  const getCodBalance = (paymentType: 'prepaid' | 'cod') => {
+    if (paymentType !== 'cod') return 0;
+    const subtotal = getCartTotal();
+    const shipping = getShippingChargeValue();
+    const total = subtotal + shipping + COD_HANDLING_FEE;
+    return total - COD_ADVANCE_AMOUNT;
+  };
+
+  const getGrandTotal = (paymentType: 'prepaid' | 'cod') => {
+    const subtotal = getCartTotal();
+    const shipping = getShippingChargeValue();
+    
+    if (paymentType === 'cod') {
+      return subtotal + shipping + COD_HANDLING_FEE;
+    }
+    return subtotal + shipping;
   };
 
   return (
@@ -87,6 +164,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         getCartTotal,
         getCartCount,
+        shippingInfo,
+        setShippingPincode,
+        getShippingCharge: getShippingChargeValue,
+        isCodAvailable,
+        getCodAdvance,
+        getCodHandlingFee,
+        getCodBalance,
+        getGrandTotal,
       }}
     >
       {children}
