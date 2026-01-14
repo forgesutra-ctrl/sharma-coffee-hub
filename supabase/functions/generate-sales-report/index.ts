@@ -108,13 +108,22 @@ Deno.serve(async (req: Request) => {
 
     // Orders Sheet with detailed information
     const ordersData = orders?.map(o => {
-      const shippingAddress = o.shipping_address as { fullName?: string; email?: string; phone?: string } | null;
+      const shippingAddress = o.shipping_address as {
+        full_name?: string;
+        email?: string;
+        phone?: string;
+        address_line1?: string;
+        address_line2?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+      } | null;
       const items = o.order_items?.map((item: any) => `${item.product_name} (${item.weight}g) x${item.quantity}`).join(', ') || 'N/A';
-      
+
       return {
         'Order ID': o.order_number,
         'Order Date': new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        'Customer Name': shippingAddress?.fullName || 'N/A',
+        'Customer Name': shippingAddress?.full_name || 'N/A',
         'Customer Email': shippingAddress?.email || 'N/A',
         'Customer Phone': shippingAddress?.phone || 'N/A',
         'Products Purchased': items,
@@ -124,7 +133,7 @@ Deno.serve(async (req: Request) => {
         'Payment Method': o.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid',
         'Order Status': o.status || 'pending',
         'Shipping Region': o.shipping_region || 'N/A',
-        'Pincode': o.pincode || 'N/A',
+        'Pincode': shippingAddress?.pincode || o.pincode || 'N/A',
       };
     }) || [];
     

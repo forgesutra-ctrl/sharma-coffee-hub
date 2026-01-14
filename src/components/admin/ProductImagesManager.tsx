@@ -54,20 +54,43 @@ export default function ProductImagesManager({ productId }: ProductImagesManager
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`File ${file.name} is not an image`);
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 5MB)`);
+        }
+
         const fileExt = file.name.split('.').pop();
         const fileName = `${productId}/${Date.now()}-${i}.${fileExt}`;
 
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(fileName, file);
+        console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
 
-        if (uploadError) throw uploadError;
+        // Upload to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+
+        console.log('Upload successful:', uploadData);
 
         // Get public URL
         const { data: urlData } = supabase.storage
           .from('product-images')
           .getPublicUrl(fileName);
+
+        console.log('Public URL:', urlData.publicUrl);
 
         // Insert into product_images table
         const isPrimary = images.length === 0 && i === 0;
@@ -80,18 +103,25 @@ export default function ProductImagesManager({ productId }: ProductImagesManager
             sort_order: images.length + i,
           });
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Database insert error:', insertError);
+          throw new Error(`Database insert failed: ${insertError.message}`);
+        }
 
         // Update product.image_url if this is the primary image
         if (isPrimary) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('products')
             .update({ image_url: urlData.publicUrl })
             .eq('id', productId);
+
+          if (updateError) {
+            console.error('Product update error:', updateError);
+          }
         }
       }
 
-      toast.success('Images uploaded');
+      toast.success(`${files.length} image(s) uploaded successfully`);
       fetchImages();
     } catch (error: any) {
       console.error('Upload error:', error);

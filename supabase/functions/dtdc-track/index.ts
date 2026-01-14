@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, getDTDCConfig, getCachedTracking, setCachedTracking } from "../_shared/dtdc-utils.ts";
 
 interface TrackingEvent {
@@ -43,9 +43,9 @@ async function verifyAuth(req: Request): Promise<{ success: boolean; userId?: st
   return { success: true, userId: user.id };
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {

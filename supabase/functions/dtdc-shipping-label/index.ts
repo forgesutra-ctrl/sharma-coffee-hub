@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, dtdcStreamCall } from "../_shared/dtdc-utils.ts";
 
 // Validate AWB format (alphanumeric, reasonable length)
@@ -30,19 +30,23 @@ async function verifyAdminAuth(req: Request): Promise<{ success: boolean; error?
     .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .single();
+    .maybeSingle();
 
   if (roleError || !roleData) {
-    return { success: false, error: 'Admin access required' };
+    return { success: false, error: 'Access denied' };
+  }
+
+  const allowedRoles = ['super_admin', 'admin', 'staff', 'shop_staff'];
+  if (!allowedRoles.includes(roleData.role)) {
+    return { success: false, error: 'Insufficient permissions' };
   }
 
   return { success: true };
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {

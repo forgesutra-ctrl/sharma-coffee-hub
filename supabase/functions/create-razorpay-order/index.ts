@@ -1,14 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {
@@ -25,11 +25,17 @@ serve(async (req) => {
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
     if (!razorpayKeyId || !razorpayKeySecret) {
-      throw new Error('Razorpay credentials not configured');
+      console.error('Razorpay credentials missing');
+      return new Response(
+        JSON.stringify({ error: 'Razorpay payment gateway is not configured. Please contact support.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Generate a temporary receipt ID
     const receiptId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    console.log('Creating Razorpay order:', { amount, receiptId, isPartialCod });
 
     // Create Razorpay order
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
@@ -44,17 +50,20 @@ serve(async (req) => {
         receipt: receiptId,
         notes: {
           is_partial_cod: isPartialCod ? 'true' : 'false',
-          checkout_data: checkoutData, // Store checkout data for order creation after payment
+          checkout_data: checkoutData,
         },
       }),
     });
 
     if (!razorpayResponse.ok) {
       const error = await razorpayResponse.text();
-      throw new Error(`Razorpay error: ${error}`);
+      console.error('Razorpay API error:', error);
+      throw new Error(`Razorpay API error: ${error}`);
     }
 
     const razorpayOrder = await razorpayResponse.json();
+
+    console.log('Razorpay order created successfully:', razorpayOrder.id);
 
     return new Response(
       JSON.stringify({

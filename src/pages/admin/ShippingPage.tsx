@@ -53,7 +53,7 @@ interface TrackingEvent {
 }
 
 export default function ShippingPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isStaff } = useAuth();
   const { loading: dtdcLoading, createConsignment, downloadShippingLabel, trackShipment, cancelShipment } = useDTDC();
 
   // Create Shipment Form State
@@ -92,10 +92,10 @@ export default function ShippingPage() {
 
   // Fetch pending orders
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!(isAdmin || isStaff)) return;
     fetchPendingOrders();
     fetchShipments();
-  }, [isAdmin, statusFilter, dateFrom, dateTo, currentPage]);
+  }, [isAdmin, isStaff, statusFilter, dateFrom, dateTo, currentPage]);
 
   const fetchPendingOrders = async () => {
     const { data, error } = await supabase
@@ -265,7 +265,7 @@ export default function ShippingPage() {
     );
   };
 
-  if (!user || !isAdmin) {
+  if (!user || !(isAdmin || isStaff)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-96">
@@ -274,7 +274,7 @@ export default function ShippingPage() {
               <AlertCircle className="h-5 w-5 text-destructive" />
               Access Denied
             </CardTitle>
-            <CardDescription>You need admin privileges to access this page.</CardDescription>
+            <CardDescription>You need admin or staff privileges to access this page.</CardDescription>
           </CardHeader>
         </Card>
       </div>
