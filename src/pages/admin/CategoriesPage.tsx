@@ -191,152 +191,152 @@ export default function CategoriesPage() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-3xl font-bold">Categories</h1>
-        <Button onClick={openAddDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Category
-        </Button>
-      </div>
+          <Button onClick={openAddDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Categories</CardTitle>
-          <CardDescription>{categories.length} categories</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No categories found</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => {
-                  const parent = getParentCategory(category.parent_id);
-                  return (
-                    <TableRow key={category.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {category.parent_id && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                          <span className="font-medium">{category.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{category.slug}</TableCell>
-                      <TableCell>{parent?.name || '—'}</TableCell>
-                      <TableCell>{category.sort_order}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={category.is_active}
-                          onCheckedChange={() => toggleCategoryStatus(category)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(category)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => deleteCategory(category.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>All Categories</CardTitle>
+            <CardDescription>{categories.length} categories</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {categories.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No categories found</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Parent</TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => {
+                    const parent = getParentCategory(category.parent_id);
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {category.parent_id && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                            <span className="font-medium">{category.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+                        <TableCell>{parent?.name || '—'}</TableCell>
+                        <TableCell>{category.sort_order}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={category.is_active}
+                            onCheckedChange={() => toggleCategoryStatus(category)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(category)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteCategory(category.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
-            <DialogDescription>
-              {editingCategory ? 'Update category details' : 'Create a new category'}
-            </DialogDescription>
-          </DialogHeader>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+              <DialogDescription>
+                {editingCategory ? 'Update category details' : 'Create a new category'}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Category Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Premium Blends"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Category Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Premium Blends"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  placeholder="premium-blends"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="parent">Parent Category</Label>
+                <Select
+                  value={formData.parent_id || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None (Master Category)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (Master Category)</SelectItem>
+                    {masterCategories
+                      .filter(c => c.id !== editingCategory?.id)
+                      .map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sort_order">Sort Order</Label>
+                <Input
+                  id="sort_order"
+                  type="number"
+                  value={formData.sort_order}
+                  onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+                <Label>Active</Label>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="premium-blends"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="parent">Parent Category</Label>
-              <Select
-                value={formData.parent_id}
-                onValueChange={(value) => setFormData({ ...formData, parent_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="None (Master Category)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None (Master Category)</SelectItem>
-                  {masterCategories
-                    .filter(c => c.id !== editingCategory?.id)
-                    .map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sort_order">Sort Order</Label>
-              <Input
-                id="sort_order"
-                type="number"
-                value={formData.sort_order}
-                onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-              />
-              <Label>Active</Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingCategory ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit}>
+                {editingCategory ? 'Update' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SuperAdminOnly>
   );
