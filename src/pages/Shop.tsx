@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import Layout from '@/components/coffee/Layout';
 import ProductCard from '@/components/coffee/ProductCard';
 import { cn } from '@/lib/utils';
-import { useProducts, getUniqueProducts, getCategories } from '@/hooks/useProducts';
+import { useProducts, getUniqueProducts, useProductsByCategoryId } from '@/hooks/useProducts';
+import { useCategoriesWithCount, useCategoryBySlug } from '@/hooks/useCategories';
 import {
   Select,
   SelectContent,
@@ -21,69 +22,47 @@ import {
 } from "@/components/ui/accordion";
 
 const Shop = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const categoryParam = searchParams.get('category');
-  
-  const [activeCategory, setActiveCategory] = useState<string | null>(categoryParam);
+  const { categorySlug } = useParams<{ categorySlug?: string }>();
+
   const [sortBy, setSortBy] = useState<string>('featured');
   const [priceRange, setPriceRange] = useState<string>('all');
 
-  const { data: rawProducts, isLoading, error } = useProducts();
+  const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
+  const { data: currentCategory } = useCategoryBySlug(categorySlug);
 
-  // Update category when URL changes
-  useEffect(() => {
-    setActiveCategory(categoryParam);
-  }, [categoryParam]);
+  const { data: rawProducts, isLoading: loadingAllProducts } = useProducts();
+  const { data: categoryProducts, isLoading: loadingCategoryProducts } = useProductsByCategoryId(currentCategory?.id);
 
-  // Handle category change
-  const handleCategoryChange = (categoryId: string | null) => {
-    setActiveCategory(categoryId);
-    if (categoryId) {
-      setSearchParams({ category: categoryId });
-    } else {
-      setSearchParams({});
-    }
-  };
+  const isLoading = categorySlug ? loadingCategoryProducts : loadingAllProducts;
 
   // Get unique products (one per product, not per variant)
   const allProducts = useMemo(() => {
-    return rawProducts ? getUniqueProducts(rawProducts) : [];
-  }, [rawProducts]);
-
-  // Get categories from database
-  const dbCategories = useMemo(() => {
-    return rawProducts ? getCategories(rawProducts) : [];
-  }, [rawProducts]);
+    const productsToUse = categorySlug && categoryProducts ? categoryProducts : rawProducts;
+    return productsToUse ? getUniqueProducts(productsToUse) : [];
+  }, [rawProducts, categoryProducts, categorySlug]);
 
   const categories = useMemo(() => {
     return [
-      { id: null, name: 'All Products', count: allProducts.length },
-      ...dbCategories.map(cat => ({
+      { id: null, slug: null, name: 'All Products', count: rawProducts ? getUniqueProducts(rawProducts).length : 0 },
+      ...(dbCategories?.map(cat => ({
         id: cat.id,
+        slug: cat.slug,
         name: cat.name,
-        count: cat.count,
-      })),
+        count: cat.product_count || 0,
+      })) || []),
     ];
-  }, [dbCategories, allProducts.length]);
-
-  // Filter products by category
-  const categoryFilteredProducts = useMemo(() => {
-    if (!activeCategory) return allProducts;
-    return allProducts.filter(p => 
-      p.category.toLowerCase().replace(/\s+/g, '-') === activeCategory.toLowerCase()
-    );
-  }, [allProducts, activeCategory]);
+  }, [dbCategories, rawProducts]);
 
   // Filter by price range
   const priceFilteredProducts = useMemo(() => {
-    if (priceRange === 'all') return categoryFilteredProducts;
-    
+    if (priceRange === 'all') return allProducts;
+
     const [min, max] = priceRange.split('-').map(Number);
-    return categoryFilteredProducts.filter(p => {
+    return allProducts.filter(p => {
       if (max) return p.price >= min && p.price <= max;
       return p.price >= min;
     });
-  }, [categoryFilteredProducts, priceRange]);
+  }, [allProducts, priceRange]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -116,7 +95,7 @@ const Shop = () => {
     { value: '800-2000', label: '₹800+' },
   ];
 
-  const activeCategoryName = categories.find(c => c.id === activeCategory)?.name || 'All Products';
+  const activeCategoryName = currentCategory?.name || 'All Products';
 
   // Transform products for ProductCard
   const displayProducts = sortedProducts.map(product => ({
@@ -152,7 +131,7 @@ const Shop = () => {
               <Link to="/shop" className="text-muted-foreground hover:text-primary transition-colors">
                 Shop
               </Link>
-              {activeCategory && (
+              {categorySlug && currentCategory && (
                 <>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   <span className="text-foreground">{activeCategoryName}</span>
@@ -245,19 +224,19 @@ const Shop = () => {
                       <AccordionContent className="pb-4">
                         <div className="space-y-2">
                           {categories.map(cat => (
-                            <button
+                            <Link
                               key={cat.id || 'all'}
-                              onClick={() => handleCategoryChange(cat.id)}
+                              to={cat.slug ? `/shop/${cat.slug}` : '/shop'}
                               className={cn(
                                 'flex items-center justify-between w-full text-left py-1.5 text-sm transition-colors',
-                                activeCategory === cat.id
+                                (categorySlug === cat.slug || (!categorySlug && !cat.slug))
                                   ? 'text-primary font-medium'
                                   : 'text-muted-foreground hover:text-foreground'
                               )}
                             >
                               <span>{cat.name}</span>
                               <span className="text-xs">({cat.count})</span>
-                            </button>
+                            </Link>
                           ))}
                         </div>
                       </AccordionContent>
@@ -276,16 +255,22 @@ const Shop = () => {
 
                   {/* Mobile Category Selector */}
                   <div className="lg:hidden">
-                    <Select 
-                      value={activeCategory || 'all'} 
-                      onValueChange={(val) => handleCategoryChange(val === 'all' ? null : val)}
+                    <Select
+                      value={categorySlug || 'all'}
+                      onValueChange={(val) => {
+                        if (val === 'all') {
+                          window.location.href = '/shop';
+                        } else {
+                          window.location.href = `/shop/${val}`;
+                        }
+                      }}
                     >
                       <SelectTrigger className="w-[160px] bg-transparent border-border/50">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(cat => (
-                          <SelectItem key={cat.id || 'all'} value={cat.id || 'all'}>
+                          <SelectItem key={cat.id || 'all'} value={cat.slug || 'all'}>
                             {cat.name}
                           </SelectItem>
                         ))}
@@ -311,7 +296,7 @@ const Shop = () => {
                 {/* Products */}
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={activeCategory || 'all'}
+                    key={categorySlug || 'all'}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -334,15 +319,13 @@ const Shop = () => {
                 {sortedProducts.length === 0 && (
                   <div className="text-center py-16">
                     <p className="text-muted-foreground mb-4">No products found in this category.</p>
-                    <button
-                      onClick={() => {
-                        handleCategoryChange(null);
-                        setPriceRange('all');
-                      }}
+                    <Link
+                      to="/shop"
+                      onClick={() => setPriceRange('all')}
                       className="text-primary hover:underline"
                     >
                       View all products
-                    </button>
+                    </Link>
                   </div>
                 )}
               </main>

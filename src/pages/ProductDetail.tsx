@@ -8,18 +8,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Product } from '@/types';
-import { useProducts, DatabaseProduct } from '@/hooks/useProducts';
+import { useProductBySlug, useProducts, isPurchasableProduct } from '@/hooks/useProducts';
 import { PincodeDialog } from '@/components/PincodeDialog';
 
 const ProductDetail = () => {
-  const { slug } = useParams<{ slug?: string; categorySlug?: string; productId?: string }>();
+  const { slug } = useParams<{ slug?: string }>();
   const { addToCart, shippingInfo, setShippingPincode, getShippingCharge } = useCart();
 
-  const { data: products, isLoading, error } = useProducts();
+  const { data: product, isLoading, error } = useProductBySlug(slug);
+  const { data: allProducts } = useProducts();
 
-  // Find the product by slug
-  const product = products?.find(p => p.slug === slug);
   const variants = product?.product_variants || [];
+  const isProductPurchasable = isPurchasableProduct(product);
 
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -83,8 +83,8 @@ const ProductDetail = () => {
   const totalPrice = currentPrice * quantity;
 
   // Get related products from same category
-  const relatedProducts = products
-    ?.filter(p => p.category === product.category && p.id !== product.id)
+  const relatedProducts = allProducts
+    ?.filter(p => p.category_id === product?.category_id && p.id !== product?.id)
     .slice(0, 4) || [];
 
   const executeAddToCart = () => {
@@ -164,13 +164,17 @@ const ProductDetail = () => {
               <Link to="/shop" className="text-muted-foreground hover:text-primary transition-colors">
                 Shop
               </Link>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <Link 
-                to={`/shop?category=${encodeURIComponent(product.category.toLowerCase().replace(/\s+/g, '-'))}`} 
-                className="text-muted-foreground hover:text-primary transition-colors"
-              >
-                {product.category}
-              </Link>
+              {product.category_id && (
+                <>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <Link
+                    to={`/shop/${product.category.toLowerCase().replace(/\s+/g, '-')}`}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {product.category}
+                  </Link>
+                </>
+              )}
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
               <span className="text-foreground">{product.name}</span>
             </nav>
@@ -397,7 +401,7 @@ const ProductDetail = () => {
                   return (
                     <Link
                       key={related.id}
-                      to={`/shop/${related.slug}`}
+                      to={`/product/${related.slug}`}
                       className="group"
                     >
                       <div className="aspect-square overflow-hidden bg-card mb-4">

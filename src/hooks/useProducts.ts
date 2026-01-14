@@ -8,6 +8,15 @@ export interface ProductVariant {
   price: number;
   compare_at_price: number | null;
   stock_quantity: number | null;
+  cod_enabled: boolean | null;
+}
+
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  is_primary: boolean | null;
+  sort_order: number | null;
 }
 
 export interface DatabaseProduct {
@@ -16,6 +25,7 @@ export interface DatabaseProduct {
   slug: string;
   description: string | null;
   category: string;
+  category_id: string | null;
   image_url: string | null;
   origin: string | null;
   roast_level: string | null;
@@ -26,6 +36,7 @@ export interface DatabaseProduct {
   created_at: string;
   updated_at: string;
   product_variants: ProductVariant[];
+  product_images?: ProductImage[];
 }
 
 export interface FlatProduct {
@@ -58,6 +69,7 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
       slug,
       description,
       category,
+      category_id,
       image_url,
       origin,
       roast_level,
@@ -73,9 +85,108 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
         weight,
         price,
         compare_at_price,
-        stock_quantity
+        stock_quantity,
+        cod_enabled
+      ),
+      product_images (
+        id,
+        product_id,
+        image_url,
+        is_primary,
+        sort_order
       )
     `)
+    .eq('is_active', true)
+    .order('is_featured', { ascending: false })
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return (data as DatabaseProduct[]) || [];
+}
+
+// Fetch single product by slug with all related data
+async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      id,
+      name,
+      slug,
+      description,
+      category,
+      category_id,
+      image_url,
+      origin,
+      roast_level,
+      flavor_notes,
+      intensity,
+      is_featured,
+      is_active,
+      created_at,
+      updated_at,
+      product_variants (
+        id,
+        product_id,
+        weight,
+        price,
+        compare_at_price,
+        stock_quantity,
+        cod_enabled
+      ),
+      product_images (
+        id,
+        product_id,
+        image_url,
+        is_primary,
+        sort_order
+      )
+    `)
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as DatabaseProduct | null;
+}
+
+// Fetch products by category ID
+async function fetchProductsByCategoryId(categoryId: string): Promise<DatabaseProduct[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      id,
+      name,
+      slug,
+      description,
+      category,
+      category_id,
+      image_url,
+      origin,
+      roast_level,
+      flavor_notes,
+      intensity,
+      is_featured,
+      is_active,
+      created_at,
+      updated_at,
+      product_variants (
+        id,
+        product_id,
+        weight,
+        price,
+        compare_at_price,
+        stock_quantity,
+        cod_enabled
+      ),
+      product_images (
+        id,
+        product_id,
+        image_url,
+        is_primary,
+        sort_order
+      )
+    `)
+    .eq('category_id', categoryId)
     .eq('is_active', true)
     .order('is_featured', { ascending: false })
     .order('name', { ascending: true });
@@ -201,15 +312,68 @@ export function useFeaturedProducts() {
   return { data: featuredProducts, ...rest };
 }
 
-// Hook for products by category
+// Hook for products by category (using category slug)
 export function useProductsByCategory(category: string | null) {
   const { data: products, ...rest } = useProducts();
-  
+
   const filteredProducts = products
-    ? getUniqueProducts(products).filter(p => 
+    ? getUniqueProducts(products).filter(p =>
         !category || p.category.toLowerCase().replace(/\s+/g, '-') === category.toLowerCase()
       )
     : [];
 
   return { data: filteredProducts, ...rest };
+}
+
+// Hook for single product by slug
+export function useProductBySlug(slug: string | undefined) {
+  return useQuery({
+    queryKey: ['product', slug],
+    queryFn: () => slug ? fetchProductBySlug(slug) : Promise.resolve(null),
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// Hook for products by category ID
+export function useProductsByCategoryId(categoryId: string | undefined) {
+  return useQuery({
+    queryKey: ['products-by-category', categoryId],
+    queryFn: () => categoryId ? fetchProductsByCategoryId(categoryId) : Promise.resolve([]),
+    enabled: !!categoryId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// Hook to get product variants for a specific product
+export function useProductVariants(productId: string | undefined) {
+  return useQuery({
+    queryKey: ['product-variants', productId],
+    queryFn: async () => {
+      if (!productId) return [];
+
+      const { data, error } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', productId)
+        .order('weight', { ascending: true });
+
+      if (error) throw error;
+      return (data as ProductVariant[]) || [];
+    },
+    enabled: !!productId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// Check if product has variants (parent product)
+export function isParentProduct(product: DatabaseProduct | null): boolean {
+  if (!product) return false;
+  return (product.product_variants?.length || 0) === 0;
+}
+
+// Check if product is purchasable (has variants)
+export function isPurchasableProduct(product: DatabaseProduct | null): boolean {
+  if (!product) return false;
+  return (product.product_variants?.length || 0) > 0;
 }

@@ -9,7 +9,8 @@ import InstagramFeed from '@/components/coffee/InstagramFeed';
 import { mockTestimonials } from '@/data/mockData';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
 import coffeeBeans from '@/assets/coffee-beans-roasting.jpg';
-import { useFeaturedProducts, useProducts, getCategories } from '@/hooks/useProducts';
+import { useFeaturedProducts, useProducts } from '@/hooks/useProducts';
+import { useCategoriesWithCount } from '@/hooks/useCategories';
 
 // Transform testimonials for carousel
 const testimonials = mockTestimonials.map(t => ({
@@ -22,7 +23,8 @@ const testimonials = mockTestimonials.map(t => ({
 
 export default function Homepage() {
   const { data: featuredProducts, isLoading: loadingFeatured } = useFeaturedProducts();
-  const { data: allProducts, isLoading: loadingProducts } = useProducts();
+  const { data: allProducts } = useProducts();
+  const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
 
   // Transform featured products for BestSellersCarousel
   const bestSellers = featuredProducts?.map(product => ({
@@ -30,20 +32,23 @@ export default function Homepage() {
     name: product.name,
     price: product.price,
     image: product.image,
-    hoverImage: undefined, // Could add secondary images later
-    href: `/shop/${product.slug}`,
+    hoverImage: undefined,
+    href: `/product/${product.slug}`,
     badge: product.isFeatured ? 'Best Seller' : undefined,
   })) || [];
 
-  // Get unique categories for CategoryGrid
-  const categories = allProducts 
-    ? getCategories(allProducts).slice(0, 4).map(cat => ({
+  // Transform categories for CategoryGrid - get first image from each category
+  const categories = dbCategories?.filter(cat => cat.product_count && cat.product_count > 0)
+    .slice(0, 6)
+    .map(cat => {
+      const categoryProduct = allProducts?.find(p => p.category_id === cat.id);
+      return {
         id: cat.id,
         title: cat.name,
-        image: allProducts.find(p => p.category === cat.name)?.image_url || '/placeholder.svg',
-        href: `/shop?category=${encodeURIComponent(cat.id)}`,
-      }))
-    : [];
+        image: categoryProduct?.image_url || '/placeholder.svg',
+        href: `/shop/${cat.slug}`,
+      };
+    }) || [];
 
   return (
     <div className="bg-background">
