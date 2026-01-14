@@ -271,10 +271,12 @@ const Checkout = () => {
   // Prepare checkout data for payment (without creating order yet)
   const prepareCheckoutData = () => {
     const subtotal = getCartTotal();
+    const discount = appliedCoupon?.discount || 0;
+    const subtotalAfterDiscount = Math.max(0, subtotal - discount);
     const shippingCharge = getShippingCharge();
     const codHandlingFee = paymentType === 'cod' ? COD_HANDLING_FEE : 0;
     const codAdvance = paymentType === 'cod' ? COD_ADVANCE_AMOUNT : 0;
-    const total = subtotal + shippingCharge + codHandlingFee;
+    const total = subtotalAfterDiscount + shippingCharge + codHandlingFee;
     const codBalance = paymentType === 'cod' ? total - codAdvance : 0;
 
     return {
@@ -299,6 +301,8 @@ const Checkout = () => {
       cod_advance_paid: codAdvance,
       cod_handling_fee: codHandlingFee,
       cod_balance: codBalance,
+      promotion_id: appliedCoupon?.promotionId || null,
+      discount_amount: discount,
       items: cartItems.map(item => ({
         product_name: item.product.name,
         weight: item.weight,
