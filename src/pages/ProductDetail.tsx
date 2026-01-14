@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin } from 'lucide-react';
@@ -34,22 +34,22 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [imageError, setImageError] = useState(false);
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
-  const [pendingAddToCart, setPendingAddToCart] = useState(false);
 
-  // Set default selected child product and weight when product loads
-  if (product && !selectedChildProduct) {
-    if (hasChildProducts) {
-      // Select first child product by default
+  // Set default selected child product when product loads
+  useEffect(() => {
+    if (product && hasChildProducts && !selectedChildProduct) {
       setSelectedChildProduct(childProducts[0]);
     }
-  }
+  }, [product, hasChildProducts, childProducts, selectedChildProduct]);
 
   // Set default selected weight when active product changes
-  if (activeProduct && variants.length > 0 && selectedWeight === null) {
-    // Default to 500g if available, otherwise first variant
-    const defaultVariant = variants.find(v => v.weight === 500) || variants[0];
-    setSelectedWeight(defaultVariant.weight);
-  }
+  useEffect(() => {
+    if (activeProduct && variants.length > 0) {
+      // Default to 500g if available, otherwise first variant
+      const defaultVariant = variants.find(v => v.weight === 500) || variants[0];
+      setSelectedWeight(defaultVariant.weight);
+    }
+  }, [activeProduct?.id, variants]);
 
   // Reset weight when child product changes
   const handleChildProductChange = (child: DatabaseProduct) => {
@@ -148,24 +148,12 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!selectedVariant) return;
 
-    // Check if PIN code is already validated
-    if (!shippingInfo) {
-      setPendingAddToCart(true);
-      setShowPincodeDialog(true);
-      return;
-    }
-
+    // Add to cart immediately - pincode is optional at this stage
     executeAddToCart();
   };
 
   const handlePincodeValidated = (pincode: string, shippingCharge: number, region: string) => {
     setShippingPincode(pincode);
-
-    // If add to cart was pending, execute it now
-    if (pendingAddToCart) {
-      setPendingAddToCart(false);
-      executeAddToCart();
-    }
   };
 
   return (
