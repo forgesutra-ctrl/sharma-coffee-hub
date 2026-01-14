@@ -26,6 +26,7 @@ export interface DatabaseProduct {
   description: string | null;
   category: string;
   category_id: string | null;
+  parent_product_id: string | null;
   image_url: string | null;
   origin: string | null;
   roast_level: string | null;
@@ -37,6 +38,7 @@ export interface DatabaseProduct {
   updated_at: string;
   product_variants: ProductVariant[];
   product_images?: ProductImage[];
+  child_products?: DatabaseProduct[];
 }
 
 export interface FlatProduct {
@@ -59,7 +61,7 @@ export interface FlatProduct {
   isFeatured: boolean;
 }
 
-// Fetch all active products with their variants
+// Fetch all active products with their variants (only parent products)
 async function fetchProducts(): Promise<DatabaseProduct[]> {
   const { data, error } = await supabase
     .from('products')
@@ -70,6 +72,7 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
       description,
       category,
       category_id,
+      parent_product_id,
       image_url,
       origin,
       roast_level,
@@ -97,6 +100,7 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
       )
     `)
     .eq('is_active', true)
+    .is('parent_product_id', null)
     .order('is_featured', { ascending: false })
     .order('name', { ascending: true });
 
@@ -104,7 +108,7 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
   return (data as DatabaseProduct[]) || [];
 }
 
-// Fetch single product by slug with all related data
+// Fetch single product by slug with all related data including child products
 async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null> {
   const { data, error } = await supabase
     .from('products')
@@ -115,6 +119,7 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
       description,
       category,
       category_id,
+      parent_product_id,
       image_url,
       origin,
       roast_level,
@@ -146,10 +151,58 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
     .maybeSingle();
 
   if (error) throw error;
+
+  // If this is a parent product, fetch child products
+  if (data) {
+    const { data: childData, error: childError } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        slug,
+        description,
+        category,
+        category_id,
+        parent_product_id,
+        image_url,
+        origin,
+        roast_level,
+        flavor_notes,
+        intensity,
+        is_featured,
+        is_active,
+        created_at,
+        updated_at,
+        product_variants (
+          id,
+          product_id,
+          weight,
+          price,
+          compare_at_price,
+          stock_quantity,
+          cod_enabled
+        ),
+        product_images (
+          id,
+          product_id,
+          image_url,
+          is_primary,
+          sort_order
+        )
+      `)
+      .eq('parent_product_id', data.id)
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+
+    if (!childError && childData) {
+      (data as any).child_products = childData;
+    }
+  }
+
   return data as DatabaseProduct | null;
 }
 
-// Fetch products by category ID
+// Fetch products by category ID (only parent products)
 async function fetchProductsByCategoryId(categoryId: string): Promise<DatabaseProduct[]> {
   const { data, error } = await supabase
     .from('products')
@@ -160,6 +213,7 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
       description,
       category,
       category_id,
+      parent_product_id,
       image_url,
       origin,
       roast_level,
@@ -188,6 +242,7 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
     `)
     .eq('category_id', categoryId)
     .eq('is_active', true)
+    .is('parent_product_id', null)
     .order('is_featured', { ascending: false })
     .order('name', { ascending: true });
 

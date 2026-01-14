@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Product } from '@/types';
-import { useProductBySlug, useProducts, isPurchasableProduct } from '@/hooks/useProducts';
+import { useProductBySlug, useProducts, isPurchasableProduct, DatabaseProduct } from '@/hooks/useProducts';
 import { PincodeDialog } from '@/components/PincodeDialog';
 
 const ProductDetail = () => {
@@ -18,8 +18,17 @@ const ProductDetail = () => {
   const { data: product, isLoading, error } = useProductBySlug(slug);
   const { data: allProducts } = useProducts();
 
-  const variants = product?.product_variants || [];
-  const isProductPurchasable = isPurchasableProduct(product);
+  // Check if this product has child products (variants like different blends)
+  const hasChildProducts = (product?.child_products?.length ?? 0) > 0;
+  const childProducts = product?.child_products || [];
+
+  // State for child product selection (if applicable)
+  const [selectedChildProduct, setSelectedChildProduct] = useState<DatabaseProduct | null>(null);
+
+  // Get the active product (child if selected, otherwise parent)
+  const activeProduct = selectedChildProduct || product;
+  const variants = activeProduct?.product_variants || [];
+  const isProductPurchasable = isPurchasableProduct(activeProduct);
 
   const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -27,12 +36,26 @@ const ProductDetail = () => {
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
   const [pendingAddToCart, setPendingAddToCart] = useState(false);
 
-  // Set default selected weight when product loads
-  if (product && variants.length > 0 && selectedWeight === null) {
+  // Set default selected child product and weight when product loads
+  if (product && !selectedChildProduct) {
+    if (hasChildProducts) {
+      // Select first child product by default
+      setSelectedChildProduct(childProducts[0]);
+    }
+  }
+
+  // Set default selected weight when active product changes
+  if (activeProduct && variants.length > 0 && selectedWeight === null) {
     // Default to 500g if available, otherwise first variant
     const defaultVariant = variants.find(v => v.weight === 500) || variants[0];
     setSelectedWeight(defaultVariant.weight);
   }
+
+  // Reset weight when child product changes
+  const handleChildProductChange = (child: DatabaseProduct) => {
+    setSelectedChildProduct(child);
+    setSelectedWeight(null); // Reset weight selection
+  };
 
   // Loading state
   if (isLoading) {
@@ -88,29 +111,29 @@ const ProductDetail = () => {
     .slice(0, 4) || [];
 
   const executeAddToCart = () => {
-    if (!selectedVariant) return;
+    if (!selectedVariant || !activeProduct) return;
 
     const cartProduct: Product = {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      description: product.description || '',
-      short_description: (product.description || '').slice(0, 100),
+      id: activeProduct.id,
+      name: activeProduct.name,
+      slug: activeProduct.slug,
+      description: activeProduct.description || '',
+      short_description: (activeProduct.description || '').slice(0, 100),
       price: currentPrice,
-      image_url: product.image_url || '/placeholder.svg',
-      images: [product.image_url || '/placeholder.svg'],
-      roast_level: (product.roast_level as 'Light' | 'Medium' | 'Dark') || 'Medium',
+      image_url: activeProduct.image_url || '/placeholder.svg',
+      images: [activeProduct.image_url || '/placeholder.svg'],
+      roast_level: (activeProduct.roast_level as 'Light' | 'Medium' | 'Dark') || 'Medium',
       has_chicory: false,
-      origin: product.origin || 'Coorg, Karnataka',
-      flavor_notes: product.flavor_notes || [],
+      origin: activeProduct.origin || 'Coorg, Karnataka',
+      flavor_notes: activeProduct.flavor_notes || [],
       available_weights: variants.map(v => v.weight),
       brewing_methods: [],
       storage_tips: '',
-      is_featured: product.is_featured || false,
+      is_featured: activeProduct.is_featured || false,
       in_stock: (selectedVariant.stock_quantity ?? 0) > 0,
       sort_order: 0,
-      created_at: product.created_at,
-      updated_at: product.updated_at,
+      created_at: activeProduct.created_at,
+      updated_at: activeProduct.updated_at,
     };
 
     addToCart({
@@ -119,7 +142,7 @@ const ProductDetail = () => {
       quantity,
       variant_id: selectedVariant.id,
     });
-    toast.success(`${product.name} added to cart`);
+    toast.success(`${activeProduct.name} added to cart`);
   };
 
   const handleAddToCart = () => {
@@ -137,7 +160,7 @@ const ProductDetail = () => {
 
   const handlePincodeValidated = (pincode: string, shippingCharge: number, region: string) => {
     setShippingPincode(pincode);
-    
+
     // If add to cart was pending, execute it now
     if (pendingAddToCart) {
       setPendingAddToCart(false);
@@ -187,14 +210,14 @@ const ProductDetail = () => {
             {/* Image Gallery */}
             <div className="space-y-4">
               {/* Main Image */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="aspect-square overflow-hidden bg-card"
               >
                 <img
-                  src={imageError ? '/placeholder.svg' : (product.image_url || '/placeholder.svg')}
-                  alt={product.name}
+                  src={imageError ? '/placeholder.svg' : (activeProduct?.image_url || '/placeholder.svg')}
+                  alt={activeProduct?.name || product.name}
                   onError={() => setImageError(true)}
                   className="w-full h-full object-cover"
                 />
@@ -290,6 +313,34 @@ const ProductDetail = () => {
                   </p>
                 )}
               </div>
+
+              {/* Blend/Variant Selection (if product has child products) */}
+              {hasChildProducts && (
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-foreground mb-3">Select Variant</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {childProducts.map((child) => (
+                      <button
+                        key={child.id}
+                        onClick={() => handleChildProductChange(child)}
+                        className={cn(
+                          "p-4 border text-left transition-all",
+                          selectedChildProduct?.id === child.id
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        <div className="font-medium text-foreground">{child.name}</div>
+                        {child.description && (
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {child.description}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Size/Weight Selection */}
               {variants.length > 0 && (
@@ -397,25 +448,25 @@ const ProductDetail = () => {
                   const relatedLowestPrice = related.product_variants?.length > 0
                     ? Math.min(...related.product_variants.map(v => v.price))
                     : 0;
-                  
+
                   return (
                     <Link
                       key={related.id}
                       to={`/product/${related.slug}`}
                       className="group"
                     >
-                      <div className="aspect-square overflow-hidden bg-card mb-4">
+                      <div className="aspect-square overflow-hidden bg-card mb-3">
                         <img
                           src={related.image_url || '/placeholder.svg'}
                           alt={related.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
-                      <h3 className="font-serif text-sm md:text-base text-center group-hover:text-primary transition-colors line-clamp-2">
+                      <h3 className="font-medium text-foreground group-hover:text-primary transition-colors mb-1">
                         {related.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground text-center mt-1">
-                        from ₹ {relatedLowestPrice.toLocaleString()}
+                      <p className="text-sm text-muted-foreground">
+                        ₹ {relatedLowestPrice.toLocaleString()}
                       </p>
                     </Link>
                   );
@@ -424,15 +475,14 @@ const ProductDetail = () => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Pincode Dialog */}
-      <PincodeDialog
-        open={showPincodeDialog}
-        onOpenChange={setShowPincodeDialog}
-        onPincodeValidated={handlePincodeValidated}
-        currentPincode={shippingInfo?.pincode}
-      />
+        {/* Pincode Dialog */}
+        <PincodeDialog
+          open={showPincodeDialog}
+          onOpenChange={setShowPincodeDialog}
+          onValidated={handlePincodeValidated}
+        />
+      </div>
     </Layout>
   );
 };
