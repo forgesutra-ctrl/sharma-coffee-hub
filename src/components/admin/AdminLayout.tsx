@@ -1,11 +1,11 @@
 import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Truck, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  Truck,
   Wrench,
   ChevronLeft,
   LogOut,
@@ -15,63 +15,44 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
 // All sidebar links with access control
+// superAdminOnly: Only super_admin and admin can access
+// staffAllowed: Staff can access these pages
 const allSidebarLinks = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, adminOnly: true },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, adminOnly: true },
-  { name: 'Products', href: '/admin/products', icon: Package, adminOnly: true },
-  { name: 'Categories', href: '/admin/categories', icon: FolderTree, adminOnly: true },
-  { name: 'Customers', href: '/admin/customers', icon: Users, adminOnly: true },
-  { name: 'Shipping', href: '/admin/shipping', icon: Truck, adminOnly: false },
-  { name: 'Operations', href: '/admin/operations', icon: Wrench, adminOnly: false },
-  { name: 'Reports', href: '/admin/reports', icon: FileText, adminOnly: true },
+  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, superAdminOnly: true, staffAllowed: false },
+  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: false },
+  { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
+  { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },
+  { name: 'Customers', href: '/admin/customers', icon: Users, superAdminOnly: true, staffAllowed: false },
+  { name: 'Shipping', href: '/admin/shipping', icon: Truck, superAdminOnly: false, staffAllowed: true },
+  { name: 'Operations', href: '/admin/operations', icon: Wrench, superAdminOnly: false, staffAllowed: true },
+  { name: 'Reports', href: '/admin/reports', icon: FileText, superAdminOnly: true, staffAllowed: false },
 ];
 
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user } = useAuth();
-
-  // Fetch user roles
-  const { data: userRoles, isLoading: rolesLoading } = useQuery({
-    queryKey: ['user-roles', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      if (error) throw error;
-      return data?.map(r => r.role) || [];
-    },
-    enabled: !!user?.id,
-  });
-
-  const isAdmin = userRoles?.includes('admin');
-  const isShopStaff = userRoles?.includes('shop_staff' as any);
-  const hasAccess = isAdmin || isShopStaff;
+  const { signOut, user, isSuperAdmin, isStaff, isLoading } = useAuth();
 
   // Filter sidebar links based on role
   const sidebarLinks = allSidebarLinks.filter(link => {
-    if (isAdmin) return true; // Admin sees all
-    if (isShopStaff) return !link.adminOnly; // Shop staff sees only non-admin items
+    if (isSuperAdmin) return true; // Super admin sees all
+    if (isStaff) return link.staffAllowed; // Staff sees only allowed items
     return false;
   });
 
-  // Get default route for shop staff
+  // Get default route based on role
   const getDefaultRoute = () => {
-    if (isAdmin) return '/admin';
-    if (isShopStaff) return '/admin/operations';
+    if (isSuperAdmin) return '/admin';
+    if (isStaff) return '/admin/operations';
     return '/';
   };
 
   // Check if current route is accessible
   const isRouteAccessible = (path: string) => {
-    if (isAdmin) return true;
-    if (isShopStaff) {
+    if (isSuperAdmin) return true;
+    if (isStaff) {
       const allowedPaths = ['/admin/operations', '/admin/shipping'];
       return allowedPaths.some(p => path.startsWith(p));
     }
@@ -84,7 +65,7 @@ export default function AdminLayout() {
   };
 
   // Show loading while checking roles
-  if (rolesLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -92,8 +73,8 @@ export default function AdminLayout() {
     );
   }
 
-  // Redirect shop staff from admin-only pages
-  if (isShopStaff && !isAdmin && !isRouteAccessible(location.pathname)) {
+  // Redirect staff from super-admin-only pages
+  if (isStaff && !isSuperAdmin && !isRouteAccessible(location.pathname)) {
     return <Navigate to="/admin/operations" replace />;
   }
 
@@ -108,8 +89,11 @@ export default function AdminLayout() {
             <span className="text-sm">Back to Store</span>
           </Link>
           <h1 className="font-display text-xl font-bold mt-3">Admin Panel</h1>
-          {isShopStaff && !isAdmin && (
-            <p className="text-xs text-muted-foreground mt-1">Shop Staff View</p>
+          {isStaff && !isSuperAdmin && (
+            <p className="text-xs text-muted-foreground mt-1">Staff View</p>
+          )}
+          {isSuperAdmin && (
+            <p className="text-xs text-muted-foreground mt-1">Super Admin</p>
           )}
         </div>
 
@@ -152,8 +136,11 @@ export default function AdminLayout() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-lg font-bold">Admin</h1>
-            {isShopStaff && !isAdmin && (
-              <p className="text-xs text-muted-foreground">Shop Staff</p>
+            {isStaff && !isSuperAdmin && (
+              <p className="text-xs text-muted-foreground">Staff</p>
+            )}
+            {isSuperAdmin && (
+              <p className="text-xs text-muted-foreground">Super Admin</p>
             )}
           </div>
           <Link to="/" className="text-sm text-primary">

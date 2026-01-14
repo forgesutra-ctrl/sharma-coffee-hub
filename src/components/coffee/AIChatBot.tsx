@@ -240,7 +240,7 @@ export default function AIChatBot() {
         <div className="relative group">
           <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-25" />
           <div className="relative flex items-center justify-center w-14 h-14 bg-primary hover:bg-primary/90 rounded-full shadow-lg transition-colors">
-            
+            <Coffee className="w-6 h-6 text-primary-foreground" />
           </div>
           {messages.length > 0 && <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs rounded-full flex items-center justify-center font-medium">
               {messages.filter(m => m.role === 'assistant').length}

@@ -1,15 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {
@@ -27,11 +27,24 @@ serve(async (req) => {
       throw new Error('Razorpay secret not configured');
     }
 
-    // Verify signature
+    // Verify signature using Web Crypto API
     const body = razorpayOrderId + '|' + razorpayPaymentId;
-    const expectedSignature = createHmac('sha256', razorpayKeySecret)
-      .update(body)
-      .digest('hex');
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(razorpayKeySecret);
+    const messageData = encoder.encode(body);
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signature = await crypto.subtle.sign('HMAC', key, messageData);
+    const expectedSignature = Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     if (expectedSignature !== razorpaySignature) {
       return new Response(
@@ -52,6 +65,27 @@ serve(async (req) => {
       throw new Error('Checkout data is required');
     }
 
+    // Check for duplicate order (idempotency)
+    const { data: existingOrder } = await supabase
+      .from('orders')
+      .select('id, order_number, payment_status')
+      .eq('razorpay_order_id', razorpayOrderId)
+      .maybeSingle();
+
+    if (existingOrder) {
+      console.log('Order already exists for this payment:', existingOrder.id);
+      return new Response(
+        JSON.stringify({ 
+          verified: true, 
+          message: 'Order already created for this payment',
+          orderId: existingOrder.id,
+          orderNumber: existingOrder.order_number,
+          paymentStatus: existingOrder.payment_status,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create order after successful payment verification
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -63,14 +97,18 @@ serve(async (req) => {
         shipping_address: checkout.shipping_address,
         pincode: checkout.pincode,
         shipping_region: checkout.shipping_region,
+        shipping_amount: checkout.shipping_charge,
         shipping_charge: checkout.shipping_charge,
         payment_type: checkout.payment_type,
-        cod_advance_paid: checkout.cod_advance_paid,
-        cod_handling_fee: checkout.cod_handling_fee,
-        cod_balance: checkout.cod_balance,
+        payment_method: checkout.payment_type === 'cod' ? 'Cash on Delivery' : 'Online Payment',
+        cod_advance_paid: checkout.cod_advance_paid || 0,
+        cod_handling_fee: checkout.cod_handling_fee || 0,
+        cod_balance: checkout.cod_balance || 0,
         razorpay_order_id: razorpayOrderId,
         razorpay_payment_id: razorpayPaymentId,
         payment_status: checkout.payment_type === 'cod' ? 'advance_paid' : 'paid',
+        payment_verified: true,
+        payment_verified_at: new Date().toISOString(),
         status: 'confirmed',
       })
       .select()
@@ -86,7 +124,9 @@ serve(async (req) => {
       const orderItems = checkout.items.map((item: any) => ({
         order_id: order.id,
         product_name: item.product_name,
+        product_id: item.product_id || null,
         weight: item.weight,
+        grind_type: item.grind_type || 'Whole Bean',
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,
@@ -102,6 +142,9 @@ serve(async (req) => {
         // Don't fail the whole transaction - order is created
       }
     }
+
+    // TODO: Reduce inventory for products
+    // TODO: Send order confirmation email
 
     return new Response(
       JSON.stringify({ 

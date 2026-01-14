@@ -39,9 +39,9 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
 
         {/* SociableKit Instagram Reels Widget */}
         <div className="flex justify-center">
-          <div 
-            className="sk-instagram-reels" 
-            data-embed-id="25960091"
+          <div
+            className="sk-ww-instagram-reels"
+            data-embed-id="25643033"
             style={{ width: '100%', maxWidth: '1200px' }}
           />
         </div>

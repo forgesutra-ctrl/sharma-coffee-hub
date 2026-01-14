@@ -19,7 +19,7 @@ export const SalesReportDownload = () => {
 
       if (error) throw error;
 
-      // The response is a base64 encoded CSV string
+      // The response is a base64 encoded Excel file
       if (data?.base64) {
         const binaryString = atob(data.base64);
         const bytes = new Uint8Array(binaryString.length);

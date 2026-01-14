@@ -1,18 +1,19 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {
-    const { email, password } = await req.json();
+    const { email, password, role } = await req.json();
 
     if (!email || !password) {
       return new Response(
@@ -20,6 +21,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Validate role - default to 'user' if not specified
+    const validRoles = ['super_admin', 'staff', 'admin', 'user', 'shop_staff'];
+    const userRole = role && validRoles.includes(role) ? role : 'user';
 
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -42,35 +47,34 @@ serve(async (req) => {
         const existingUser = existingUsers?.users?.find(u => u.email === email);
         
         if (existingUser) {
-          // Check if already admin
+          // Check if role already exists
           const { data: existingRole } = await supabaseAdmin
             .from("user_roles")
             .select("role")
             .eq("user_id", existingUser.id)
-            .eq("role", "admin")
-            .single();
+            .maybeSingle();
 
-          if (existingRole) {
+          if (existingRole && existingRole.role === userRole) {
             return new Response(
-              JSON.stringify({ message: "Admin user already exists", userId: existingUser.id }),
+              JSON.stringify({ message: `User already exists with ${userRole} role`, userId: existingUser.id }),
               { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
-          // Add admin role
+          // Update role if different
           const { error: roleError } = await supabaseAdmin
             .from("user_roles")
-            .insert({ user_id: existingUser.id, role: "admin" });
+            .upsert({ user_id: existingUser.id, role: userRole }, { onConflict: 'user_id' });
 
           if (roleError) {
             return new Response(
-              JSON.stringify({ error: `Failed to assign admin role: ${roleError.message}` }),
+              JSON.stringify({ error: `Failed to assign ${userRole} role: ${roleError.message}` }),
               { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
           return new Response(
-            JSON.stringify({ message: "Admin role assigned to existing user", userId: existingUser.id }),
+            JSON.stringify({ message: `${userRole} role assigned to existing user`, userId: existingUser.id }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -91,29 +95,29 @@ serve(async (req) => {
       );
     }
 
-    // The handle_new_user trigger should create the profile and user role
-    // But we need to update the role to admin
+    // The handle_new_user trigger creates a default 'user' role
+    // Update it to the specified role
     const { error: updateRoleError } = await supabaseAdmin
       .from("user_roles")
-      .update({ role: "admin" })
+      .update({ role: userRole })
       .eq("user_id", userId);
 
     if (updateRoleError) {
-      // If update fails, try insert
-      const { error: insertRoleError } = await supabaseAdmin
+      // If update fails, try upsert
+      const { error: upsertRoleError } = await supabaseAdmin
         .from("user_roles")
-        .insert({ user_id: userId, role: "admin" });
+        .upsert({ user_id: userId, role: userRole }, { onConflict: 'user_id' });
 
-      if (insertRoleError) {
+      if (upsertRoleError) {
         return new Response(
-          JSON.stringify({ error: `User created but failed to assign admin role: ${insertRoleError.message}` }),
+          JSON.stringify({ error: `User created but failed to assign ${userRole} role: ${upsertRoleError.message}` }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
     return new Response(
-      JSON.stringify({ message: "Admin user created successfully", userId }),
+      JSON.stringify({ message: `User created successfully with ${userRole} role`, userId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {

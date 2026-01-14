@@ -3,13 +3,15 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import logger from '@/lib/logger';
 
-type AppRole = 'admin' | 'user';
+type AppRole = 'super_admin' | 'admin' | 'staff' | 'shop_staff' | 'user';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: AppRole | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isStaff: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
@@ -116,7 +118,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserRole(null);
   };
 
-  const isAdmin = userRole === 'admin';
+  // Check if user has admin privileges (super_admin or admin)
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
+  // Check if user is super admin specifically
+  const isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
+
+  // Check if user is staff
+  const isStaff = userRole === 'staff' || userRole === 'shop_staff';
 
   return (
     <AuthContext.Provider
@@ -125,6 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         userRole,
         isAdmin,
+        isSuperAdmin,
+        isStaff,
         isLoading,
         signIn,
         signUp,
