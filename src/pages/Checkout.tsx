@@ -163,7 +163,8 @@ const Checkout = () => {
     });
   };
 
-  const createOrder = async () => {
+  // Prepare checkout data for payment (without creating order yet)
+  const prepareCheckoutData = () => {
     const subtotal = getCartTotal();
     const shippingCharge = getShippingCharge();
     const codHandlingFee = paymentType === 'cod' ? COD_HANDLING_FEE : 0;
@@ -171,77 +172,63 @@ const Checkout = () => {
     const total = subtotal + shippingCharge + codHandlingFee;
     const codBalance = paymentType === 'cod' ? total - codAdvance : 0;
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: user?.id,
-        order_number: '',
-        subtotal,
-        total_amount: total,
-        shipping_address: {
-          fullName: shippingForm.fullName,
-          phone: shippingForm.phone,
-          addressLine1: shippingForm.addressLine1,
-          addressLine2: shippingForm.addressLine2,
-          city: shippingForm.city,
-          state: shippingForm.state,
-          pincode: shippingForm.pincode,
-          landmark: shippingForm.landmark,
-        },
+    return {
+      user_id: user?.id,
+      subtotal,
+      total_amount: total,
+      shipping_address: {
+        fullName: shippingForm.fullName,
+        email: shippingForm.email,
+        phone: shippingForm.phone,
+        addressLine1: shippingForm.addressLine1,
+        addressLine2: shippingForm.addressLine2,
+        city: shippingForm.city,
+        state: shippingForm.state,
         pincode: shippingForm.pincode,
-        shipping_region: shippingInfo?.region || '',
-        shipping_charge: shippingCharge,
-        payment_type: paymentType,
-        cod_advance_paid: codAdvance,
-        cod_handling_fee: codHandlingFee,
-        cod_balance: codBalance,
-        status: 'pending',
-        payment_status: 'pending',
-      })
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
-
-    // Create order items with variant info
-    const orderItems = cartItems.map(item => ({
-      order_id: order.id,
-      product_name: item.product.name,
-      weight: item.weight,
-      quantity: item.quantity,
-      unit_price: item.product.price,
-      total_price: item.product.price * item.quantity,
-      variant_id: item.variant_id || null,
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-
-    if (itemsError) throw itemsError;
-
-    return order;
+        landmark: shippingForm.landmark,
+      },
+      pincode: shippingForm.pincode,
+      shipping_region: shippingInfo?.region || '',
+      shipping_charge: shippingCharge,
+      payment_type: paymentType,
+      cod_advance_paid: codAdvance,
+      cod_handling_fee: codHandlingFee,
+      cod_balance: codBalance,
+      items: cartItems.map(item => ({
+        product_name: item.product.name,
+        weight: item.weight,
+        quantity: item.quantity,
+        unit_price: item.product.price,
+        total_price: item.product.price * item.quantity,
+        variant_id: item.variant_id || null,
+      })),
+    };
   };
 
-  const initiateRazorpayPayment = async (order: { id: string; order_number: string }) => {
+  const initiateRazorpayPayment = async () => {
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded) {
       throw new Error('Failed to load payment gateway');
     }
 
-    const amount = paymentType === 'cod' ? COD_ADVANCE_AMOUNT : getGrandTotal('prepaid');
+    const checkoutData = prepareCheckoutData();
+    const amount = paymentType === 'cod' ? COD_ADVANCE_AMOUNT : checkoutData.total_amount;
     const isPartialCod = paymentType === 'cod';
 
-    // Create Razorpay order via edge function
+    // Create Razorpay order via edge function (without creating DB order yet)
     const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-      body: { orderId: order.id, amount, isPartialCod },
+      body: { 
+        amount, 
+        isPartialCod,
+        checkoutData: JSON.stringify(checkoutData),
+      },
     });
 
     if (error || !data) {
       throw new Error(error?.message || 'Failed to create payment order');
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<{ orderId: string; orderNumber: string }>((resolve, reject) => {
       const options: RazorpayOptions = {
         key: data.razorpayKeyId,
         amount: data.amount,
@@ -251,13 +238,13 @@ const Checkout = () => {
         order_id: data.razorpayOrderId,
         handler: async (response: RazorpayResponse) => {
           try {
-            // Verify payment on server
+            // Verify payment AND create order on server
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
               body: {
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
-                orderId: order.id,
+                checkoutData: JSON.stringify(checkoutData),
               },
             });
 
@@ -265,7 +252,10 @@ const Checkout = () => {
               throw new Error('Payment verification failed');
             }
 
-            resolve();
+            resolve({ 
+              orderId: verifyData.orderId, 
+              orderNumber: verifyData.orderNumber 
+            });
           } catch (err) {
             reject(err);
           }
@@ -289,16 +279,13 @@ const Checkout = () => {
       razorpay.open();
     });
   };
-
   const handlePlaceOrder = async () => {
     setIsLoading(true);
     try {
-      const order = await createOrder();
-      setOrderId(order.id);
-      setOrderNumber(order.order_number);
-
-      await initiateRazorpayPayment(order);
-
+      const result = await initiateRazorpayPayment();
+      
+      setOrderId(result.orderId);
+      setOrderNumber(result.orderNumber);
       clearCart();
       
       toast({
@@ -314,7 +301,7 @@ const Checkout = () => {
       if (errorMessage === 'Payment cancelled') {
         toast({
           title: 'Payment Cancelled',
-          description: 'Your order is saved. You can retry the payment.',
+          description: 'You can retry the payment when ready.',
           variant: 'destructive',
         });
       } else {

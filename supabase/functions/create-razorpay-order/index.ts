@@ -12,11 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { orderId, amount, isPartialCod } = await req.json();
+    const { amount, isPartialCod, checkoutData } = await req.json();
 
-    if (!orderId || !amount) {
+    if (!amount) {
       return new Response(
-        JSON.stringify({ error: 'Order ID and amount are required' }),
+        JSON.stringify({ error: 'Amount is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -28,6 +28,9 @@ serve(async (req) => {
       throw new Error('Razorpay credentials not configured');
     }
 
+    // Generate a temporary receipt ID
+    const receiptId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
     // Create Razorpay order
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
@@ -38,10 +41,10 @@ serve(async (req) => {
       body: JSON.stringify({
         amount: Math.round(amount * 100), // Razorpay expects amount in paise
         currency: 'INR',
-        receipt: orderId,
+        receipt: receiptId,
         notes: {
-          order_id: orderId,
           is_partial_cod: isPartialCod ? 'true' : 'false',
+          checkout_data: checkoutData, // Store checkout data for order creation after payment
         },
       }),
     });
@@ -52,16 +55,6 @@ serve(async (req) => {
     }
 
     const razorpayOrder = await razorpayResponse.json();
-
-    // Update order with Razorpay order ID
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    await supabase
-      .from('orders')
-      .update({ razorpay_order_id: razorpayOrder.id })
-      .eq('id', orderId);
 
     return new Response(
       JSON.stringify({
