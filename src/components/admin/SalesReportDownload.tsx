@@ -13,8 +13,19 @@ export const SalesReportDownload = () => {
   const handleDownload = async () => {
     setLoading(true);
     try {
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Please log in again to download reports');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-sales-report', {
-        body: { month, year }
+        body: { month, year },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
@@ -27,16 +38,15 @@ export const SalesReportDownload = () => {
           bytes[i] = binaryString.charCodeAt(i);
         }
         const blob = new Blob([bytes], {
-          type: data.contentType || 'text/csv'
+          type: data.contentType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
         
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = data.filename || `sales-report-${month}-${year}.csv`;
+        a.download = data.filename || `sales-report-${month}-${year}.xlsx`;
         a.click();
         URL.revokeObjectURL(url);
-
         toast.success('Report downloaded successfully');
       } else {
         throw new Error('Invalid response format');
