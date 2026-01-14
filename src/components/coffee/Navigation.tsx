@@ -3,67 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Menu, X, User, ChevronDown, Search, Instagram, Phone, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useCategories } from '@/hooks/useCategories';
 import { cn } from '@/lib/utils';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
-const navLinks = [{
-  name: 'Home',
-  href: '/'
-}, {
-  name: 'Shop',
-  href: '/shop',
-  children: [{
-    name: 'Filter Coffee',
-    href: '/shop',
-    description: 'Traditional South Indian blends',
-    items: [{
-      name: 'Coorg Classic',
-      href: '/shop/coorg-classic'
-    }, {
-      name: 'Gold Blend',
-      href: '/shop/gold-blend'
-    }, {
-      name: 'Premium Blend',
-      href: '/shop/premium-blend'
-    }]
-  }, {
-    name: 'Premium Selection',
-    href: '/shop/specialty-blends',
-    description: 'For the connoisseur',
-    items: [{
-      name: 'Specialty Blends',
-      href: '/shop/specialty-blends'
-    }, {
-      name: 'Royal Caffeine',
-      href: '/shop/royal-caffeine'
-    }]
-  }, {
-    name: 'More Products',
-    href: '/shop',
-    description: 'Beyond coffee',
-    items: [{
-      name: 'Instant Coffee',
-      href: '/shop/instant-coffee-decoctions'
-    }, {
-      name: 'Tea Collection',
-      href: '/shop/tea-products'
-    }, {
-      name: 'Accessories',
-      href: '/shop/other-products'
-    }]
-  }]
-}, {
-  name: 'Our Story',
-  href: '/about'
-}, {
-  name: 'Brewing Guide',
-  href: '/brewing-guide'
-}, {
-  name: 'Visit Us',
-  href: '/processing'
-}, {
-  name: 'Contact',
-  href: '/contact'
-}];
 const announcements = [{
   text: 'FREE SHIPPING',
   highlight: 'On all orders over ₹999'
@@ -74,6 +16,7 @@ const announcements = [{
   text: '100% AUTHENTIC',
   highlight: 'Premium South Indian coffee'
 }];
+
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -86,10 +29,44 @@ export default function Navigation() {
   const {
     user
   } = useAuth();
+  const { data: categories } = useCategories();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHomePage = location.pathname === '/';
+
+  // Build navigation links dynamically
+  const navLinks = [
+    {
+      name: 'Home',
+      href: '/'
+    },
+    {
+      name: 'Shop',
+      href: '/shop',
+      children: categories?.map(cat => ({
+        name: cat.name,
+        href: `/shop/${cat.slug}`,
+        description: ''
+      })) || []
+    },
+    {
+      name: 'Our Story',
+      href: '/about'
+    },
+    {
+      name: 'Brewing Guide',
+      href: '/brewing-guide'
+    },
+    {
+      name: 'Visit Us',
+      href: '/processing'
+    },
+    {
+      name: 'Contact',
+      href: '/contact'
+    }
+  ];
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -225,41 +202,30 @@ export default function Navigation() {
                     {link.name}
                   </Link>}
 
-                {/* Mega Menu Dropdown */}
-                {link.children && activeDropdown === link.name && <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[600px] bg-card border border-border rounded-lg shadow-2xl animate-fade-in z-50" onMouseEnter={() => setIsMegaMenuHovered(true)} onMouseLeave={() => {
+                {/* Dropdown Menu */}
+                {link.children && activeDropdown === link.name && <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] bg-card border border-border rounded-lg shadow-2xl animate-fade-in z-50" onMouseEnter={() => setIsMegaMenuHovered(true)} onMouseLeave={() => {
               setIsMegaMenuHovered(false);
               setActiveDropdown(null);
             }}>
-                    <div className="grid grid-cols-3 gap-0 p-2">
-                      {link.children.map(category => <div key={category.name} className="p-4">
-                          <Link to={category.href} className="font-serif font-semibold text-foreground hover:text-primary transition-colors" onClick={() => setActiveDropdown(null)}>
-                            {category.name}
-                          </Link>
-                          <p className="text-xs text-muted-foreground mt-1 mb-3">
-                            {category.description}
-                          </p>
-                          <ul className="space-y-2">
-                            {category.items?.map(item => <li key={item.name}>
-                                <Link to={item.href} className="text-sm text-foreground/70 hover:text-primary transition-colors flex items-center gap-2 group" onClick={() => setActiveDropdown(null)}>
-                                  <span className="w-1 h-1 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
-                                  {item.name}
-                                </Link>
-                              </li>)}
-                          </ul>
-                        </div>)}
-                    </div>
-                    
-                    {/* Featured Banner in Mega Menu */}
-                    <div className="border-t border-border p-4 bg-muted/30 rounded-b-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-primary font-medium tracking-wider uppercase">Featured</p>
-                          <p className="text-sm font-medium">Royal Caffeine - 100% Pure Coffee</p>
-                        </div>
-                        <Link to="/shop/royal-caffeine" className="text-sm text-primary hover:underline" onClick={() => setActiveDropdown(null)}>
-                          Shop Now →
+                    <div className="p-2">
+                      <Link
+                        to="/shop"
+                        className="block px-4 py-2.5 text-sm font-medium text-foreground hover:text-primary hover:bg-muted/50 rounded transition-colors"
+                        onClick={() => setActiveDropdown(null)}
+                      >
+                        All Products
+                      </Link>
+                      <div className="border-t border-border my-2" />
+                      {link.children.map(category => (
+                        <Link
+                          key={category.name}
+                          to={category.href}
+                          className="block px-4 py-2.5 text-sm text-foreground/70 hover:text-primary hover:bg-muted/50 rounded transition-colors"
+                          onClick={() => setActiveDropdown(null)}
+                        >
+                          {category.name}
                         </Link>
-                      </div>
+                      ))}
                     </div>
                   </div>}
               </div>)}
@@ -276,17 +242,25 @@ export default function Navigation() {
                       <ChevronDown className={cn('w-5 h-5 transition-transform duration-300', activeDropdown === link.name && 'rotate-180')} />
                     </button>
                     <div className={cn('overflow-hidden transition-all duration-300', activeDropdown === link.name ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0')}>
-                      <div className="pl-4 pb-4 space-y-4">
-                        {link.children.map(category => <div key={category.name}>
-                            <p className="text-xs text-primary font-medium tracking-wider uppercase mb-2">
-                              {category.name}
-                            </p>
-                            <div className="space-y-2">
-                              {category.items?.map(item => <Link key={item.name} to={item.href} className="block py-2 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
-                                  {item.name}
-                                </Link>)}
-                            </div>
-                          </div>)}
+                      <div className="pl-4 pb-4 space-y-2">
+                        <Link
+                          to="/shop"
+                          className="block py-2 text-foreground/70 hover:text-primary transition-colors font-medium"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          All Products
+                        </Link>
+                        <div className="border-t border-border/30 my-2" />
+                        {link.children.map(category => (
+                          <Link
+                            key={category.name}
+                            to={category.href}
+                            className="block py-2 text-foreground/70 hover:text-primary transition-colors"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
                       </div>
                     </div>
                   </> : <Link to={link.href} className={cn("block py-4 text-lg font-serif font-medium transition-colors", location.pathname === link.href ? "text-primary" : "text-foreground")} onClick={() => setIsOpen(false)}>

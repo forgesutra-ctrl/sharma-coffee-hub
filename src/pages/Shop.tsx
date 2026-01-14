@@ -30,10 +30,11 @@ const Shop = () => {
   const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
   const { data: currentCategory } = useCategoryBySlug(categorySlug);
 
-  const { data: rawProducts, isLoading: loadingAllProducts } = useProducts();
-  const { data: categoryProducts, isLoading: loadingCategoryProducts } = useProductsByCategoryId(currentCategory?.id);
+  const { data: rawProducts, isLoading: loadingAllProducts, error: errorAllProducts } = useProducts();
+  const { data: categoryProducts, isLoading: loadingCategoryProducts, error: errorCategoryProducts } = useProductsByCategoryId(currentCategory?.id);
 
   const isLoading = categorySlug ? loadingCategoryProducts : loadingAllProducts;
+  const error = categorySlug ? errorCategoryProducts : errorAllProducts;
 
   // Get unique products (one per product, not per variant)
   const allProducts = useMemo(() => {

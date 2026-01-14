@@ -25,7 +25,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const inStock = product.inStock !== false;
 
   // Navigate to product detail page using slug
-  const productUrl = `/shop/${product.slug}`;
+  const productUrl = `/product/${product.slug}`;
 
   return (
     <div 
