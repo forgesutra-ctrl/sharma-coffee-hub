@@ -89,6 +89,9 @@ const Checkout = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [paymentType, setPaymentType] = useState<PaymentType>('prepaid');
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; promotionId: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const [shippingForm, setShippingForm] = useState<ShippingForm>({
     fullName: '',
@@ -117,7 +120,7 @@ const Checkout = () => {
 
   const validateShipping = (): boolean => {
     const result = shippingAddressSchema.safeParse(shippingForm);
-    
+
     if (!result.success) {
       const firstError = result.error.errors[0];
       toast({
@@ -127,8 +130,110 @@ const Checkout = () => {
       });
       return false;
     }
-    
+
     return true;
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a coupon code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCouponLoading(true);
+    try {
+      const { data: promotion, error } = await supabase
+        .from('promotions')
+        .select('*')
+        .eq('coupon_code', couponCode.toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error || !promotion) {
+        toast({
+          title: 'Invalid Coupon',
+          description: 'This coupon code is not valid',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const now = new Date();
+      const startDate = new Date(promotion.start_date);
+      const endDate = promotion.end_date ? new Date(promotion.end_date) : null;
+
+      if (now < startDate || (endDate && now > endDate)) {
+        toast({
+          title: 'Expired Coupon',
+          description: 'This coupon has expired',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) {
+        toast({
+          title: 'Coupon Limit Reached',
+          description: 'This coupon has reached its usage limit',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      let discount = 0;
+      const currentSubtotal = getCartTotal();
+
+      if (promotion.min_order_amount && currentSubtotal < promotion.min_order_amount) {
+        toast({
+          title: 'Minimum Order Not Met',
+          description: `Minimum order amount is ₹${promotion.min_order_amount}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (promotion.discount_type === 'percentage') {
+        discount = (currentSubtotal * promotion.discount_value) / 100;
+        if (promotion.max_discount_amount) {
+          discount = Math.min(discount, promotion.max_discount_amount);
+        }
+      } else if (promotion.discount_type === 'fixed_amount') {
+        discount = Math.min(promotion.discount_value, currentSubtotal);
+      }
+
+      setAppliedCoupon({
+        code: couponCode.toUpperCase(),
+        discount: discount,
+        promotionId: promotion.id,
+      });
+
+      toast({
+        title: 'Coupon Applied',
+        description: `You saved ₹${discount.toFixed(2)}!`,
+      });
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to apply coupon',
+        variant: 'destructive',
+      });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    toast({
+      title: 'Coupon Removed',
+      description: 'Coupon code has been removed',
+    });
   };
 
   const handleNextStep = () => {
@@ -327,10 +432,12 @@ const Checkout = () => {
   }
 
   const subtotal = getCartTotal();
+  const discount = appliedCoupon?.discount || 0;
+  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
   const shippingCharge = getShippingCharge();
   const codHandlingFee = paymentType === 'cod' ? COD_HANDLING_FEE : 0;
-  const grandTotal = getGrandTotal(paymentType);
-  const codBalance = getCodBalance(paymentType);
+  const grandTotal = subtotalAfterDiscount + shippingCharge + codHandlingFee;
+  const codBalance = paymentType === 'cod' ? grandTotal - COD_ADVANCE_AMOUNT : 0;
   const codAvailable = isCodAvailable();
 
   return (
@@ -733,6 +840,15 @@ const Checkout = () => {
                       </span>
                       <span className="font-medium">₹{subtotal}</span>
                     </div>
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-green-600">
+                        <span className="flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Discount ({appliedCoupon.code})
+                        </span>
+                        <span className="font-medium">-₹{discount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Truck className="w-3 h-3" />
@@ -749,6 +865,47 @@ const Checkout = () => {
                         <span className="font-medium">₹{codHandlingFee}</span>
                       </div>
                     )}
+
+                    {!appliedCoupon && (
+                      <div className="pt-3 border-t border-border">
+                        <Label htmlFor="coupon" className="text-xs text-muted-foreground">
+                          Have a coupon code?
+                        </Label>
+                        <div className="flex gap-2 mt-2">
+                          <Input
+                            id="coupon"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            placeholder="Enter code"
+                            className="flex-1 h-9 text-sm"
+                            onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleApplyCoupon}
+                            disabled={couponLoading}
+                          >
+                            {couponLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Apply'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {appliedCoupon && (
+                      <div className="pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveCoupon}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Remove coupon
+                        </Button>
+                      </div>
+                    )}
+
                     <div className="border-t border-border pt-3 mt-3">
                       <div className="flex justify-between text-base">
                         <span className="font-semibold">Total</span>

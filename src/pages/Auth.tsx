@@ -132,12 +132,27 @@ const Auth = () => {
           throw new Error('No session created. Please try again.');
         }
 
+        const userId = verifyData.user?.id;
+        let finalRedirect = redirectTo;
+
+        if (userId) {
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
+            finalRedirect = '/admin/dashboard';
+          }
+        }
+
         toast({
           title: response.data?.isNewUser ? 'Account Created' : 'Welcome Back',
           description: 'You have been successfully logged in',
         });
 
-        navigate(redirectTo, { replace: true });
+        navigate(finalRedirect, { replace: true });
       } else {
         throw new Error('Invalid verification response');
       }
@@ -201,6 +216,13 @@ const Auth = () => {
         <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
           {step === 'email' ? (
             <>
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                <span className="text-sm">Back</span>
+              </button>
               <h2 className="text-xl font-semibold text-center mb-2">Welcome</h2>
               <p className="text-muted-foreground text-center text-sm mb-6">
                 Enter your email to sign in or create an account

@@ -170,35 +170,72 @@ export interface WholesaleInquiry {
   message: string;
 }
 
-export interface Subscription {
+export interface SubscriptionPlan {
   id: string;
-  subscription_number: string;
-  customer_email: string;
-  customer_name: string;
-  customer_phone: string;
-  product_id: string;
-  product_name: string;
-  weight: number;
-  quantity: number;
-  frequency: '15_days' | 'monthly' | '2_months';
-  next_delivery_date: string;
-  delivery_address: ShippingAddress;
-  status: 'active' | 'paused' | 'cancelled';
-  notes: string;
+  name: string;
+  description: string;
+  billing_cycle: string;
+  discount_percentage: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
-  paused_at?: string;
-  cancelled_at?: string;
 }
 
-export interface SubscriptionDelivery {
+export interface UserSubscription {
   id: string;
-  subscription_id: string;
-  order_id?: string;
-  scheduled_date: string;
-  delivered_date?: string;
-  status: 'scheduled' | 'processing' | 'shipped' | 'delivered' | 'skipped';
-  tracking_number: string;
+  user_id: string;
+  plan_id: string;
+  product_id: string;
+  variant_id: string | null;
+  quantity: number;
+  status: 'active' | 'paused' | 'cancelled';
+  next_billing_date: string;
+  shipping_address: ShippingAddress;
+  razorpay_subscription_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SubscriptionOrder {
+  id: string;
+  subscription_id: string;
+  order_id: string | null;
+  billing_date: string;
+  status: string;
+  created_at: string;
+}
+
+export interface UserSubscriptionWithDetails extends UserSubscription {
+  plan: SubscriptionPlan;
+  product: ProductV2;
+  variant?: ProductVariant;
+}
+
+export interface Promotion {
+  id: string;
+  name: string;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed_amount' | 'buy_x_get_y' | 'free_shipping';
+  discount_value: number;
+  coupon_code: string | null;
+  min_order_amount: number | null;
+  max_discount_amount: number | null;
+  applicable_products: string[] | null;
+  applicable_categories: string[] | null;
+  start_date: string;
+  end_date: string | null;
+  usage_limit: number | null;
+  usage_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PromotionUsage {
+  id: string;
+  promotion_id: string;
+  user_id: string | null;
+  order_id: string | null;
+  discount_applied: number;
+  used_at: string;
 }

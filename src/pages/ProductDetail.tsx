@@ -7,9 +7,10 @@ import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Product } from '@/types';
+import { Product, ProductV2, ProductVariant } from '@/types';
 import { useProductBySlug, useProducts, isPurchasableProduct, DatabaseProduct } from '@/hooks/useProducts';
 import { PincodeDialog } from '@/components/PincodeDialog';
+import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -387,6 +388,17 @@ const ProductDetail = () => {
                   {(selectedVariant?.stock_quantity ?? 0) > 0 ? 'Add to Cart' : 'Out of Stock'}
                 </Button>
               </div>
+
+              {/* Subscription Card */}
+              {activeProduct?.subscription_eligible && selectedVariant && (
+                <div className="mb-6">
+                  <SubscriptionCard
+                    product={activeProduct as unknown as ProductV2}
+                    selectedVariant={selectedVariant as ProductVariant}
+                    quantity={quantity}
+                  />
+                </div>
+              )}
 
               {/* Features */}
               <div className="space-y-3 py-6 border-t border-border/50">

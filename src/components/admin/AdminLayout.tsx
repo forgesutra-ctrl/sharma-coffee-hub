@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   LogOut,
   FolderTree,
-  FileText
+  FileText,
+  Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -25,6 +26,7 @@ const allSidebarLinks = [
   { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
   { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },
   { name: 'Customers', href: '/admin/customers', icon: Users, superAdminOnly: true, staffAllowed: false },
+  { name: 'Promotions', href: '/admin/promotions', icon: Tag, superAdminOnly: true, staffAllowed: false },
   { name: 'Shipping', href: '/admin/shipping', icon: Truck, superAdminOnly: false, staffAllowed: true },
   { name: 'Operations', href: '/admin/operations', icon: Wrench, superAdminOnly: false, staffAllowed: true },
   { name: 'Reports', href: '/admin/reports', icon: FileText, superAdminOnly: true, staffAllowed: false },

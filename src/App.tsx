@@ -24,6 +24,7 @@ import TermsOfService from "./pages/TermsOfService";
 import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import FAQ from "./pages/FAQ";
+import Subscriptions from "./pages/Subscriptions";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AccountLayout from "./components/account/AccountLayout";
 import AccountDashboard from "./pages/account/AccountDashboard";
@@ -37,6 +38,7 @@ import OrdersPage from "./pages/admin/OrdersPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CustomersPage from "./pages/admin/CustomersPage";
+import PromotionsPage from "./pages/admin/PromotionsPage";
 import ShippingPage from "./pages/admin/ShippingPage";
 import OperationsPage from "./pages/admin/OperationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
@@ -70,7 +72,8 @@ const App = () => (
               <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="/faq" element={<FAQ />} />
-              
+              <Route path="/subscriptions" element={<Subscriptions />} />
+
               {/* Protected Routes */}
               <Route path="/checkout" element={
                 <ProtectedRoute>
@@ -102,6 +105,7 @@ const App = () => (
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="categories" element={<CategoriesPage />} />
                 <Route path="customers" element={<CustomersPage />} />
+                <Route path="promotions" element={<PromotionsPage />} />
                 <Route path="shipping" element={<ShippingPage />} />
                 <Route path="operations" element={<OperationsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
