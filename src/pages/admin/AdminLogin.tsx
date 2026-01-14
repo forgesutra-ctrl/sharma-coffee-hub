@@ -43,16 +43,21 @@ const AdminLogin = () => {
         throw new Error('Login failed');
       }
 
-      // Check if user has admin role
+      // Check if user has admin, super_admin, or staff role
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
-        .eq('role', 'admin')
-        .single();
+        .maybeSingle();
 
-      if (roleError || !roleData) {
-        // Sign out if not an admin
+      if (roleError) {
+        await supabase.auth.signOut();
+        throw new Error('Failed to verify access permissions');
+      }
+
+      // Allow super_admin, admin, and staff roles
+      const allowedRoles = ['super_admin', 'admin', 'staff'];
+      if (!roleData || !allowedRoles.includes(roleData.role)) {
         await supabase.auth.signOut();
         throw new Error('You do not have admin access');
       }
