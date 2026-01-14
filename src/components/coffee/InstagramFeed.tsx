@@ -25,7 +25,7 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Instagram className="w-8 h-8 text-primary" />
             <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase">
-              @sharmacoffeeworks
+              @sharma_coffee_works
             </p>
           </div>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -49,7 +49,7 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
         {/* CTA */}
         <div className="text-center mt-10">
           <a
-            href="https://www.instagram.com/sharmacoffeeworks"
+            href="https://www.instagram.com/sharma_coffee_works/"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium transition-colors group"
