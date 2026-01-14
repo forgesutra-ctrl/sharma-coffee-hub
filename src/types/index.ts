@@ -136,16 +136,6 @@ export interface ShippingAddress {
   country: string;
 }
 
-export interface Testimonial {
-  id: string;
-  customer_name: string;
-  content: string;
-  rating: number;
-  location: string;
-  is_featured: boolean;
-  created_at: string;
-}
-
 export interface BrewingGuide {
   id: string;
   title: string;

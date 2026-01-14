@@ -1,4 +1,4 @@
-import { Product, Testimonial, BrewingGuide } from '../types';
+import { Product, BrewingGuide } from '../types';
 
 export const mockProducts: Product[] = [
   {
@@ -88,36 +88,6 @@ export const mockProducts: Product[] = [
     sort_order: 4,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  },
-];
-
-export const mockTestimonials: Testimonial[] = [
-  {
-    id: '1',
-    customer_name: 'Priya Sharma',
-    content: 'Been ordering from Sharma Coffee Works for over 10 years. The Gold Blend brings back memories of my grandmother\'s filter coffee. Absolutely authentic!',
-    rating: 5,
-    location: 'Bengaluru',
-    is_featured: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    customer_name: 'Rajesh Kumar',
-    content: 'The freshness of their coffee is unmatched. You can tell it\'s roasted with care. The Premium Blend has become a family favorite.',
-    rating: 5,
-    location: 'Mumbai',
-    is_featured: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    customer_name: 'Ananya Reddy',
-    content: 'As a coffee enthusiast, I appreciate the quality and consistency of Sharma Coffee. Their Royal Caffeine is perfect for my morning espresso.',
-    rating: 5,
-    location: 'Hyderabad',
-    is_featured: true,
-    created_at: new Date().toISOString(),
   },
 ];
 

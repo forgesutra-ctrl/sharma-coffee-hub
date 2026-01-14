@@ -1,30 +1,31 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, RefreshCw, Award, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 import HeroVideo from '@/components/coffee/HeroVideo';
 import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
 import CategoryGrid from '@/components/coffee/CategoryGrid';
-import TestimonialsCarousel from '@/components/coffee/TestimonialsCarousel';
 import StorySection from '@/components/coffee/StorySection';
 import InstagramFeed from '@/components/coffee/InstagramFeed';
-import { mockTestimonials } from '@/data/mockData';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
 import coffeeBeans from '@/assets/coffee-beans-roasting.jpg';
 import { useFeaturedProducts, useProducts } from '@/hooks/useProducts';
 import { useCategoriesWithCount } from '@/hooks/useCategories';
 
-// Transform testimonials for carousel
-const testimonials = mockTestimonials.map(t => ({
-  id: t.id,
-  content: t.content,
-  customerName: t.customer_name,
-  location: t.location || '',
-  rating: t.rating,
-}));
-
 export default function Homepage() {
   const { data: featuredProducts, isLoading: loadingFeatured } = useFeaturedProducts();
   const { data: allProducts } = useProducts();
   const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
+
+  // Load Google Reviews widget script
+  useEffect(() => {
+    const existingScript = document.querySelector('script[src*="google-reviews/widget.js"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/google-reviews/widget.js';
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   // Transform featured products for BestSellersCarousel
   const bestSellers = featuredProducts?.map(product => ({
@@ -153,14 +154,22 @@ export default function Homepage() {
         theme="dark"
       />
 
-      {/* Testimonials Carousel */}
-      <section className="py-20 bg-background">
+      {/* Google Reviews */}
+      <section className="py-24 bg-secondary">
         <div className="max-w-7xl mx-auto px-4">
-          <TestimonialsCarousel
-            testimonials={testimonials}
-            title="What Our Customers Say"
-            subtitle="Join thousands of coffee lovers"
-          />
+          {/* Header */}
+          <div className="text-center mb-16">
+            <p className="text-primary text-sm font-medium tracking-[0.3em] uppercase mb-4">
+              Reviews
+            </p>
+            <h2 className="font-display text-4xl md:text-5xl font-semibold text-foreground">
+              What Our Customers Say
+            </h2>
+            <div className="section-divider mt-6" />
+          </div>
+
+          {/* Google Reviews Widget */}
+          <div className="sk-ww-google-reviews" data-embed-id="25643427"></div>
         </div>
       </section>
 

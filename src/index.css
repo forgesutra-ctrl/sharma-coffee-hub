@@ -278,17 +278,6 @@
     @apply scale-110;
   }
 
-  /* ===== TESTIMONIAL CARDS ===== */
-  .testimonial-card {
-    @apply relative p-8 bg-card border border-border/50 transition-all duration-500;
-    @apply hover:border-primary/40 hover:bg-muted/30;
-  }
-
-  .testimonial-card::before {
-    content: '"';
-    @apply absolute top-4 left-6 text-8xl font-serif text-primary/10 leading-none;
-    font-family: 'Playfair Display', serif;
-  }
 
   /* ===== VARIANT SELECTORS ===== */
   .variant-option {
