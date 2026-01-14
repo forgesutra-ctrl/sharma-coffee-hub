@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Package, ShoppingCart, Users, IndianRupee, TrendingUp, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 type Order = Tables<'orders'>;
 
@@ -67,14 +68,17 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
+      <SuperAdminOnly>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </SuperAdminOnly>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <SuperAdminOnly>
+      <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
@@ -226,6 +230,7 @@ export default function AdminDashboard() {
           </Card>
         </Link>
       </div>
-    </div>
+      </div>
+    </SuperAdminOnly>
   );
 }

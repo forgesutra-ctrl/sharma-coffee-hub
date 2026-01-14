@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import ProductEditor from '@/components/admin/ProductEditor';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 type Product = Tables<'products'>;
 
@@ -122,9 +123,10 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Products</h1>
+    <SuperAdminOnly>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-3xl font-bold">Products</h1>
         <Button onClick={() => setIsCreating(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Product
@@ -249,6 +251,7 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </SuperAdminOnly>
   );
 }

@@ -31,21 +31,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (error) {
-        logger.error('Failed to fetch user role');
+        logger.error('Failed to fetch user role:', error);
         return null;
       }
 
-      // Check if user has admin role (prioritize admin over user)
-      const roles = data?.map(r => r.role) || [];
-      if (roles.includes('admin')) {
-        return 'admin' as AppRole;
-      }
-      return roles[0] as AppRole | null;
+      return (data?.role as AppRole) || null;
     } catch (error) {
-      logger.error('Failed to fetch user role');
+      logger.error('Failed to fetch user role:', error);
       return null;
     }
   };
@@ -121,10 +117,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if user has admin privileges (super_admin or admin)
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  // Check if user is super admin specifically
-  const isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
+  // Check if user is super admin specifically (highest level access)
+  const isSuperAdmin = userRole === 'super_admin';
 
-  // Check if user is staff
+  // Check if user is staff (limited access to operations/shipping only)
   const isStaff = userRole === 'staff' || userRole === 'shop_staff';
 
   return (

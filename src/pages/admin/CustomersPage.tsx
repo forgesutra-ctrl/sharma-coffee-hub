@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Eye, Mail, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 type Profile = Tables<'profiles'>;
 type CustomerSegment = Tables<'customer_segments'>;
@@ -100,9 +101,10 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Customers</h1>
+    <SuperAdminOnly>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-3xl font-bold">Customers</h1>
       </div>
 
       {/* Search */}
@@ -265,6 +267,7 @@ export default function CustomersPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SuperAdminOnly>
   );
 }

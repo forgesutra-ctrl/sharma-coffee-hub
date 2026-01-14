@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isStaff, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -26,7 +26,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
+  // For admin routes, allow both admins and staff (AdminLayout handles specific restrictions)
+  if (requireAdmin && !isAdmin && !isStaff) {
     return <Navigate to="/" replace />;
   }
 

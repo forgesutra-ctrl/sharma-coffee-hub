@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 interface Category {
   id: string;
@@ -186,9 +187,10 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Categories</h1>
+    <SuperAdminOnly>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-3xl font-bold">Categories</h1>
         <Button onClick={openAddDialog}>
           <Plus className="w-4 h-4 mr-2" />
           Add Category
@@ -335,6 +337,7 @@ export default function CategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SuperAdminOnly>
   );
 }

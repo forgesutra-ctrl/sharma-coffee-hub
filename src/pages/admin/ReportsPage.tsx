@@ -1,10 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { SalesReportDownload } from '@/components/admin/SalesReportDownload';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 export default function ReportsPage() {
   return (
-    <div className="p-6 space-y-6">
+    <SuperAdminOnly>
+      <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Reports</h1>
       </div>
@@ -25,6 +27,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </SuperAdminOnly>
   );
 }
