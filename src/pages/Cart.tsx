@@ -3,7 +3,7 @@ import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Truck, Weight } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Truck, Weight, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { PincodeDialog } from '@/components/PincodeDialog';
 
@@ -23,6 +23,17 @@ const Cart = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
+
+  // Check if cart has subscription items
+  const hasSubscriptionItems = cartItems.some(item => item.is_subscription);
+  const allItemsAreSubscription = cartItems.length > 0 && cartItems.every(item => item.is_subscription);
+
+  // Calculate subscription savings
+  const subscriptionSavings = cartItems
+    .filter(item => item.is_subscription && item.original_price)
+    .reduce((total, item) => {
+      return total + ((item.original_price! - item.product.price) * item.quantity);
+    }, 0);
 
   const handleCheckout = () => {
     if (!shippingInfo) {
@@ -68,8 +79,9 @@ const Cart = () => {
   }
 
   const subtotal = getCartTotal();
-  const shipping = getShippingCharge();
-  const grandTotal = getGrandTotal('prepaid');
+  // Free shipping if all items are subscription, otherwise calculate normally
+  const shipping = allItemsAreSubscription ? 0 : getShippingCharge();
+  const grandTotal = subtotal + shipping;
   const cartWeight = getCartWeight();
 
   return (
@@ -86,15 +98,22 @@ const Cart = () => {
               {cartItems.map((item) => (
                 <div
                   key={`${item.product.id}-${item.weight}`}
-                  className="bg-card border border-border rounded-xl p-4 flex gap-4"
+                  className={`bg-card border rounded-xl p-4 flex gap-4 ${
+                    item.is_subscription ? 'border-primary/30' : 'border-border'
+                  }`}
                 >
                   {/* Product Image */}
-                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
                     <img
                       src={item.product.image_url || item.product.images?.[0] || ''}
                       alt={item.product.name}
                       className="w-full h-full object-cover"
                     />
+                    {item.is_subscription && (
+                      <div className="absolute top-1 left-1 bg-primary text-primary-foreground p-1 rounded-full">
+                        <RefreshCw className="w-3 h-3" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Product Details */}
@@ -105,9 +124,38 @@ const Cart = () => {
                     <div className="text-sm text-muted-foreground mt-1 space-y-0.5">
                       <p>{item.weight >= 1000 ? `${item.weight / 1000} kg` : `${item.weight}g`}</p>
                     </div>
-                    <p className="text-primary font-semibold mt-2">
-                      ₹{item.product.price}
-                    </p>
+                    
+                    {/* Subscription Badge */}
+                    {item.is_subscription && (
+                      <div className="mt-2 space-y-1">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary text-xs font-semibold rounded">
+                          <RefreshCw className="w-3 h-3" />
+                          Monthly Subscription
+                        </span>
+                        <p className="text-xs text-green-600 font-medium">
+                          ✓ Free Shipping
+                        </p>
+                        {item.original_price && item.original_price !== item.product.price && (
+                          <p className="text-xs text-green-600">
+                            Saving ₹{(item.original_price - item.product.price) * item.quantity}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="mt-2 flex items-center gap-2">
+                      {item.is_subscription && item.original_price && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          ₹{item.original_price}
+                        </span>
+                      )}
+                      <p className="text-primary font-semibold">
+                        ₹{item.product.price}
+                      </p>
+                      {item.is_subscription && (
+                        <span className="text-xs text-muted-foreground">/month</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Quantity Controls */}
@@ -154,6 +202,21 @@ const Cart = () => {
                   Order Summary
                 </h2>
 
+                {/* Subscription Notice */}
+                {hasSubscriptionItems && (
+                  <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Subscription items in cart</span>
+                    </div>
+                    {allItemsAreSubscription && (
+                      <p className="text-xs text-green-600 mt-1 font-medium">
+                        ✓ Free Shipping applied
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Delivery Location */}
                 <div className="mb-4 p-3 bg-muted/30 border border-border/50 rounded-lg">
                   {shippingInfo ? (
@@ -199,18 +262,32 @@ const Cart = () => {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">₹{subtotal}</span>
                   </div>
+                  
+                  {/* Subscription Savings */}
+                  {subscriptionSavings > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span className="flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3" />
+                        Subscription Savings
+                      </span>
+                      <span className="font-medium">-₹{subscriptionSavings}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Truck className="w-3 h-3" />
                       Shipping
                     </span>
-                    {shippingInfo ? (
+                    {allItemsAreSubscription ? (
+                      <span className="font-medium text-green-600">FREE</span>
+                    ) : shippingInfo ? (
                       <span className="font-medium">₹{shipping}</span>
                     ) : (
                       <span className="text-muted-foreground text-xs">Enter PIN</span>
                     )}
                   </div>
-                  {shippingInfo && shippingInfo.multiplier > 0 && (
+                  {shippingInfo && !allItemsAreSubscription && shippingInfo.multiplier > 0 && (
                     <div className="text-xs text-muted-foreground pl-5">
                       {shippingInfo.region}: ₹{(shipping / shippingInfo.multiplier).toFixed(0)}/kg × {shippingInfo.multiplier} kg
                     </div>
@@ -220,6 +297,11 @@ const Cart = () => {
                       <span className="font-semibold">Total</span>
                       <span className="font-bold text-primary">₹{grandTotal}</span>
                     </div>
+                    {hasSubscriptionItems && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Subscription items will be billed monthly
+                      </p>
+                    )}
                   </div>
                 </div>
 
