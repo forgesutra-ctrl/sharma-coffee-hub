@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
 const announcements = [{
   text: 'FREE SHIPPING',
-  highlight: 'On all orders over ₹999'
+  highlight: 'Subscription Members Only'
 }, {
   text: 'FARM TO CUP',
   highlight: 'Direct from Coorg since 1983'
@@ -232,8 +232,17 @@ export default function Navigation() {
           </div>
         </div>
 
+        {/* Mobile Navigation Overlay */}
+        {isOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black/50 z-40 top-[calc(2.5rem+4rem)]"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Mobile Navigation */}
-        <div className={cn('lg:hidden fixed inset-x-0 top-[calc(2.5rem+4rem)] bottom-0 bg-background z-40 transform transition-all duration-500 ease-out overflow-y-auto', isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none')}>
+        <div className={cn('lg:hidden fixed inset-x-0 top-[calc(2.5rem+4rem)] bottom-0 bg-background z-50 transform transition-all duration-300 ease-out overflow-y-auto shadow-2xl', isOpen ? 'translate-x-0' : 'translate-x-full')}>
           <div className="flex flex-col p-6 space-y-1 min-h-full">
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">
                 {link.children ? <>

@@ -28,6 +28,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useDTDC } from '@/hooks/useDTDC';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
+import BulkInventoryUpload from '@/components/admin/BulkInventoryUpload';
+import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
 
 // Types
 interface ProductWithVariants {
@@ -480,6 +482,11 @@ export default function OperationsPage() {
 
         {/* ========== INVENTORY TAB ========== */}
         <TabsContent value="inventory" className="space-y-4">
+          {/* Bulk Upload - Super Admin Only */}
+          <SuperAdminOnly>
+            <BulkInventoryUpload />
+          </SuperAdminOnly>
+
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />

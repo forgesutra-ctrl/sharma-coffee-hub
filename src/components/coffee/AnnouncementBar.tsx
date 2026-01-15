@@ -13,8 +13,8 @@ const announcements: Announcement[] = [
   {
     id: '1',
     icon: Truck,
-    message: 'Free shipping on orders above',
-    highlight: '₹999',
+    message: 'Free Shipping —',
+    highlight: 'Subscription Members Only',
   },
   {
     id: '2',

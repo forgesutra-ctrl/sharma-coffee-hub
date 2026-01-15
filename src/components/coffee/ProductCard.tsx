@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -16,6 +16,8 @@ interface ProductCardProps {
     description?: string;
     flavorNotes?: string[];
     inStock?: boolean;
+    subscription_eligible?: boolean;
+    subscription_discount_percentage?: number;
   };
 }
 
@@ -109,7 +111,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       {/* Product Info */}
       <div className="pt-4 text-center">
-        <Link 
+        <Link
           to={productUrl}
           className="block"
         >
@@ -117,16 +119,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.name}
           </h3>
         </Link>
-        
-        <p className="mt-2 text-sm text-muted-foreground">
+
+        <div className="mt-2 space-y-1">
           {inStock ? (
             <>
-              <span className="text-foreground font-medium">from ₹{product.price.toLocaleString()}</span>
+              <p className="text-sm">
+                <span className="text-foreground font-medium">from ₹{product.price.toLocaleString()}</span>
+              </p>
+              {product.subscription_eligible && product.subscription_discount_percentage && (
+                <div className="flex items-center justify-center gap-1.5 text-xs">
+                  <RefreshCw className="w-3 h-3 text-primary" />
+                  <span className="text-primary font-medium">
+                    Subscribe & Save {product.subscription_discount_percentage}%
+                  </span>
+                </div>
+              )}
             </>
           ) : (
-            <span className="text-muted-foreground">Sold Out</span>
+            <span className="text-muted-foreground text-sm">Sold Out</span>
           )}
-        </p>
+        </div>
       </div>
     </div>
   );

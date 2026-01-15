@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package } from 'lucide-react';
 import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [imageError, setImageError] = useState(false);
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
+  const [purchaseType, setPurchaseType] = useState<'one-time' | 'subscription'>('one-time');
 
   // Set default selected child product when product loads
   useEffect(() => {
@@ -162,7 +163,7 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-background">
         {/* Announcement Bar */}
         <div className="bg-primary text-primary-foreground py-2.5 text-center text-xs font-medium tracking-[0.2em] uppercase">
-          Free Shipping On all orders over ₹499
+          Free Shipping — A Privilege Extended Only to Our Subscription Members
         </div>
 
         {/* Breadcrumb */}
@@ -331,6 +332,48 @@ const ProductDetail = () => {
                 </div>
               )}
 
+              {/* Purchase Type Toggle - Prominent Subscription Option */}
+              {activeProduct?.subscription_eligible && (
+                <div className="mb-6 p-4 border-2 border-primary/20 rounded-lg bg-gradient-to-br from-primary/5 to-transparent">
+                  <p className="text-sm font-medium text-foreground mb-3">Choose Your Purchase Option</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPurchaseType('one-time')}
+                      className={cn(
+                        "p-4 border-2 rounded-lg text-left transition-all",
+                        purchaseType === 'one-time'
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <ShoppingBag className="w-4 h-4" />
+                        <span className="font-semibold">One-Time Purchase</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Regular price, no commitment</p>
+                    </button>
+                    <button
+                      onClick={() => setPurchaseType('subscription')}
+                      className={cn(
+                        "p-4 border-2 rounded-lg text-left transition-all relative overflow-hidden",
+                        purchaseType === 'subscription'
+                          ? "border-primary bg-primary/10"
+                          : "border-primary/50 hover:border-primary"
+                      )}
+                    >
+                      <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-bl">
+                        SAVE 15%
+                      </div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <RefreshCw className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-primary">Subscribe & Save</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Monthly delivery + free shipping</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Size/Weight Selection */}
               {variants.length > 0 && (
                 <div className="mb-6">
@@ -389,14 +432,39 @@ const ProductDetail = () => {
                 </Button>
               </div>
 
-              {/* Subscription Card */}
-              {activeProduct?.subscription_eligible && selectedVariant && (
-                <div className="mb-6">
-                  <SubscriptionCard
-                    product={activeProduct as unknown as ProductV2}
-                    selectedVariant={selectedVariant as ProductVariant}
-                    quantity={quantity}
-                  />
+              {/* Subscription Details - Show when subscription is selected */}
+              {activeProduct?.subscription_eligible && purchaseType === 'subscription' && selectedVariant && (
+                <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-primary">Subscription Benefits</h3>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span>Save 15% on every order</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span className="font-medium">Free Shipping — Subscription Exclusive</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span>Delivered monthly, automatically</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span>Skip, pause, or cancel anytime</span>
+                    </li>
+                  </ul>
+                  <div className="mt-3 pt-3 border-t border-primary/20">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-muted-foreground line-through">₹{selectedVariant.price.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-primary">
+                        ₹{(selectedVariant.price * 0.85).toFixed(2)}/month
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -404,7 +472,7 @@ const ProductDetail = () => {
               <div className="space-y-3 py-6 border-t border-border/50">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Check className="w-4 h-4 text-primary" />
-                  <span>Free shipping on orders over ₹499</span>
+                  <span>Free Shipping — Subscription Members Only</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Check className="w-4 h-4 text-primary" />

@@ -77,7 +77,7 @@ export default function Homepage() {
               </div>
               <div>
                 <p className="font-medium text-foreground">Free Shipping</p>
-                <p className="text-sm text-muted-foreground">On orders over ₹499</p>
+                <p className="text-sm text-muted-foreground">Subscription Members Only</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
