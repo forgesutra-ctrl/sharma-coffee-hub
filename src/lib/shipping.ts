@@ -45,10 +45,69 @@ export function getShippingRegion(pincode: string): ShippingRegion | null {
   return 'rest_of_india';
 }
 
-export function getShippingCharge(pincode: string): number {
+export function getShippingCharge(pincode: string, weightInGrams: number = 0): number {
   const region = getShippingRegion(pincode);
   if (!region) return 0;
-  return SHIPPING_CHARGES[region];
+
+  const baseRate = SHIPPING_CHARGES[region];
+
+  if (weightInGrams <= 0) {
+    return baseRate;
+  }
+
+  const weightInKg = weightInGrams / 1000;
+  const multiplier = Math.ceil(weightInKg);
+
+  return baseRate * multiplier;
+}
+
+export function calculateShippingByState(state: string, weightInGrams: number): number {
+  let region: ShippingRegion;
+
+  if (state === KARNATAKA) {
+    region = 'karnataka';
+  } else if (SOUTH_INDIA_STATES.includes(state)) {
+    region = 'south_india';
+  } else {
+    region = 'rest_of_india';
+  }
+
+  const baseRate = SHIPPING_CHARGES[region];
+
+  if (weightInGrams <= 0) {
+    return baseRate;
+  }
+
+  const weightInKg = weightInGrams / 1000;
+  const multiplier = Math.ceil(weightInKg);
+
+  return baseRate * multiplier;
+}
+
+export function getShippingBreakdown(pincode: string, weightInGrams: number): {
+  region: ShippingRegion;
+  regionLabel: string;
+  baseRate: number;
+  weightInKg: number;
+  multiplier: number;
+  totalCharge: number;
+} | null {
+  const region = getShippingRegion(pincode);
+  if (!region) return null;
+
+  const baseRate = SHIPPING_CHARGES[region];
+  const weightInKg = weightInGrams / 1000;
+  const multiplier = Math.ceil(weightInKg);
+  const totalCharge = baseRate * multiplier;
+
+  return {
+    region,
+    regionLabel: getShippingRegionLabel(region),
+    baseRate,
+    weightInKg,
+    multiplier,
+    totalCharge,
+  };
 }
 
 export function validatePincode(pincode: string): boolean {

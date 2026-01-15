@@ -118,7 +118,7 @@ const Shop = () => {
       <div className="min-h-screen bg-background">
         {/* Announcement Bar Style Header */}
         <div className="bg-primary text-primary-foreground py-2.5 text-center text-xs font-medium tracking-[0.2em] uppercase">
-          Free Shipping On all orders over ₹499
+          Free Shipping — A Privilege Extended Only to Our Subscription Members
         </div>
 
         {/* Breadcrumb */}

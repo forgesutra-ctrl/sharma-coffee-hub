@@ -68,12 +68,13 @@ interface RazorpayResponse {
 }
 
 const Checkout = () => {
-  const { 
-    cartItems, 
-    getCartTotal, 
-    clearCart, 
+  const {
+    cartItems,
+    getCartTotal,
+    clearCart,
     shippingInfo,
     getShippingCharge,
+    getCartWeight,
     isCodAvailable,
     getCodAdvance,
     getCodHandlingFee,
@@ -860,6 +861,11 @@ const Checkout = () => {
                       </span>
                       <span className="font-medium">₹{shippingCharge}</span>
                     </div>
+                    {shippingInfo && shippingInfo.multiplier > 0 && (
+                      <div className="text-xs text-muted-foreground pl-5">
+                        {(getCartWeight() / 1000).toFixed(2)} kg × ₹{(shippingCharge / shippingInfo.multiplier).toFixed(0)}/kg
+                      </div>
+                    )}
                     {paymentType === 'cod' && (
                       <div className="flex justify-between text-amber-600">
                         <span className="flex items-center gap-1">

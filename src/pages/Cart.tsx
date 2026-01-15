@@ -3,21 +3,22 @@ import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Truck } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Truck, Weight } from 'lucide-react';
 import { useState } from 'react';
 import { PincodeDialog } from '@/components/PincodeDialog';
 
 const Cart = () => {
-  const { 
-    cartItems, 
-    updateQuantity, 
-    removeFromCart, 
-    getCartTotal, 
+  const {
+    cartItems,
+    updateQuantity,
+    removeFromCart,
+    getCartTotal,
     clearCart,
     shippingInfo,
     setShippingPincode,
     getShippingCharge,
     getGrandTotal,
+    getCartWeight,
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ const Cart = () => {
   const subtotal = getCartTotal();
   const shipping = getShippingCharge();
   const grandTotal = getGrandTotal('prepaid');
+  const cartWeight = getCartWeight();
 
   return (
     <Layout>
@@ -181,6 +183,17 @@ const Cart = () => {
                   )}
                 </div>
 
+                {/* Cart Weight */}
+                <div className="mb-4 p-3 bg-muted/10 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Weight className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Total Weight:</span>
+                    <span className="font-medium">
+                      {cartWeight >= 1000 ? `${(cartWeight / 1000).toFixed(2)} kg` : `${cartWeight}g`}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
@@ -197,6 +210,11 @@ const Cart = () => {
                       <span className="text-muted-foreground text-xs">Enter PIN</span>
                     )}
                   </div>
+                  {shippingInfo && shippingInfo.multiplier > 0 && (
+                    <div className="text-xs text-muted-foreground pl-5">
+                      {shippingInfo.region}: ₹{(shipping / shippingInfo.multiplier).toFixed(0)}/kg × {shippingInfo.multiplier} kg
+                    </div>
+                  )}
                   <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between text-base">
                       <span className="font-semibold">Total</span>

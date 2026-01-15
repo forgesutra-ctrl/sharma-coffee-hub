@@ -237,13 +237,28 @@ export const shippingPolicyContent = {
       footer: "Note: These are estimates. Actual delivery may vary due to logistics or unforeseen circumstances."
     },
     {
-      heading: "Shipping Charges",
-      content: ``,
+      heading: "Delivery Charges",
+      content: `We offer weight-based shipping across India with competitive rates designed to ensure safe delivery of your fresh coffee:`,
       list: [
-        "FREE shipping on orders above ₹499",
-        "Flat ₹49 shipping for orders below ₹499",
-        "Remote area surcharge may apply for certain pincodes"
+        "Karnataka: ₹50 per kg",
+        "South India (Tamil Nadu, Kerala, Andhra Pradesh, Telangana, Puducherry): ₹60 per kg",
+        "Rest of India: ₹100 per kg"
       ]
+    },
+    {
+      heading: "Weight-Based Pricing",
+      content: `Our shipping is calculated based on total order weight:`,
+      list: [
+        "Orders up to 1 kg: Standard rate applies",
+        "Orders 1-2 kg: 2× standard rate",
+        "Orders 2-3 kg: 3× standard rate",
+        "Orders above 3 kg: Additional tiers follow the same pattern"
+      ],
+      footer: "Example: A 2.5 kg order to Karnataka would be charged ₹150 (3 × ₹50 base rate)"
+    },
+    {
+      heading: "Free Shipping for Subscribers",
+      content: `Free shipping is a privilege extended only to our subscription members. Subscribe to enjoy complimentary delivery on all your coffee orders.`
     },
     {
       heading: "Cash on Delivery (COD)",
@@ -323,7 +338,7 @@ export const faqContent = {
         },
         {
           question: "What's the difference between prepaid and COD?",
-          answer: "Prepaid orders get priority processing and free shipping on orders above ₹499. COD orders have an additional ₹30 charge and may require partial advance for high-value orders. Prepaid orders are eligible for faster refunds if needed."
+          answer: "Prepaid orders get priority processing. COD orders have an additional ₹30 handling charge and may require partial advance for high-value orders. Prepaid orders are eligible for faster refunds if needed. Subscription members enjoy free shipping on all orders."
         },
         {
           question: "Can I modify or cancel my order?",
@@ -343,8 +358,12 @@ export const faqContent = {
           answer: "Once shipped, you'll receive an SMS and email with tracking details. You can also track your order on our website using your order number, or contact our support team."
         },
         {
+          question: "How is shipping calculated?",
+          answer: "Shipping is based on order weight and delivery location: Karnataka (₹50/kg), South India (₹60/kg), Rest of India (₹100/kg). Orders over 1kg are charged at tiered rates (2kg = 2× rate, 3kg = 3× rate, etc.). Example: 1.2kg to Karnataka = ₹100."
+        },
+        {
           question: "Do you offer free shipping?",
-          answer: "Yes! We offer free shipping on all orders above ₹499. Orders below ₹499 have a flat shipping charge of ₹49."
+          answer: "Free shipping is a privilege extended only to our subscription members. Non-subscribers pay weight-based shipping rates depending on their location and order weight."
         },
         {
           question: "What if I'm not available for delivery?",

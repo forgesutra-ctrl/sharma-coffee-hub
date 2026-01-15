@@ -6,6 +6,8 @@ interface ShippingInfo {
   pincode: string;
   region: string;
   charge: number;
+  weightInGrams: number;
+  multiplier: number;
 }
 
 interface CartContextType {
@@ -20,6 +22,7 @@ interface CartContextType {
   shippingInfo: ShippingInfo | null;
   setShippingPincode: (pincode: string) => boolean;
   getShippingCharge: () => number;
+  getCartWeight: () => number;
   // COD
   isCodAvailable: () => boolean;
   getCodAdvance: () => number;
@@ -53,18 +56,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [shippingInfo]);
 
+  const getCartWeight = useCallback(() => {
+    return cartItems.reduce((totalWeight, item) => {
+      return totalWeight + (item.weight * item.quantity);
+    }, 0);
+  }, [cartItems]);
+
   const setShippingPincode = useCallback((pincode: string): boolean => {
     const region = getShippingRegion(pincode);
     if (!region) return false;
-    
-    const charge = getShippingCharge(pincode);
+
+    const weightInGrams = getCartWeight();
+    const charge = getShippingCharge(pincode, weightInGrams);
+    const weightInKg = weightInGrams / 1000;
+    const multiplier = Math.ceil(weightInKg);
+
     setShippingInfo({
       pincode,
       region: getShippingRegionLabel(region),
       charge,
+      weightInGrams,
+      multiplier,
     });
     return true;
-  }, []);
+  }, [getCartWeight]);
 
   const addToCart = (newItem: CartItem) => {
     setCartItems((prev) => {
@@ -122,9 +137,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
-  const getShippingChargeValue = () => {
-    return shippingInfo?.charge || 0;
-  };
+  const getShippingChargeValue = useCallback(() => {
+    if (!shippingInfo) return 0;
+
+    const currentWeight = getCartWeight();
+    const weightInKg = currentWeight / 1000;
+    const multiplier = Math.ceil(weightInKg);
+
+    if (multiplier !== shippingInfo.multiplier || currentWeight !== shippingInfo.weightInGrams) {
+      const updatedCharge = getShippingCharge(shippingInfo.pincode, currentWeight);
+      setShippingInfo({
+        ...shippingInfo,
+        charge: updatedCharge,
+        weightInGrams: currentWeight,
+        multiplier,
+      });
+      return updatedCharge;
+    }
+
+    return shippingInfo.charge;
+  }, [shippingInfo, getCartWeight]);
 
   // Check if all items in cart support COD
   const isCodAvailable = useCallback(() => {
@@ -167,6 +199,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         shippingInfo,
         setShippingPincode,
         getShippingCharge: getShippingChargeValue,
+        getCartWeight,
         isCodAvailable,
         getCodAdvance,
         getCodHandlingFee,
