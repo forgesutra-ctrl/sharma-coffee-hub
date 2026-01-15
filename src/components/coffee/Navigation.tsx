@@ -59,7 +59,7 @@ export default function Navigation() {
       href: '/brewing-guide'
     },
     {
-      name: 'Visit Us',
+      name: 'Processing',
       href: '/processing'
     },
     {
