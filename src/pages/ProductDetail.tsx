@@ -169,27 +169,29 @@ const ProductDetail = () => {
         {/* Breadcrumb */}
         <div className="border-b border-border/50">
           <div className="container mx-auto px-4 py-4">
-            <nav className="flex items-center gap-2 text-sm flex-wrap">
+            <nav className="flex items-center gap-2 text-sm flex-wrap" aria-label="Breadcrumb">
               <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
                 Home
               </Link>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <Link to="/shop" className="text-muted-foreground hover:text-primary transition-colors">
                 Shop
               </Link>
-              {product.category_id && (
+              {product.categories && product.categories.slug && (
                 <>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                   <Link
-                    to={`/shop/${product.category.toLowerCase().replace(/\s+/g, '-')}`}
+                    to={`/shop/${product.categories.slug}`}
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    {product.category}
+                    {product.categories.name}
                   </Link>
                 </>
               )}
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <span className="text-foreground">{product.name}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <span className="text-foreground font-medium truncate max-w-[300px]" aria-current="page">
+                {product.name}
+              </span>
             </nav>
           </div>
         </div>

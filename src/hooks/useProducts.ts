@@ -19,6 +19,12 @@ export interface ProductImage {
   sort_order: number | null;
 }
 
+export interface CategoryInfo {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface DatabaseProduct {
   id: string;
   name: string;
@@ -34,11 +40,14 @@ export interface DatabaseProduct {
   intensity: number | null;
   is_featured: boolean | null;
   is_active: boolean | null;
+  subscription_eligible?: boolean | null;
+  subscription_discount_percentage?: number | null;
   created_at: string;
   updated_at: string;
   product_variants: ProductVariant[];
   product_images?: ProductImage[];
   child_products?: DatabaseProduct[];
+  categories?: CategoryInfo | null;
 }
 
 export interface FlatProduct {
@@ -51,6 +60,7 @@ export interface FlatProduct {
   comparePrice: number | null;
   image: string;
   category: string;
+  categorySlug: string | null;
   description: string;
   flavorNotes: string[];
   inStock: boolean;
@@ -59,6 +69,8 @@ export interface FlatProduct {
   intensity: number | null;
   weight: number;
   isFeatured: boolean;
+  subscription_eligible?: boolean;
+  subscription_discount_percentage?: number;
 }
 
 // Fetch all active products with their variants (only parent products)
@@ -80,8 +92,15 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
       intensity,
       is_featured,
       is_active,
+      subscription_eligible,
+      subscription_discount_percentage,
       created_at,
       updated_at,
+      categories (
+        id,
+        name,
+        slug
+      ),
       product_variants (
         id,
         product_id,
@@ -127,8 +146,15 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
       intensity,
       is_featured,
       is_active,
+      subscription_eligible,
+      subscription_discount_percentage,
       created_at,
       updated_at,
+      categories (
+        id,
+        name,
+        slug
+      ),
       product_variants (
         id,
         product_id,
@@ -171,8 +197,15 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
         intensity,
         is_featured,
         is_active,
+        subscription_eligible,
+        subscription_discount_percentage,
         created_at,
         updated_at,
+        categories (
+          id,
+          name,
+          slug
+        ),
         product_variants (
           id,
           product_id,
@@ -221,8 +254,15 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
       intensity,
       is_featured,
       is_active,
+      subscription_eligible,
+      subscription_discount_percentage,
       created_at,
       updated_at,
+      categories (
+        id,
+        name,
+        slug
+      ),
       product_variants (
         id,
         product_id,
@@ -269,6 +309,7 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
       comparePrice: lowestPriceVariant?.compare_at_price || null,
       image: product.image_url || '/placeholder.svg',
       category: product.category,
+      categorySlug: product.categories?.slug || null,
       description: product.description || '',
       flavorNotes: product.flavor_notes || [],
       inStock: (lowestPriceVariant?.stock_quantity ?? 0) > 0,
@@ -277,6 +318,8 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
       intensity: product.intensity,
       weight: lowestPriceVariant?.weight || 250,
       isFeatured: product.is_featured || false,
+      subscription_eligible: product.subscription_eligible || false,
+      subscription_discount_percentage: product.subscription_discount_percentage || undefined,
     };
   });
 }
@@ -285,7 +328,7 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
 export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
   return products.flatMap(product => {
     const variants = product.product_variants || [];
-    
+
     if (variants.length === 0) {
       return [{
         id: product.id,
@@ -297,6 +340,7 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
         comparePrice: null,
         image: product.image_url || '/placeholder.svg',
         category: product.category,
+        categorySlug: product.categories?.slug || null,
         description: product.description || '',
         flavorNotes: product.flavor_notes || [],
         inStock: false,
@@ -305,6 +349,8 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
         intensity: product.intensity,
         weight: 250,
         isFeatured: product.is_featured || false,
+        subscription_eligible: product.subscription_eligible || false,
+        subscription_discount_percentage: product.subscription_discount_percentage || undefined,
       }];
     }
 
@@ -318,6 +364,7 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
       comparePrice: variant.compare_at_price,
       image: product.image_url || '/placeholder.svg',
       category: product.category,
+      categorySlug: product.categories?.slug || null,
       description: product.description || '',
       flavorNotes: product.flavor_notes || [],
       inStock: (variant.stock_quantity ?? 0) > 0,
@@ -326,6 +373,8 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
       intensity: product.intensity,
       weight: variant.weight,
       isFeatured: product.is_featured || false,
+      subscription_eligible: product.subscription_eligible || false,
+      subscription_discount_percentage: product.subscription_discount_percentage || undefined,
     }));
   });
 }
