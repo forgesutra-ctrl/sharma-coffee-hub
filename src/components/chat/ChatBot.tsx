@@ -36,6 +36,10 @@ export function ChatBot() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    console.log("ChatBot mounted");
+  }, []);
+
   /* ===============================
      Welcome message
   =============================== */
@@ -80,7 +84,7 @@ export function ChatBot() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
+      const result = await supabase.functions.invoke(
         "chat-assistant",
         {
           body: {
@@ -93,13 +97,26 @@ export function ChatBot() {
         }
       );
 
-      if (error) throw error;
+      if (result.error) {
+        console.error("Edge function error:", result.error);
+        throw result.error;
+      }
 
-      // ✅ CORRECT RESPONSE EXTRACTION
-      const responseText =
-        typeof data?.data?.response === "string"
-          ? data.data.response
-          : "Sorry, I couldn’t process that.";
+      // ✅ DEFENSIVE RESPONSE PARSING
+      const raw = result.data;
+      let responseText = "Sorry, I couldn't process that.";
+
+      if (typeof raw === "string") {
+        responseText = raw;
+      } else if (raw && typeof raw === "object") {
+        if (typeof raw.response === "string") {
+          responseText = raw.response;
+        } else if (typeof raw.data?.response === "string") {
+          responseText = raw.data.response;
+        }
+      }
+
+      console.log("Chat response received:", responseText.substring(0, 50) + "...");
 
       setMessages((prev) => [
         ...prev,
@@ -115,10 +132,10 @@ export function ChatBot() {
       setMessages((prev) => [
         ...prev,
         {
-          id: "error",
+          id: "error-" + Date.now(),
           role: "assistant",
           content:
-            "I’m having trouble right now. Please try again in a moment.",
+            "I'm having trouble right now. Please try again in a moment.",
           timestamp: new Date(),
         },
       ]);
