@@ -106,12 +106,9 @@ const ProductDetail = () => {
   const selectedVariant = variants.find(v => v.weight === selectedWeight) || variants[0];
   const currentPrice = selectedVariant?.price || 0;
   
-  // Calculate subscription price (15% discount)
+  // No discount for subscription - same price as one-time
   const isSubscriptionSelected = purchaseType === 'subscription' && activeProduct?.subscription_eligible;
-  const discountPercentage = activeProduct?.subscription_discount_percentage || 15;
-  const subscriptionPrice = Math.round(currentPrice * (1 - discountPercentage / 100));
-  const displayPrice = isSubscriptionSelected ? subscriptionPrice : currentPrice;
-  const totalPrice = displayPrice * quantity;
+  const totalPrice = currentPrice * quantity;
 
   // Get related products from same category
   const relatedProducts = allProducts
@@ -121,9 +118,8 @@ const ProductDetail = () => {
   const executeAddToCart = () => {
     if (!selectedVariant || !activeProduct) return;
 
-    // Calculate final price based on purchase type
+    // Same price for both subscription and one-time (no discount)
     const isSubscription = purchaseType === 'subscription' && activeProduct.subscription_eligible;
-    const finalPrice = isSubscription ? subscriptionPrice : currentPrice;
 
     const cartProduct: Product = {
       id: activeProduct.id,
@@ -131,7 +127,7 @@ const ProductDetail = () => {
       slug: activeProduct.slug,
       description: activeProduct.description || '',
       short_description: (activeProduct.description || '').slice(0, 100),
-      price: finalPrice,
+      price: currentPrice,
       image_url: activeProduct.image_url || '/placeholder.svg',
       images: [activeProduct.image_url || '/placeholder.svg'],
       roast_level: (activeProduct.roast_level as 'Light' | 'Medium' | 'Dark') || 'Medium',
@@ -243,21 +239,9 @@ const ProductDetail = () => {
                 <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mb-4">
                   {product.name}
                 </h1>
-                <div className="flex items-center gap-3">
-                  {isSubscriptionSelected && (
-                    <span className="text-xl text-muted-foreground line-through">
-                      ₹ {(currentPrice * quantity).toLocaleString()}
-                    </span>
-                  )}
-                  <p className="text-2xl font-medium text-foreground">
-                    ₹ {totalPrice.toLocaleString()}
-                  </p>
-                  {isSubscriptionSelected && (
-                    <span className="px-2 py-1 bg-green-600/20 text-green-600 text-sm font-medium rounded">
-                      Save 15%
-                    </span>
-                  )}
-                </div>
+                <p className="text-2xl font-medium text-foreground">
+                  ₹ {totalPrice.toLocaleString()}
+                </p>
               </div>
 
               {/* Description */}
@@ -368,7 +352,7 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Purchase Type Toggle - Prominent Subscription Option */}
+              {/* Purchase Type Toggle - Subscription Option */}
               {activeProduct?.subscription_eligible && (
                 <div className="mb-6 p-4 border-2 border-primary/20 rounded-lg bg-gradient-to-br from-primary/5 to-transparent">
                   <p className="text-sm font-medium text-foreground mb-3">Choose Your Purchase Option</p>
@@ -387,7 +371,7 @@ const ProductDetail = () => {
                         <span className="font-semibold">One-Time Purchase</span>
                       </div>
                       <p className="text-lg font-bold text-foreground">₹{currentPrice}</p>
-                      <p className="text-xs text-muted-foreground">Regular price, no commitment</p>
+                      <p className="text-xs text-muted-foreground">Standard shipping rates apply</p>
                     </button>
                     <button
                       onClick={() => setPurchaseType('subscription')}
@@ -398,17 +382,14 @@ const ProductDetail = () => {
                           : "border-primary/50 hover:border-primary"
                       )}
                     >
-                      <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-bl">
-                        SAVE 15%
+                      <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl">
+                        FREE SHIPPING
                       </div>
                       <div className="flex items-center gap-2 mb-1">
                         <RefreshCw className="w-4 h-4 text-primary" />
-                        <span className="font-semibold text-primary">Subscribe & Save</span>
+                        <span className="font-semibold text-primary">Subscribe</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-lg font-bold text-primary">₹{subscriptionPrice}</p>
-                        <span className="text-sm text-muted-foreground line-through">₹{currentPrice}</span>
-                      </div>
+                      <p className="text-lg font-bold text-primary">₹{currentPrice}</p>
                       <p className="text-xs text-muted-foreground">Monthly delivery + Free Shipping</p>
                     </button>
                   </div>
@@ -422,35 +403,23 @@ const ProductDetail = () => {
                   <div className="flex flex-wrap gap-3">
                     {variants
                       .sort((a, b) => a.weight - b.weight)
-                      .map((variant) => {
-                        const variantSubPrice = Math.round(variant.price * (1 - discountPercentage / 100));
-                        return (
-                          <button
-                            key={variant.id}
-                            onClick={() => setSelectedWeight(variant.weight)}
-                            className={cn(
-                              "px-4 py-2 border text-sm transition-all flex flex-col items-center",
-                              selectedWeight === variant.weight
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border hover:border-primary/50"
-                            )}
-                          >
-                            <span>
-                              {variant.weight >= 1000 ? `${variant.weight / 1000} kg` : `${variant.weight} g`}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {isSubscriptionSelected ? (
-                                <>
-                                  <span className="line-through mr-1">₹{variant.price}</span>
-                                  <span className="text-primary font-medium">₹{variantSubPrice}</span>
-                                </>
-                              ) : (
-                                `₹${variant.price}`
-                              )}
-                            </span>
-                          </button>
-                        );
-                      })}
+                      .map((variant) => (
+                        <button
+                          key={variant.id}
+                          onClick={() => setSelectedWeight(variant.weight)}
+                          className={cn(
+                            "px-4 py-2 border text-sm transition-all flex flex-col items-center",
+                            selectedWeight === variant.weight
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <span>
+                            {variant.weight >= 1000 ? `${variant.weight / 1000} kg` : `${variant.weight} g`}
+                          </span>
+                          <span className="text-xs text-muted-foreground">₹{variant.price}</span>
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}
@@ -499,12 +468,8 @@ const ProductDetail = () => {
                   </div>
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary" />
-                      <span>Save 15% on every order</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary" />
-                      <span className="font-medium">Free Shipping — Subscription Exclusive</span>
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="font-medium">Free Shipping on every delivery</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-primary" />
@@ -514,12 +479,16 @@ const ProductDetail = () => {
                       <Check className="w-4 h-4 text-primary" />
                       <span>Skip, pause, or cancel anytime</span>
                     </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span>Never run out of your favorite coffee</span>
+                    </li>
                   </ul>
                   <div className="mt-3 pt-3 border-t border-primary/20">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-sm text-muted-foreground line-through">₹{currentPrice}/month</span>
+                      <span className="text-sm text-muted-foreground">Monthly delivery</span>
                       <span className="text-lg font-bold text-primary">
-                        ₹{subscriptionPrice}/month
+                        ₹{currentPrice}/month
                       </span>
                     </div>
                   </div>
