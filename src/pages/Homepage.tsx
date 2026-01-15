@@ -203,8 +203,8 @@ export default function Homepage() {
 
       {/* Ambient Coffee Sound */}
       <AmbientSound
-        audioSrc="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4a4fc90e1b.mp3"
-        label="Filter Coffee Ambience"
+        audioSrc="https://cdn.pixabay.com/audio/2024/07/30/audio_86b9700fe6.mp3"
+        label="Coffee Pouring"
       />
     </div>
   );

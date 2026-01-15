@@ -8,32 +8,66 @@ interface AmbientSoundProps {
 }
 
 export default function AmbientSound({ audioSrc, label = 'Ambient Sound' }: AmbientSoundProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [autoPlayAttempted, setAutoPlayAttempted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.volume = 0.3;
+    audio.volume = 0.4;
     audio.loop = true;
 
-    if (isPlaying && hasInteracted) {
+    const attemptAutoPlay = async () => {
+      if (autoPlayAttempted) return;
+      setAutoPlayAttempted(true);
+
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (error) {
+        console.log('Auto-play prevented by browser. Waiting for user interaction...');
+        setIsPlaying(false);
+
+        const playOnInteraction = async () => {
+          try {
+            await audio.play();
+            setIsPlaying(true);
+            document.removeEventListener('click', playOnInteraction);
+            document.removeEventListener('scroll', playOnInteraction);
+            document.removeEventListener('touchstart', playOnInteraction);
+          } catch (err) {
+            console.log('Playback failed:', err);
+          }
+        };
+
+        document.addEventListener('click', playOnInteraction, { once: true });
+        document.addEventListener('scroll', playOnInteraction, { once: true });
+        document.addEventListener('touchstart', playOnInteraction, { once: true });
+      }
+    };
+
+    attemptAutoPlay();
+  }, [autoPlayAttempted]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
           console.log('Audio playback prevented:', error);
-          setIsPlaying(false);
         });
       }
     } else {
       audio.pause();
     }
-  }, [isPlaying, hasInteracted]);
+  }, [isPlaying]);
 
   const toggleSound = () => {
-    setHasInteracted(true);
     setIsPlaying(!isPlaying);
   };
 
