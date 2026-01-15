@@ -536,7 +536,7 @@ export default function OperationsPage() {
                           >
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>
-                              <Badge variant="secondary">{product.category}</Badge>
+                              <Badge variant="secondary">{product.categories?.name || product.category}</Badge>
                             </TableCell>
                             <TableCell>{variant.weight}g @ ₹{Number(variant.price).toLocaleString()}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">

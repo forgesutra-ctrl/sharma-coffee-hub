@@ -107,7 +107,7 @@ const Shop = () => {
     image: product.image,
     secondaryImage: undefined,
     category: product.category,
-    categorySlug: product.category.toLowerCase().replace(/\s+/g, '-'),
+    categorySlug: product.categorySlug || product.category.toLowerCase().replace(/\s+/g, '-'),
     description: product.description,
     flavorNotes: product.flavorNotes,
     inStock: product.inStock,

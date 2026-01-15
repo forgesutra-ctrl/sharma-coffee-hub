@@ -221,7 +221,7 @@ const ProductDetail = () => {
               {/* Title & Price */}
               <div className="mb-6">
                 <p className="text-sm text-primary font-medium tracking-wider uppercase mb-2">
-                  {product.category}
+                  {product.categories?.name || product.category}
                 </p>
                 <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mb-4">
                   {product.name}
