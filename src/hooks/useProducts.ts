@@ -312,7 +312,7 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
       categorySlug: product.categories?.slug || null,
       description: product.description || '',
       flavorNotes: product.flavor_notes || [],
-      inStock: (lowestPriceVariant?.stock_quantity ?? 0) > 0,
+      inStock: variants.length > 0 && variants.some(v => (v.stock_quantity ?? 0) > 0),
       origin: product.origin,
       roastLevel: product.roast_level,
       intensity: product.intensity,
