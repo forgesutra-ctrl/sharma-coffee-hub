@@ -76,10 +76,6 @@ const Checkout = () => {
     getShippingCharge,
     getCartWeight,
     isCodAvailable,
-    getCodAdvance,
-    getCodHandlingFee,
-    getCodBalance,
-    getGrandTotal,
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -109,13 +105,6 @@ const Checkout = () => {
   // Check for subscription items
   const hasSubscriptionItems = cartItems.some(item => item.is_subscription);
   const allItemsAreSubscription = cartItems.length > 0 && cartItems.every(item => item.is_subscription);
-  
-  // Calculate subscription savings
-  const subscriptionSavings = cartItems
-    .filter(item => item.is_subscription && item.original_price)
-    .reduce((total, item) => {
-      return total + ((item.original_price! - item.product.price) * item.quantity);
-    }, 0);
 
   const steps: { id: CheckoutStep; label: string; icon: React.ReactNode }[] = [
     { id: 'shipping', label: 'Shipping', icon: <MapPin className="w-4 h-4" /> },
@@ -695,11 +684,6 @@ const Checkout = () => {
                             )}
                           </div>
                           <div className="text-right">
-                            {item.is_subscription && item.original_price && (
-                              <p className="text-sm text-muted-foreground line-through">
-                                ₹{item.original_price * item.quantity}
-                              </p>
-                            )}
                             <p className="font-semibold text-foreground">
                               ₹{item.product.price * item.quantity}
                             </p>
@@ -740,7 +724,7 @@ const Checkout = () => {
                           </li>
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Check className="w-4 h-4" />
-                            <span>15% savings on every delivery</span>
+                            <span>Automatic monthly delivery</span>
                           </li>
                           <li className="flex items-center gap-2 text-muted-foreground">
                             <Check className="w-4 h-4" />
@@ -830,7 +814,7 @@ const Checkout = () => {
                         Subscription Activated
                       </p>
                       <p className="text-muted-foreground">
-                        Your subscription items will be delivered monthly. Manage your subscription from your account.
+                        Your subscription items will be delivered monthly with free shipping. Manage your subscription from your account.
                       </p>
                     </div>
                   )}
@@ -944,6 +928,11 @@ const Checkout = () => {
                         <RefreshCw className="w-4 h-4" />
                         <span>Subscription items included</span>
                       </div>
+                      {allItemsAreSubscription && (
+                        <p className="text-xs text-green-600 mt-1 font-medium">
+                          ✓ Free Shipping applied
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -954,17 +943,6 @@ const Checkout = () => {
                       </span>
                       <span className="font-medium">₹{subtotal}</span>
                     </div>
-                    
-                    {/* Subscription Savings */}
-                    {subscriptionSavings > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span className="flex items-center gap-1">
-                          <RefreshCw className="w-3 h-3" />
-                          Subscription Savings
-                        </span>
-                        <span className="font-medium">Included</span>
-                      </div>
-                    )}
                     
                     {appliedCoupon && (
                       <div className="flex justify-between text-green-600">
@@ -1022,56 +1000,57 @@ const Checkout = () => {
                             disabled={couponLoading}
                           >
                             {couponLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Apply'}
-                          </Button> 
+                          </Button>
                         </div>
-                  </div>
-                )}
-
-                {appliedCoupon && (
-                  <div className="pt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemoveCoupon}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      Remove coupon
-                    </Button>
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-3 mt-3">
-                  <div className="flex justify-between text-base">
-                    <span className="font-semibold">Total</span>
-                    <span className="font-bold text-primary">₹{grandTotal}</span>
-                  </div>
-                  {paymentType === 'cod' && (
-                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                      <div className="flex justify-between">
-                        <span>Pay now (advance)</span>
-                        <span>₹{COD_ADVANCE_AMOUNT}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Pay on delivery</span>
-                        <span>₹{codBalance}</span>
+                    )}
+
+                    {appliedCoupon && (
+                      <div className="pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveCoupon}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Remove coupon
+                        </Button>
                       </div>
+                    )}
+
+                    <div className="border-t border-border pt-3 mt-3">
+                      <div className="flex justify-between text-base">
+                        <span className="font-semibold">Total</span>
+                        <span className="font-bold text-primary">₹{grandTotal}</span>
+                      </div>
+                      {paymentType === 'cod' && (
+                        <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                          <div className="flex justify-between">
+                            <span>Pay now (advance)</span>
+                            <span>₹{COD_ADVANCE_AMOUNT}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Pay on delivery</span>
+                            <span>₹{codBalance}</span>
+                          </div>
+                        </div>
+                      )}
+                      {hasSubscriptionItems && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Subscription items billed monthly
+                        </p>
+                      )}
                     </div>
-                  )}
-                  {hasSubscriptionItems && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Subscription items billed monthly
-                    </p>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  </div>
-</Layout>
-);
+    </Layout>
+  );
 };
+
 export default Checkout;
