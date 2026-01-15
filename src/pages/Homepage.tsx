@@ -6,9 +6,9 @@ import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
 import CategoryGrid from '@/components/coffee/CategoryGrid';
 import StorySection from '@/components/coffee/StorySection';
 import InstagramFeed from '@/components/coffee/InstagramFeed';
-import AmbientSound from '@/components/coffee/AmbientSound';
+// import AmbientSound from '@/components/coffee/AmbientSound';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
-import coffeePlantImg from '@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg;
+import coffeePlantImg from '@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg';
 import { useFeaturedProducts, useProducts } from '@/hooks/useProducts';
 import { useCategoriesWithCount } from '@/hooks/useCategories';
 
@@ -201,13 +201,13 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Ambient Coffee Sound */}
-      <AmbientSound
+      {/* Ambient Coffee Sound - Temporarily disabled for debugging */}
+      {/* <AmbientSound
         audioSrc="https://cdn.pixabay.com/audio/2024/07/30/audio_86b9700fe6.mp3"
         label="Coffee Pouring"
         volume={0.4}
         autoPlay={true}
-      />
+      /> */}
     </div>
   );
 }
