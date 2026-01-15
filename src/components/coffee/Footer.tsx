@@ -71,8 +71,8 @@ export default function Footer() {
             desc: 'No artificial additives'
           }, {
             icon: Award,
-            title: 'Since 1983',
-            desc: 'Four decades of trust'
+            title: 'Since 1897',
+            desc: 'Over a century of trust'
           }, {
             icon: Heart,
             title: 'Made with Love',
@@ -99,8 +99,8 @@ export default function Footer() {
               <img src={sharmaCoffeeLogo} alt="Sharma Coffee Works" className="h-16 w-auto" />
             </Link>
             <p className="text-white/60 text-sm leading-relaxed mb-6 max-w-sm">
-              Since 1983, we've been crafting authentic South Indian filter coffee from the finest 
-              Coorg estates. Four decades of tradition, passion, and the perfect cup.
+              Since 1897, we've been crafting authentic South Indian filter coffee from the finest
+              Coorg estates. Over a century of tradition, passion, and the perfect cup.
             </p>
             <div className="flex gap-3">
               {[{
