@@ -37,7 +37,7 @@ export function ChatBot() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   /* ===============================
-     WELCOME MESSAGE
+     Welcome message
   =============================== */
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -54,7 +54,7 @@ export function ChatBot() {
   }, [isOpen, messages.length]);
 
   /* ===============================
-     AUTO SCROLL
+     Auto-scroll
   =============================== */
   useEffect(() => {
     if (scrollRef.current) {
@@ -63,7 +63,7 @@ export function ChatBot() {
   }, [messages]);
 
   /* ===============================
-     SEND MESSAGE (FINAL FIX)
+     Send message
   =============================== */
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
@@ -80,33 +80,26 @@ export function ChatBot() {
     setIsLoading(true);
 
     try {
-      const result = await supabase.functions.invoke("chat-assistant", {
-        body: {
-          message: text,
-          conversationHistory: messages.slice(-6).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        },
-      });
-
-      if (result.error) throw result.error;
-
-      /**
-       * 🔒 BULLETPROOF RESPONSE NORMALIZATION
-       * Handles ALL Supabase Edge Function return types
-       */
-      let responseText = "Sorry, I couldn’t process that.";
-
-      const raw = result.data;
-
-      if (typeof raw === "string") {
-        responseText = raw;
-      } else if (raw && typeof raw === "object") {
-        if (typeof raw.response === "string") {
-          responseText = raw.response;
+      const { data, error } = await supabase.functions.invoke(
+        "chat-assistant",
+        {
+          body: {
+            message: text,
+            conversationHistory: messages.slice(-6).map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          },
         }
-      }
+      );
+
+      if (error) throw error;
+
+      // ✅ CORRECT RESPONSE EXTRACTION
+      const responseText =
+        typeof data?.data?.response === "string"
+          ? data.data.response
+          : "Sorry, I couldn’t process that.";
 
       setMessages((prev) => [
         ...prev,
@@ -118,7 +111,7 @@ export function ChatBot() {
         },
       ]);
     } catch (err) {
-      console.error("ChatBot error:", err);
+      console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
         {
@@ -135,7 +128,7 @@ export function ChatBot() {
   }
 
   /* ===============================
-     QUICK ACTIONS
+     Quick actions
   =============================== */
   function handleQuickAction(action: string) {
     if (action.startsWith("/")) {
@@ -159,7 +152,7 @@ export function ChatBot() {
             transition={{ duration: 0.2 }}
             className="fixed bottom-24 right-4 w-[90vw] md:w-96 h-[600px] bg-card border rounded-2xl shadow-2xl z-50 flex flex-col"
           >
-            {/* HEADER */}
+            {/* Header */}
             <div className="bg-primary text-primary-foreground p-4 flex justify-between">
               <div className="flex items-center gap-2">
                 <Coffee className="w-5 h-5" />
@@ -177,7 +170,7 @@ export function ChatBot() {
               </Button>
             </div>
 
-            {/* MESSAGES */}
+            {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div ref={scrollRef} className="space-y-4">
                 {messages.map((m) => (
@@ -225,7 +218,7 @@ export function ChatBot() {
               </div>
             </ScrollArea>
 
-            {/* INPUT */}
+            {/* Input */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -247,7 +240,7 @@ export function ChatBot() {
         )}
       </AnimatePresence>
 
-      {/* FLOATING BUTTON */}
+      {/* Floating Button */}
       <button
         onClick={() => setIsOpen((o) => !o)}
         className="fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50"
