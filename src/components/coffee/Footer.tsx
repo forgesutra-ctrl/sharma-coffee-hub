@@ -4,7 +4,7 @@ import { Instagram, Facebook, Twitter, Youtube, Mail, MapPin, Phone, ArrowRight,
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
+import sharmaCoffeeLogo from '@/assets/whatsapp_image_2026-01-13_at_9.28.59_am.jpeg';
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -96,7 +96,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-4">
             <Link to="/" className="inline-block mb-6">
-              <img src={sharmaCoffeeLogo} alt="Sharma Coffee Works" className="h-12 w-auto brightness-0 invert opacity-90" />
+              <img src={sharmaCoffeeLogo} alt="Sharma Coffee Works" className="h-16 w-auto" />
             </Link>
             <p className="text-white/60 text-sm leading-relaxed mb-6 max-w-sm">
               Since 1983, we've been crafting authentic South Indian filter coffee from the finest 
