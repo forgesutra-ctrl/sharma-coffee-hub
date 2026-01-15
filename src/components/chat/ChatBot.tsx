@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Send, Coffee, Loader2, ShoppingBag, Package, Phone } from "lucide-react";
+import {
+  X,
+  Send,
+  Coffee,
+  Loader2,
+  ShoppingBag,
+  Package,
+  Phone,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +36,9 @@ export function ChatBot() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  /* ===============================
+     Welcome message
+  =============================== */
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
@@ -40,14 +51,20 @@ export function ChatBot() {
         },
       ]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length]);
 
+  /* ===============================
+     Auto-scroll
+  =============================== */
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
+  /* ===============================
+     Send message
+  =============================== */
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
 
@@ -63,28 +80,38 @@ export function ChatBot() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat-assistant", {
-        body: {
-          message: text,
-          conversationHistory: messages.slice(-6).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        },
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "chat-assistant",
+        {
+          body: {
+            message: text,
+            conversationHistory: messages.slice(-6).map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          },
+        }
+      );
 
       if (error) throw error;
+
+      // ✅ CORRECT RESPONSE EXTRACTION
+      const responseText =
+        typeof data?.data?.response === "string"
+          ? data.data.response
+          : "Sorry, I couldn’t process that.";
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data?.response ?? "Sorry, I couldn’t process that.",
+          content: responseText,
           timestamp: new Date(),
         },
       ]);
-    } catch {
+    } catch (err) {
+      console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
         {
@@ -100,6 +127,9 @@ export function ChatBot() {
     }
   }
 
+  /* ===============================
+     Quick actions
+  =============================== */
   function handleQuickAction(action: string) {
     if (action.startsWith("/")) {
       window.location.href = action;
@@ -119,6 +149,7 @@ export function ChatBot() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
             className="fixed bottom-24 right-4 w-[90vw] md:w-96 h-[600px] bg-card border rounded-2xl shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
@@ -130,7 +161,11 @@ export function ChatBot() {
                   <p className="text-xs opacity-80">Customer Support</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+              >
                 <X />
               </Button>
             </div>
@@ -195,8 +230,9 @@ export function ChatBot() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your message…"
+                disabled={isLoading}
               />
-              <Button type="submit" size="icon">
+              <Button type="submit" size="icon" disabled={isLoading}>
                 <Send className="w-4 h-4" />
               </Button>
             </form>
@@ -209,7 +245,7 @@ export function ChatBot() {
         onClick={() => setIsOpen((o) => !o)}
         className="fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50"
       >
-        <Coffee />
+        <Coffee className="w-6 h-6" />
       </button>
     </>
   );
