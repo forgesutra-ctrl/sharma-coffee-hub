@@ -1,104 +1,170 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface CoffeeAmbienceProps {
+interface AmbientSoundProps {
   audioSrc: string;
+  label?: string;
   volume?: number;
+  autoPlay?: boolean;
 }
 
-const CoffeeAmbience = ({ audioSrc, volume = 0.4 }: CoffeeAmbienceProps) => {
+const AmbientSound = ({ 
+  audioSrc, 
+  label = 'Ambient Sound',
+  volume = 0.4,
+  autoPlay = true 
+}: AmbientSoundProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasTriedAutoPlay = useRef(false);
 
+  // Initialize audio element
   useEffect(() => {
-    // Create audio element
-    audioRef.current = new Audio(audioSrc);
-    audioRef.current.loop = true;
-    audioRef.current.volume = volume;
-
-    // Try to auto-play
-    const playPromise = audioRef.current.play();
+    const audio = new Audio();
+    audio.src = audioSrc;
+    audio.loop = true;
+    audio.volume = volume;
+    audio.preload = 'auto';
     
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          setIsPlaying(true);
-          setHasInteracted(true);
-        })
-        .catch(() => {
-          // Auto-play was prevented, wait for user interaction
-          setIsPlaying(false);
-        });
-    }
+    audio.addEventListener('canplaythrough', () => {
+      setIsLoaded(true);
+    });
 
-    // Cleanup
+    audio.addEventListener('error', (e) => {
+      console.error('Audio loading error:', e);
+    });
+
+    audioRef.current = audio;
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = '';
         audioRef.current = null;
       }
     };
   }, [audioSrc, volume]);
 
-  // Handle first user interaction to start audio
+  // Attempt auto-play when loaded
   useEffect(() => {
-    if (hasInteracted) return;
+    if (!isLoaded || !autoPlay || hasTriedAutoPlay.current) return;
+    
+    hasTriedAutoPlay.current = true;
 
-    const startAudioOnInteraction = () => {
-      if (audioRef.current && !hasInteracted) {
-        audioRef.current.play()
-          .then(() => {
-            setIsPlaying(true);
-            setHasInteracted(true);
-          })
-          .catch(console.error);
+    const attemptAutoPlay = async () => {
+      if (!audioRef.current) return;
+
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+        setHasUserInteracted(true);
+      } catch (error) {
+        // Auto-play was blocked by browser - this is expected
+        console.log('Auto-play blocked, waiting for user interaction');
+        setIsPlaying(false);
       }
     };
 
-    // Listen for user interactions
-    window.addEventListener('click', startAudioOnInteraction, { once: true });
-    window.addEventListener('scroll', startAudioOnInteraction, { once: true });
-    window.addEventListener('touchstart', startAudioOnInteraction, { once: true });
-    window.addEventListener('keydown', startAudioOnInteraction, { once: true });
+    attemptAutoPlay();
+  }, [isLoaded, autoPlay]);
 
-    return () => {
-      window.removeEventListener('click', startAudioOnInteraction);
-      window.removeEventListener('scroll', startAudioOnInteraction);
-      window.removeEventListener('touchstart', startAudioOnInteraction);
-      window.removeEventListener('keydown', startAudioOnInteraction);
-    };
-  }, [hasInteracted]);
+  // Play audio function
+  const playAudio = useCallback(async () => {
+    if (!audioRef.current || !isLoaded) return false;
 
-  const toggleAudio = () => {
+    try {
+      await audioRef.current.play();
+      setIsPlaying(true);
+      return true;
+    } catch (error) {
+      console.error('Play error:', error);
+      return false;
+    }
+  }, [isLoaded]);
+
+  // Pause audio function
+  const pauseAudio = useCallback(() => {
     if (!audioRef.current) return;
+    audioRef.current.pause();
+    setIsPlaying(false);
+  }, []);
 
+  // Handle user interaction to start audio (for browsers that block auto-play)
+  useEffect(() => {
+    if (hasUserInteracted || !isLoaded || !autoPlay) return;
+
+    const handleFirstInteraction = async () => {
+      if (hasUserInteracted) return;
+      
+      const success = await playAudio();
+      if (success) {
+        setHasUserInteracted(true);
+        // Remove all listeners after successful play
+        removeListeners();
+      }
+    };
+
+    const removeListeners = () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('scroll', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+
+    // Add interaction listeners
+    document.addEventListener('click', handleFirstInteraction, { passive: true });
+    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
+    document.addEventListener('scroll', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('keydown', handleFirstInteraction, { once: true });
+
+    return removeListeners;
+  }, [hasUserInteracted, isLoaded, autoPlay, playAudio]);
+
+  // Toggle audio on/off
+  const toggleAudio = async () => {
     if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+      pauseAudio();
     } else {
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-          setHasInteracted(true);
-        })
-        .catch(console.error);
+      const success = await playAudio();
+      if (success) {
+        setHasUserInteracted(true);
+      }
     }
   };
 
   return (
     <button
       onClick={toggleAudio}
-      className="fixed bottom-6 right-6 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 hover:scale-110"
-      aria-label={isPlaying ? 'Mute coffee ambience' : 'Play coffee ambience'}
+      disabled={!isLoaded}
+      className={cn(
+        "fixed bottom-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all duration-300",
+        "hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+        isPlaying 
+          ? "bg-primary text-primary-foreground" 
+          : "bg-card text-foreground border border-border",
+        !isLoaded && "opacity-50 cursor-not-allowed"
+      )}
+      aria-label={isPlaying ? `Mute ${label}` : `Play ${label}`}
+      title={isPlaying ? `Mute ${label}` : `Play ${label}`}
     >
       {isPlaying ? (
         <Volume2 className="w-5 h-5" />
       ) : (
         <VolumeX className="w-5 h-5" />
       )}
+      
+      {/* Ripple animation when playing */}
+      {isPlaying && (
+        <>
+          <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20" />
+          <span className="absolute inset-0 rounded-full bg-primary animate-pulse opacity-10" />
+        </>
+      )}
     </button>
   );
 };
 
-export default CoffeeAmbience;
+export default AmbientSound;
