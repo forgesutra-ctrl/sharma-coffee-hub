@@ -28,13 +28,6 @@ const Cart = () => {
   const hasSubscriptionItems = cartItems.some(item => item.is_subscription);
   const allItemsAreSubscription = cartItems.length > 0 && cartItems.every(item => item.is_subscription);
 
-  // Calculate subscription savings
-  const subscriptionSavings = cartItems
-    .filter(item => item.is_subscription && item.original_price)
-    .reduce((total, item) => {
-      return total + ((item.original_price! - item.product.price) * item.quantity);
-    }, 0);
-
   const handleCheckout = () => {
     if (!shippingInfo) {
       setShowPincodeDialog(true);
@@ -135,20 +128,10 @@ const Cart = () => {
                         <p className="text-xs text-green-600 font-medium">
                           ✓ Free Shipping
                         </p>
-                        {item.original_price && item.original_price !== item.product.price && (
-                          <p className="text-xs text-green-600">
-                            Saving ₹{(item.original_price - item.product.price) * item.quantity}
-                          </p>
-                        )}
                       </div>
                     )}
                     
                     <div className="mt-2 flex items-center gap-2">
-                      {item.is_subscription && item.original_price && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          ₹{item.original_price}
-                        </span>
-                      )}
                       <p className="text-primary font-semibold">
                         ₹{item.product.price}
                       </p>
@@ -262,17 +245,6 @@ const Cart = () => {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">₹{subtotal}</span>
                   </div>
-                  
-                  {/* Subscription Savings */}
-                  {subscriptionSavings > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span className="flex items-center gap-1">
-                        <RefreshCw className="w-3 h-3" />
-                        Subscription Savings
-                      </span>
-                      <span className="font-medium">-₹{subscriptionSavings}</span>
-                    </div>
-                  )}
                   
                   <div className="flex justify-between">
                     <span className="text-muted-foreground flex items-center gap-1">
