@@ -109,6 +109,9 @@ export interface CartItem {
   quantity: number;
   sku?: string;
   variant_id?: string;
+  // Subscription fields
+  is_subscription?: boolean;
+  original_price?: number;
 }
 
 export interface Order {
