@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Coffee, Leaf, Heart, Award, MapPin, Users, Globe } from 'lucide-react';
 import { brandInfo, aboutContent, heritageContent } from '@/data/brandContent';
 import coffeeSelectionImg from '@/assets/coffee-selection.jpg';
-import coffeeRoastingImg from '@/assets/coffee-beans-roasting.jpg';
+import foundersImg from '@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am.jpeg';
 
 const values = [
   {
@@ -112,9 +112,9 @@ export default function About() {
             </div>
             <div className="lg:order-1 relative">
               <div className="aspect-square rounded-lg overflow-hidden image-shine">
-                <img 
-                  src={coffeeRoastingImg} 
-                  alt="Coffee Roasting at Sharma Coffee" 
+                <img
+                  src={foundersImg}
+                  alt="Sharma Coffee Founders - Building a Legacy Together"
                   className="w-full h-full object-cover"
                 />
               </div>
