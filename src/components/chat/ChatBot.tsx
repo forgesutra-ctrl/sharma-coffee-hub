@@ -1,39 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Send, Coffee, Loader2, ShoppingBag, Package, Phone } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from "react";
+import { X, Send, Coffee, Loader2, ShoppingBag, Package, Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
 }
 
 const quickActions = [
-  { label: 'Browse Products', icon: ShoppingBag, action: '/shop' },
-  { label: 'Track Order', icon: Package, action: 'track' },
-  { label: 'Contact Us', icon: Phone, action: '/contact' },
+  { label: "Browse Products", icon: ShoppingBag, action: "/shop" },
+  { label: "Track Order", icon: Package, action: "track" },
+  { label: "Contact Us", icon: Phone, action: "/contact" },
 ];
 
 export function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
         {
-          id: 'welcome',
-          role: 'assistant',
+          id: "welcome",
+          role: "assistant",
           content:
             "Hello! I’m the Sharma Coffee Works assistant ☕ How can I help you today?",
           timestamp: new Date(),
@@ -48,22 +48,22 @@ export function ChatBot() {
     }
   }, [messages]);
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim()) return;
+  async function sendMessage(text: string) {
+    if (!text.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: text,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setIsLoading(true);
-    setInput('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-assistant', {
+      const { data, error } = await supabase.functions.invoke("chat-assistant", {
         body: {
           message: text,
           conversationHistory: messages.slice(-6).map((m) => ({
@@ -79,37 +79,37 @@ export function ChatBot() {
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: data?.response ?? 'Sorry, I could not process that.',
+          role: "assistant",
+          content: data?.response ?? "Sorry, I couldn’t process that.",
           timestamp: new Date(),
         },
       ]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
-          id: 'error',
-          role: 'assistant',
+          id: "error",
+          role: "assistant",
           content:
-            'Sorry, something went wrong. Please try again in a moment.',
+            "I’m having trouble right now. Please try again in a moment.",
           timestamp: new Date(),
         },
       ]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleQuickAction = (action: string) => {
-    if (action.startsWith('/')) {
+  function handleQuickAction(action: string) {
+    if (action.startsWith("/")) {
       window.location.href = action;
       return;
     }
 
-    if (action === 'track') {
-      sendMessage('I want to track my order');
+    if (action === "track") {
+      sendMessage("I want to track my order");
     }
-  };
+  }
 
   return (
     <>
@@ -142,16 +142,16 @@ export function ChatBot() {
                   <div
                     key={m.id}
                     className={cn(
-                      'flex',
-                      m.role === 'user' ? 'justify-end' : 'justify-start'
+                      "flex",
+                      m.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
                     <div
                       className={cn(
-                        'max-w-[80%] rounded-xl px-4 py-2 text-sm',
-                        m.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
+                        "max-w-[80%] rounded-xl px-4 py-2 text-sm",
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
                       )}
                     >
                       {m.content}
@@ -192,7 +192,6 @@ export function ChatBot() {
               className="p-4 border-t flex gap-2"
             >
               <Input
-                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your message…"
