@@ -1,105 +1,104 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-interface AmbientSoundProps {
+interface CoffeeAmbienceProps {
   audioSrc: string;
-  label?: string;
+  volume?: number;
 }
 
-export default function AmbientSound({ audioSrc, label = 'Ambient Sound' }: AmbientSoundProps) {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [autoPlayAttempted, setAutoPlayAttempted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
+const CoffeeAmbience = ({ audioSrc, volume = 0.4 }: CoffeeAmbienceProps) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    // Create audio element
+    audioRef.current = new Audio(audioSrc);
+    audioRef.current.loop = true;
+    audioRef.current.volume = volume;
 
-    audio.volume = 0.4;
-    audio.loop = true;
+    // Try to auto-play
+    const playPromise = audioRef.current.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          setIsPlaying(true);
+          setHasInteracted(true);
+        })
+        .catch(() => {
+          // Auto-play was prevented, wait for user interaction
+          setIsPlaying(false);
+        });
+    }
 
-    const attemptAutoPlay = async () => {
-      if (autoPlayAttempted) return;
-      setAutoPlayAttempted(true);
+    // Cleanup
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [audioSrc, volume]);
 
-      try {
-        await audio.play();
-        setIsPlaying(true);
-      } catch (error) {
-        console.log('Auto-play prevented by browser. Waiting for user interaction...');
-        setIsPlaying(false);
+  // Handle first user interaction to start audio
+  useEffect(() => {
+    if (hasInteracted) return;
 
-        const playOnInteraction = async () => {
-          try {
-            await audio.play();
+    const startAudioOnInteraction = () => {
+      if (audioRef.current && !hasInteracted) {
+        audioRef.current.play()
+          .then(() => {
             setIsPlaying(true);
-            document.removeEventListener('click', playOnInteraction);
-            document.removeEventListener('scroll', playOnInteraction);
-            document.removeEventListener('touchstart', playOnInteraction);
-          } catch (err) {
-            console.log('Playback failed:', err);
-          }
-        };
-
-        document.addEventListener('click', playOnInteraction, { once: true });
-        document.addEventListener('scroll', playOnInteraction, { once: true });
-        document.addEventListener('touchstart', playOnInteraction, { once: true });
+            setHasInteracted(true);
+          })
+          .catch(console.error);
       }
     };
 
-    attemptAutoPlay();
-  }, [autoPlayAttempted]);
+    // Listen for user interactions
+    window.addEventListener('click', startAudioOnInteraction, { once: true });
+    window.addEventListener('scroll', startAudioOnInteraction, { once: true });
+    window.addEventListener('touchstart', startAudioOnInteraction, { once: true });
+    window.addEventListener('keydown', startAudioOnInteraction, { once: true });
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    return () => {
+      window.removeEventListener('click', startAudioOnInteraction);
+      window.removeEventListener('scroll', startAudioOnInteraction);
+      window.removeEventListener('touchstart', startAudioOnInteraction);
+      window.removeEventListener('keydown', startAudioOnInteraction);
+    };
+  }, [hasInteracted]);
+
+  const toggleAudio = () => {
+    if (!audioRef.current) return;
 
     if (isPlaying) {
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.log('Audio playback prevented:', error);
-        });
-      }
+      audioRef.current.pause();
+      setIsPlaying(false);
     } else {
-      audio.pause();
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+          setHasInteracted(true);
+        })
+        .catch(console.error);
     }
-  }, [isPlaying]);
-
-  const toggleSound = () => {
-    setIsPlaying(!isPlaying);
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
-      <button
-        onClick={toggleSound}
-        className={cn(
-          "group relative flex items-center gap-3 px-4 py-3 rounded-full shadow-lg transition-all duration-300",
-          "bg-background/95 backdrop-blur-sm border border-border/50",
-          "hover:shadow-xl hover:scale-105",
-          isPlaying && "bg-primary/10 border-primary/30"
-        )}
-        aria-label={isPlaying ? 'Mute sound' : 'Play sound'}
-      >
-        {isPlaying ? (
-          <Volume2 className="w-5 h-5 text-primary animate-pulse" />
-        ) : (
-          <VolumeX className="w-5 h-5 text-muted-foreground" />
-        )}
-
-        <span className={cn(
-          "text-sm font-medium whitespace-nowrap transition-all duration-300",
-          "max-w-0 opacity-0 overflow-hidden",
-          "group-hover:max-w-[200px] group-hover:opacity-100",
-          isPlaying ? "text-primary" : "text-muted-foreground"
-        )}>
-          {label}
-        </span>
-      </button>
-
-      <audio ref={audioRef} src={audioSrc} preload="auto" />
-    </div>
+    <button
+      onClick={toggleAudio}
+      className="fixed bottom-6 right-6 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 hover:scale-110"
+      aria-label={isPlaying ? 'Mute coffee ambience' : 'Play coffee ambience'}
+    >
+      {isPlaying ? (
+        <Volume2 className="w-5 h-5" />
+      ) : (
+        <VolumeX className="w-5 h-5" />
+      )}
+    </button>
   );
-}
+};
+
+export default CoffeeAmbience;
