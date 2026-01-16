@@ -68,7 +68,6 @@ const AmbientSound = ({
         await audioRef.current.play();
         hasUserInteracted.current = true;
       } catch (error) {
-        // Auto-play was blocked - this is normal
         console.log('Auto-play blocked, waiting for user interaction');
       }
     };
@@ -91,7 +90,6 @@ const AmbientSound = ({
       }
     };
 
-    // Listen for user interactions
     const events = ['click', 'touchstart', 'scroll', 'keydown'];
     
     events.forEach(event => {
