@@ -36,13 +36,7 @@ export function ChatBot() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    console.log("ChatBot mounted");
-  }, []);
-
-  /* ===============================
-     Welcome message
-  =============================== */
+  // Welcome message on open
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
@@ -50,25 +44,21 @@ export function ChatBot() {
           id: "welcome",
           role: "assistant",
           content:
-            "Hello! I’m the Sharma Coffee Works assistant ☕ How can I help you today?",
+            "Hello! I'm the Sharma Coffee Works assistant ☕ How can I help you today?",
           timestamp: new Date(),
         },
       ]);
     }
   }, [isOpen, messages.length]);
 
-  /* ===============================
-     Auto-scroll
-  =============================== */
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  /* ===============================
-     Send message
-  =============================== */
+  // Send message handler - FIXED VERSION
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
 
@@ -84,55 +74,71 @@ export function ChatBot() {
     setIsLoading(true);
 
     try {
-      const result = await supabase.functions.invoke(
-        "chat-assistant",
-        {
-          body: {
-            message: text,
-            conversationHistory: messages.slice(-6).map((m) => ({
-              role: m.role,
-              content: m.content,
-            })),
-          },
-        }
-      );
+      console.log("📤 Sending message to Edge Function:", text);
 
-      if (result.error) {
-        console.error("Edge function error:", result.error);
-        throw result.error;
+      const { data, error } = await supabase.functions.invoke("chat-assistant", {
+        body: {
+          message: text,
+          conversationHistory: messages.slice(-6).map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        },
+      });
+
+      console.log("📥 Raw response from Edge Function:", data);
+      console.log("❌ Error from Edge Function:", error);
+
+      if (error) throw error;
+
+      // ✅ BULLETPROOF RESPONSE NORMALIZATION
+      // Handles ALL possible Supabase Edge Function return shapes
+      let assistantText = "Sorry, I couldn't process that.";
+
+      if (data) {
+        // Case 1: data is a string directly
+        if (typeof data === "string") {
+          // Check if it's JSON string that needs parsing
+          try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed.response === "string") {
+              assistantText = parsed.response;
+            } else {
+              assistantText = data;
+            }
+          } catch {
+            assistantText = data;
+          }
+        }
+        // Case 2: data is an object with .response
+        else if (typeof data === "object" && data !== null) {
+          if (typeof data.response === "string") {
+            assistantText = data.response;
+          }
+          // Case 3: Nested data.data.response (some Supabase versions)
+          else if (data.data && typeof data.data.response === "string") {
+            assistantText = data.data.response;
+          }
+        }
       }
 
-      // ✅ DEFENSIVE RESPONSE PARSING
-      const raw = result.data;
-      let responseText = "Sorry, I couldn't process that.";
-
-      if (typeof raw === "string") {
-        responseText = raw;
-      } else if (raw && typeof raw === "object") {
-        if (typeof raw.response === "string") {
-          responseText = raw.response;
-        } else if (typeof raw.data?.response === "string") {
-          responseText = raw.data.response;
-        }
-      }
-
-      console.log("Chat response received:", responseText.substring(0, 50) + "...");
+      console.log("✅ Extracted assistant text:", assistantText);
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: responseText,
+          content: assistantText,
           timestamp: new Date(),
         },
       ]);
     } catch (err) {
-      console.error("Chat error:", err);
+      console.error("🔥 ChatBot error:", err);
       setMessages((prev) => [
         ...prev,
         {
-          id: "error-" + Date.now(),
+          id: "error",
           role: "assistant",
           content:
             "I'm having trouble right now. Please try again in a moment.",
@@ -144,9 +150,7 @@ export function ChatBot() {
     }
   }
 
-  /* ===============================
-     Quick actions
-  =============================== */
+  // Quick actions handler
   function handleQuickAction(action: string) {
     if (action.startsWith("/")) {
       window.location.href = action;
@@ -213,7 +217,9 @@ export function ChatBot() {
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <div className="bg-muted rounded-xl px-4 py-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
                   </div>
                 )}
 
@@ -260,9 +266,9 @@ export function ChatBot() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen((o) => !o)}
-        className="fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50"
+        className="fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50 hover:scale-105 transition-transform"
       >
-        <Coffee className="w-6 h-6" />
+        {isOpen ? <X className="w-6 h-6" /> : <Coffee className="w-6 h-6" />}
       </button>
     </>
   );
