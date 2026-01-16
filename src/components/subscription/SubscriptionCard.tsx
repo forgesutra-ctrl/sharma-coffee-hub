@@ -54,8 +54,33 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
       return;
     }
 
+    if (!plan.razorpay_plan_id) {
+      toast.error('Subscription plan not configured properly');
+      return;
+    }
+
     setLoading(true);
+
     try {
+      /* 1️⃣ CREATE RAZORPAY SUBSCRIPTION */
+      const response = await fetch(
+        '/functions/v1/create-razorpay-subscription',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_plan_id: plan.razorpay_plan_id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to create Razorpay subscription');
+      }
+
+      const { subscription_id } = await response.json();
+
+      /* 2️⃣ SAVE SUBSCRIPTION IN SUPABASE */
       const nextBillingDate = new Date();
       nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
@@ -64,6 +89,7 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
         .insert({
           user_id: user.id,
           plan_id: plan.id,
+          razorpay_subscription_id: subscription_id,
           product_id: product.id,
           variant_id: selectedVariant.id,
           quantity,
@@ -73,11 +99,11 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
 
       if (error) throw error;
 
-      toast.success('Subscription created successfully!');
+      toast.success('Subscription activated successfully!');
       navigate('/account/subscriptions');
     } catch (error) {
       console.error('Subscription error:', error);
-      toast.error('Failed to create subscription');
+      toast.error('Failed to start subscription');
     } finally {
       setLoading(false);
     }
@@ -104,51 +130,28 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
           Get this coffee delivered monthly and save on every order
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-start gap-2">
-            <Calendar className="h-4 w-4 text-primary mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium">Monthly Delivery</p>
-              <p className="text-muted-foreground text-xs">Auto-renews</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <Package className="h-4 w-4 text-primary mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium">Free Shipping</p>
-              <p className="text-muted-foreground text-xs">Always</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <Truck className="h-4 w-4 text-primary mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium">Skip Anytime</p>
-              <p className="text-muted-foreground text-xs">Full control</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <Tag className="h-4 w-4 text-primary mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium">Cancel Anytime</p>
-              <p className="text-muted-foreground text-xs">No commitment</p>
-            </div>
-          </div>
+          <Feature icon={<Calendar />} title="Monthly Delivery" desc="Auto-renews" />
+          <Feature icon={<Package />} title="Free Shipping" desc="Always" />
+          <Feature icon={<Truck />} title="Skip Anytime" desc="Full control" />
+          <Feature icon={<Tag />} title="Cancel Anytime" desc="No commitment" />
         </div>
 
         {selectedVariant && (
           <div className="pt-3 border-t">
-            <div className="flex items-baseline justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Regular Price:</span>
-              <span className="text-sm line-through">₹{selectedVariant.price.toFixed(2)}</span>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Regular Price</span>
+              <span className="line-through">₹{selectedVariant.price.toFixed(2)}</span>
             </div>
-            <div className="flex items-baseline justify-between mb-2">
-              <span className="text-sm font-medium">Subscription Price:</span>
-              <span className="text-lg font-bold text-primary">₹{discountedPrice.toFixed(2)}</span>
+            <div className="flex justify-between font-medium mb-2">
+              <span>Subscription Price</span>
+              <span className="text-primary text-lg">₹{discountedPrice.toFixed(2)}</span>
             </div>
-            <div className="text-xs text-center text-green-600 font-medium">
-              You save ₹{savings.toFixed(2)} per delivery!
-            </div>
+            <p className="text-xs text-center text-green-600">
+              You save ₹{savings.toFixed(2)} per delivery
+            </p>
           </div>
         )}
 
@@ -158,7 +161,7 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
           className="w-full"
           size="lg"
         >
-          {loading ? 'Creating Subscription...' : 'Subscribe Now'}
+          {loading ? 'Creating Subscription…' : 'Subscribe Now'}
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
@@ -166,5 +169,18 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+/* Small helper for clean UI */
+function Feature({ icon, title, desc }: any) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="h-4 w-4 text-primary mt-0.5">{icon}</div>
+      <div className="text-sm">
+        <p className="font-medium">{title}</p>
+        <p className="text-muted-foreground text-xs">{desc}</p>
+      </div>
+    </div>
   );
 }
