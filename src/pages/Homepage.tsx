@@ -8,7 +8,7 @@ import StorySection from '@/components/coffee/StorySection';
 import InstagramFeed from '@/components/coffee/InstagramFeed';
 import AmbientSound from '@/components/coffee/AmbientSound';
 import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
-import coffeePlantImg from '@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg';
+import coffeePlantImg from '@/assets/chatgpt_image_jan_12,_2025,_10_25_34_am copy.jpeg';
 import { useFeaturedProducts, useProducts } from '@/hooks/useProducts';
 import { useCategoriesWithCount } from '@/hooks/useCategories';
 
@@ -53,27 +53,29 @@ export default function Homepage() {
     }) || [];
 
   return (
-    <div className="bg-background">
-      {/* Hero Video Section */}
-      <HeroVideo
-        videoSrc={heroVideo}
-        posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
-        title="A SIP OF HOME"
-        subtitle="Crafted with Tradition Since 1987"
-        ctaText="Shop Now"
-        ctaLink="/shop"
-        secondaryCtaText="Our Story"
-        secondaryCtaLink="/about"
-        height="full"
-        overlayOpacity={60}
-      />
+    <div className="min-h-screen w-full bg-background overflow-x-hidden">
+      {/* Hero Video Section - Full Screen */}
+      <section className="w-full">
+        <HeroVideo
+          videoSrc={heroVideo}
+          posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
+          title="A SIP OF HOME"
+          subtitle="Crafted with Tradition Since 1987"
+          ctaText="Shop Now"
+          ctaLink="/shop"
+          secondaryCtaText="Our Story"
+          secondaryCtaLink="/about"
+          height="full"
+          overlayOpacity={60}
+        />
+      </section>
 
       {/* Features Bar */}
-      <section className="features-bar py-6 border-y border-border/30">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="w-full py-6 border-y border-border/30 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Truck className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -82,7 +84,7 @@ export default function Homepage() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <RefreshCw className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -91,7 +93,7 @@ export default function Homepage() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-4 text-center md:text-left">
-              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Award className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -104,8 +106,8 @@ export default function Homepage() {
       </section>
 
       {/* Best Sellers Carousel */}
-      <section className="py-16 bg-background">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="w-full py-16 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loadingFeatured ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -129,8 +131,8 @@ export default function Homepage() {
 
       {/* Shop by Category */}
       {categories.length > 0 && (
-        <section className="py-20 bg-secondary/50">
-          <div className="max-w-7xl mx-auto px-4">
+        <section className="w-full py-20 bg-secondary/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <CategoryGrid
               categories={categories}
               title="Shop by Category"
@@ -141,23 +143,25 @@ export default function Homepage() {
       )}
 
       {/* Story Section */}
-      <StorySection
-        title="Four Decades of Passion"
-        subtitle="Our Heritage"
-        content={[
-          "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
-          "Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, and blended with the finest ghee-roasted chicory from Jamnagar."
-        ]}
-        image={coffeePlantImg}
-        ctaText="Learn More"
-        ctaLink="/about"
-        layout="right"
-        theme="dark"
-      />
+      <section className="w-full">
+        <StorySection
+          title="Four Decades of Passion"
+          subtitle="Our Heritage"
+          content={[
+            "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
+            "Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, and blended with the finest ghee-roasted chicory from Jamnagar."
+          ]}
+          image={coffeePlantImg}
+          ctaText="Learn More"
+          ctaLink="/about"
+          layout="right"
+          theme="dark"
+        />
+      </section>
 
       {/* Google Reviews */}
-      <section className="py-24 bg-secondary">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="w-full py-24 bg-secondary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-16">
             <p className="text-primary text-sm font-medium tracking-[0.3em] uppercase mb-4">
@@ -175,15 +179,17 @@ export default function Homepage() {
       </section>
 
       {/* Instagram Feed */}
-      <InstagramFeed />
+      <section className="w-full">
+        <InstagramFeed />
+      </section>
 
       {/* Final CTA */}
-      <section className="relative py-32 overflow-hidden">
+      <section className="relative w-full py-32 overflow-hidden">
         {/* Background with gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-accent" />
         <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg')] bg-cover bg-center mix-blend-overlay opacity-20" />
         
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-display text-4xl md:text-6xl font-bold text-primary-foreground mb-6 tracking-tight">
             Experience the Taste of Coorg
           </h2>
@@ -201,7 +207,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Ambient Coffee Sound - Using local file */}
+      {/* Ambient Coffee Sound */}
       <AmbientSound
         audioSrc="/coffee-pour.mp3"
         label="Coffee Pouring"
