@@ -10,13 +10,13 @@ import InstagramFeed from "@/components/coffee/InstagramFeed";
 import AmbientSound from "@/components/coffee/AmbientSound";
 
 import heroVideo from "@/assets/videos/hero-coffee-brewing.mp4";
-import coffeePlantImg from "@/assets/coffee-plant.jpg";
 
 import { useFeaturedProducts, useProducts } from "@/hooks/useProducts";
 import { useCategoriesWithCount } from "@/hooks/useCategories";
 
 export default function Homepage() {
-  const { data: featuredProducts, isLoading: loadingFeatured } = useFeaturedProducts();
+  const { data: featuredProducts, isLoading: loadingFeatured } =
+    useFeaturedProducts();
   const { data: allProducts } = useProducts();
   const { data: dbCategories } = useCategoriesWithCount();
 
@@ -62,7 +62,7 @@ export default function Homepage() {
 
   return (
     <div className="min-h-screen w-full bg-background overflow-x-hidden">
-      {/* Hero Section */}
+      {/* HERO */}
       <section className="w-full">
         <HeroVideo
           videoSrc={heroVideo}
@@ -78,7 +78,7 @@ export default function Homepage() {
         />
       </section>
 
-      {/* Features */}
+      {/* FEATURES */}
       <section className="w-full py-6 border-y border-border/30">
         <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-6">
           <Feature icon={Truck} title="Free Shipping" desc="Subscription Members Only" />
@@ -87,7 +87,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Best Sellers */}
+      {/* BEST SELLERS */}
       <section className="w-full py-16">
         <div className="max-w-7xl mx-auto px-4">
           {loadingFeatured ? (
@@ -104,7 +104,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Categories */}
+      {/* CATEGORIES */}
       {categories.length > 0 && (
         <section className="w-full py-20 bg-secondary/50">
           <div className="max-w-7xl mx-auto px-4">
@@ -117,7 +117,7 @@ export default function Homepage() {
         </section>
       )}
 
-      {/* Story */}
+      {/* STORY SECTION */}
       <StorySection
         title="Four Decades of Passion"
         subtitle="Our Heritage"
@@ -125,14 +125,14 @@ export default function Homepage() {
           "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg.",
           "Every bean is hand-selected, slow-roasted, and blended with the finest ghee-roasted chicory."
         ]}
-        image={coffeePlantImg}
+        image="/coffee-plant.jpg"
         ctaText="Learn More"
         ctaLink="/about"
         layout="right"
         theme="dark"
       />
 
-      {/* Reviews */}
+      {/* REVIEWS */}
       <section className="w-full py-24 bg-secondary">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="font-display text-4xl md:text-5xl font-semibold">
@@ -142,7 +142,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Instagram */}
+      {/* INSTAGRAM */}
       <InstagramFeed />
 
       {/* CTA */}
@@ -161,7 +161,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Ambient Sound */}
+      {/* AMBIENT SOUND */}
       <AmbientSound
         audioSrc="/coffee-pour.mp3"
         label="Coffee Pouring"
@@ -172,7 +172,7 @@ export default function Homepage() {
   );
 }
 
-/* ---------- Helper Component ---------- */
+/* ---------- FEATURE BLOCK ---------- */
 
 function Feature({
   icon: Icon,
