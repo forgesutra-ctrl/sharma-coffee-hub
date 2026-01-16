@@ -201,9 +201,9 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Ambient Coffee Sound */}
+      {/* Ambient Coffee Sound - Using local file */}
       <AmbientSound
-        audioSrc="https://cdn.pixabay.com/audio/2024/07/30/audio_86b9700fe6.mp3"
+        audioSrc="/coffee-pour.mp3"
         label="Coffee Pouring"
         volume={0.4}
         autoPlay={true}
