@@ -15,11 +15,19 @@ interface SubscriptionCardProps {
   quantity: number;
 }
 
-export function SubscriptionCard({ product, selectedVariant, quantity }: SubscriptionCardProps) {
+export function SubscriptionCard({
+  product,
+  selectedVariant,
+  quantity,
+}: SubscriptionCardProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+
+  // NEW: delivery day (1–28)
+  const [deliveryDay, setDeliveryDay] = useState<number>(1);
 
   useEffect(() => {
     fetchSubscriptionPlan();
@@ -33,9 +41,7 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
       .eq('billing_cycle', 'monthly')
       .maybeSingle();
 
-    if (data) {
-      setPlan(data);
-    }
+    if (data) setPlan(data);
   };
 
   if (!product.subscription_eligible || !plan) {
@@ -55,7 +61,7 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
     }
 
     if (!plan.razorpay_plan_id) {
-      toast.error('Subscription plan not configured properly');
+      toast.error('Subscription plan not configured');
       return;
     }
 
@@ -95,14 +101,17 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
           quantity,
           status: 'active',
           next_billing_date: nextBillingDate.toISOString().split('T')[0],
+
+          // NEW: save preferred delivery day
+          delivery_day: deliveryDay,
         });
 
       if (error) throw error;
 
-      toast.success('Subscription activated successfully!');
+      toast.success('Subscription activated successfully');
       navigate('/account/subscriptions');
     } catch (error) {
-      console.error('Subscription error:', error);
+      console.error(error);
       toast.error('Failed to start subscription');
     } finally {
       setLoading(false);
@@ -127,11 +136,12 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
           </Badge>
         </div>
         <CardDescription>
-          Get this coffee delivered monthly and save on every order
+          Monthly delivery with subscriber benefits
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* BENEFITS */}
         <div className="grid grid-cols-2 gap-3">
           <Feature icon={<Calendar />} title="Monthly Delivery" desc="Auto-renews" />
           <Feature icon={<Package />} title="Free Shipping" desc="Always" />
@@ -139,15 +149,38 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
           <Feature icon={<Tag />} title="Cancel Anytime" desc="No commitment" />
         </div>
 
+        {/* NEW: DELIVERY DAY SELECTOR */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">
+            Preferred delivery day (every month)
+          </label>
+          <select
+            value={deliveryDay}
+            onChange={(e) => setDeliveryDay(Number(e.target.value))}
+            className="w-full border rounded px-2 py-2"
+          >
+            {[...Array(28)].map((_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* PRICING */}
         {selectedVariant && (
           <div className="pt-3 border-t">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-muted-foreground">Regular Price</span>
-              <span className="line-through">₹{selectedVariant.price.toFixed(2)}</span>
+              <span className="line-through">
+                ₹{selectedVariant.price.toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between font-medium mb-2">
               <span>Subscription Price</span>
-              <span className="text-primary text-lg">₹{discountedPrice.toFixed(2)}</span>
+              <span className="text-primary text-lg">
+                ₹{discountedPrice.toFixed(2)}
+              </span>
             </div>
             <p className="text-xs text-center text-green-600">
               You save ₹{savings.toFixed(2)} per delivery
@@ -172,7 +205,7 @@ export function SubscriptionCard({ product, selectedVariant, quantity }: Subscri
   );
 }
 
-/* Small helper for clean UI */
+/* Small UI helper */
 function Feature({ icon, title, desc }: any) {
   return (
     <div className="flex items-start gap-2">
