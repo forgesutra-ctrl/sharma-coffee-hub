@@ -1,170 +1,209 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Truck, RefreshCw, Award, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import HeroVideo from '@/components/coffee/HeroVideo';
+import BestSellersCarousel from '@/components/coffee/BestSellersCarousel';
+import CategoryGrid from '@/components/coffee/CategoryGrid';
+import StorySection from '@/components/coffee/StorySection';
+import InstagramFeed from '@/components/coffee/InstagramFeed';
+import AmbientSound from '@/components/coffee/AmbientSound';
+import heroVideo from '@/assets/videos/hero-coffee-brewing.mp4';
+import coffeePlantImg from '@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg';
+import { useFeaturedProducts, useProducts } from '@/hooks/useProducts';
+import { useCategoriesWithCount } from '@/hooks/useCategories';
 
-interface AmbientSoundProps {
-  audioSrc: string;
-  label?: string;
-  volume?: number;
-  autoPlay?: boolean;
-}
+export default function Homepage() {
+  const { data: featuredProducts, isLoading: loadingFeatured } = useFeaturedProducts();
+  const { data: allProducts } = useProducts();
+  const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
 
-const AmbientSound = ({ 
-  audioSrc, 
-  label = 'Ambient Sound',
-  volume = 0.4,
-  autoPlay = true 
-}: AmbientSoundProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const hasTriedAutoPlay = useRef(false);
-
-  // Initialize audio element
+  // Load Google Reviews widget script
   useEffect(() => {
-    const audio = new Audio();
-    audio.src = audioSrc;
-    audio.loop = true;
-    audio.volume = volume;
-    audio.preload = 'auto';
-    
-    audio.addEventListener('canplaythrough', () => {
-      setIsLoaded(true);
-    });
-
-    audio.addEventListener('error', (e) => {
-      console.error('Audio loading error:', e);
-    });
-
-    audioRef.current = audio;
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        audioRef.current = null;
-      }
-    };
-  }, [audioSrc, volume]);
-
-  // Attempt auto-play when loaded
-  useEffect(() => {
-    if (!isLoaded || !autoPlay || hasTriedAutoPlay.current) return;
-    
-    hasTriedAutoPlay.current = true;
-
-    const attemptAutoPlay = async () => {
-      if (!audioRef.current) return;
-
-      try {
-        await audioRef.current.play();
-        setIsPlaying(true);
-        setHasUserInteracted(true);
-      } catch (error) {
-        // Auto-play was blocked by browser - this is expected
-        console.log('Auto-play blocked, waiting for user interaction');
-        setIsPlaying(false);
-      }
-    };
-
-    attemptAutoPlay();
-  }, [isLoaded, autoPlay]);
-
-  // Play audio function
-  const playAudio = useCallback(async () => {
-    if (!audioRef.current || !isLoaded) return false;
-
-    try {
-      await audioRef.current.play();
-      setIsPlaying(true);
-      return true;
-    } catch (error) {
-      console.error('Play error:', error);
-      return false;
+    const existingScript = document.querySelector('script[src*="google-reviews/widget.js"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/google-reviews/widget.js';
+      script.defer = true;
+      document.body.appendChild(script);
     }
-  }, [isLoaded]);
-
-  // Pause audio function
-  const pauseAudio = useCallback(() => {
-    if (!audioRef.current) return;
-    audioRef.current.pause();
-    setIsPlaying(false);
   }, []);
 
-  // Handle user interaction to start audio (for browsers that block auto-play)
-  useEffect(() => {
-    if (hasUserInteracted || !isLoaded || !autoPlay) return;
+  // Transform featured products for BestSellersCarousel
+  const bestSellers = featuredProducts?.map(product => ({
+    id: product.productId,
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    hoverImage: undefined,
+    href: `/product/${product.slug}`,
+    badge: product.isFeatured ? 'Best Seller' : undefined,
+  })) || [];
 
-    const handleFirstInteraction = async () => {
-      if (hasUserInteracted) return;
-      
-      const success = await playAudio();
-      if (success) {
-        setHasUserInteracted(true);
-        // Remove all listeners after successful play
-        removeListeners();
-      }
-    };
-
-    const removeListeners = () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('scroll', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-
-    // Add interaction listeners
-    document.addEventListener('click', handleFirstInteraction, { passive: true });
-    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
-    document.addEventListener('scroll', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('keydown', handleFirstInteraction, { once: true });
-
-    return removeListeners;
-  }, [hasUserInteracted, isLoaded, autoPlay, playAudio]);
-
-  // Toggle audio on/off
-  const toggleAudio = async () => {
-    if (isPlaying) {
-      pauseAudio();
-    } else {
-      const success = await playAudio();
-      if (success) {
-        setHasUserInteracted(true);
-      }
-    }
-  };
+  // Transform categories for CategoryGrid
+  const categories = dbCategories?.filter(cat => cat.product_count && cat.product_count > 0)
+    .slice(0, 6)
+    .map(cat => {
+      const categoryProduct = allProducts?.find(p => p.category_id === cat.id);
+      return {
+        id: cat.id,
+        title: cat.name,
+        image: categoryProduct?.image_url || '/placeholder.svg',
+        href: `/shop/${cat.slug}`,
+      };
+    }) || [];
 
   return (
-    <button
-      onClick={toggleAudio}
-      disabled={!isLoaded}
-      className={cn(
-        "fixed bottom-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all duration-300",
-        "hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-        isPlaying 
-          ? "bg-primary text-primary-foreground" 
-          : "bg-card text-foreground border border-border",
-        !isLoaded && "opacity-50 cursor-not-allowed"
-      )}
-      aria-label={isPlaying ? `Mute ${label}` : `Play ${label}`}
-      title={isPlaying ? `Mute ${label}` : `Play ${label}`}
-    >
-      {isPlaying ? (
-        <Volume2 className="w-5 h-5" />
-      ) : (
-        <VolumeX className="w-5 h-5" />
-      )}
-      
-      {/* Ripple animation when playing */}
-      {isPlaying && (
-        <>
-          <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20" />
-          <span className="absolute inset-0 rounded-full bg-primary animate-pulse opacity-10" />
-        </>
-      )}
-    </button>
-  );
-};
+    <div className="bg-background">
+      {/* Hero Video Section */}
+      <HeroVideo
+        videoSrc={heroVideo}
+        posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
+        title="A SIP OF HOME"
+        subtitle="Crafted with Tradition Since 1987"
+        ctaText="Shop Now"
+        ctaLink="/shop"
+        secondaryCtaText="Our Story"
+        secondaryCtaLink="/about"
+        height="full"
+        overlayOpacity={60}
+      />
 
-export default AmbientSound;
+      {/* Features Bar */}
+      <section className="features-bar py-6 border-y border-border/30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center justify-center gap-4 text-center md:text-left">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                <Truck className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Free Shipping</p>
+                <p className="text-sm text-muted-foreground">Subscription Members Only</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-4 text-center md:text-left">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Easy Returns</p>
+                <p className="text-sm text-muted-foreground">7-day hassle-free returns</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-4 text-center md:text-left">
+              <div className="feature-icon w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                <Award className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Premium Quality</p>
+                <p className="text-sm text-muted-foreground">Since 1987</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Best Sellers Carousel */}
+      <section className="py-16 bg-background">
+        <div className="max-w-7xl mx-auto px-4">
+          {loadingFeatured ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : bestSellers.length > 0 ? (
+            <BestSellersCarousel
+              products={bestSellers}
+              title="Best Sellers"
+              viewAllLink="/shop"
+            />
+          ) : (
+            <div className="text-center py-12">
+              <h2 className="font-display text-4xl md:text-5xl font-semibold text-foreground mb-4">
+                Best Sellers
+              </h2>
+              <p className="text-muted-foreground">Check back soon for our featured products!</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Shop by Category */}
+      {categories.length > 0 && (
+        <section className="py-20 bg-secondary/50">
+          <div className="max-w-7xl mx-auto px-4">
+            <CategoryGrid
+              categories={categories}
+              title="Shop by Category"
+              columns={4}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Story Section */}
+      <StorySection
+        title="Four Decades of Passion"
+        subtitle="Our Heritage"
+        content={[
+          "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg. Our journey began with a simple belief: great coffee comes from patience, tradition, and respect for the craft.",
+          "Every bean is hand-selected from high-altitude estates, slow-roasted using traditional methods, and blended with the finest ghee-roasted chicory from Jamnagar."
+        ]}
+        image={coffeePlantImg}
+        ctaText="Learn More"
+        ctaLink="/about"
+        layout="right"
+        theme="dark"
+      />
+
+      {/* Google Reviews */}
+      <section className="py-24 bg-secondary">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <p className="text-primary text-sm font-medium tracking-[0.3em] uppercase mb-4">
+              Reviews
+            </p>
+            <h2 className="font-display text-4xl md:text-5xl font-semibold text-foreground">
+              What Our Customers Say
+            </h2>
+            <div className="section-divider mt-6" />
+          </div>
+          <div className="sk-ww-google-reviews" data-embed-id="25643427"></div>
+        </div>
+      </section>
+
+      {/* Instagram Feed */}
+      <InstagramFeed />
+
+      {/* Final CTA */}
+      <section className="relative py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-accent" />
+        <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg')] bg-cover bg-center mix-blend-overlay opacity-20" />
+        
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <h2 className="font-display text-4xl md:text-6xl font-bold text-primary-foreground mb-6 tracking-tight">
+            Experience the Taste of Coorg
+          </h2>
+          <p className="text-primary-foreground/80 mb-12 max-w-2xl mx-auto text-lg md:text-xl leading-relaxed">
+            Join thousands of coffee lovers who've made the switch to freshly roasted,
+            traditionally crafted coffee from the hills of Coorg.
+          </p>
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-3 bg-background text-foreground font-medium tracking-[0.15em] uppercase text-sm px-12 py-5 hover:bg-foreground hover:text-background transition-all duration-300 group"
+          >
+            <span>Shop Now</span>
+            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Ambient Coffee Sound */}
+      <AmbientSound
+        audioSrc="https://cdn.pixabay.com/audio/2024/07/30/audio_86b9700fe6.mp3"
+        label="Coffee Pouring"
+        volume={0.4}
+        autoPlay={true}
+      />
+    </div>
+  );
+}
