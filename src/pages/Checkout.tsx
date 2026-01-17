@@ -545,7 +545,7 @@ const Checkout = () => {
                       {shippingInfo && (
                         <p className="text-xs text-muted-foreground mt-1">
                           <Truck className="w-3 h-3 inline mr-1" />
-                          Delivering to {shippingInfo.region} - ₹{shippingInfo.charge}
+                          Delivering to {shippingInfo.region} - ₹{getShippingCharge()}
                         </p>
                       )}
                     </div>

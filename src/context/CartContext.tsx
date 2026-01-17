@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem } from '../types';
-import { getShippingCharge, getShippingRegion, getShippingRegionLabel, COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from '@/lib/shipping';
+import { getShippingCharge, getShippingRegion, getShippingRegionLabel, SHIPPING_CHARGES, COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from '@/lib/shipping';
 
 interface ShippingInfo {
   pincode: string;
   region: string;
+  baseRate: number;
   multiplier: number;
   codAvailable: boolean;
   weight: number;
@@ -70,10 +71,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const weightInGrams = getCartWeight();
     const weightInKg = weightInGrams / 1000;
     const multiplier = Math.ceil(weightInKg);
+    const baseRate = SHIPPING_CHARGES[region];
 
     setShippingInfo({
       pincode,
       region: getShippingRegionLabel(region),
+      baseRate,
       multiplier,
       codAvailable: true,
       weight: weightInGrams,
@@ -146,7 +149,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Pure getter - just returns the current shipping charge without side effects
   // DOES NOT call setShippingInfo - only calculates and returns
   const getShippingChargeValue = useCallback((): number => {
-    if (!shippingInfo || !shippingInfo.multiplier) return 0;
+    if (!shippingInfo || !shippingInfo.baseRate) return 0;
 
     // Calculate weight from cart items
     const weight = cartItems.reduce((total, item) => {
@@ -155,9 +158,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (weight <= 0) return 0;
 
-    // Calculate shipping based on weight and multiplier
+    // Calculate shipping based on weight: baseRate * ceil(weightInKg)
+    // Example: 250g in Karnataka = 50 * ceil(0.25) = 50 * 1 = Rs 50
+    // Example: 1500g in South India = 60 * ceil(1.5) = 60 * 2 = Rs 120
     const weightInKg = weight / 1000;
-    const charge = Math.ceil(weightInKg * shippingInfo.multiplier);
+    const multiplier = Math.ceil(weightInKg);
+    const charge = shippingInfo.baseRate * multiplier;
 
     return charge;
   }, [shippingInfo, cartItems]);
