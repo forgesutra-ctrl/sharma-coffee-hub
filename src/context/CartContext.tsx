@@ -137,13 +137,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
+  // Pure getter - just returns the current shipping charge without side effects
   const getShippingChargeValue = useCallback(() => {
     if (!shippingInfo) return 0;
+
+    const currentWeight = getCartWeight();
+    const updatedCharge = getShippingCharge(shippingInfo.pincode, currentWeight);
+    return updatedCharge;
+  }, [shippingInfo, getCartWeight]);
+
+  // Auto-update shipping info when cart weight changes
+  useEffect(() => {
+    if (!shippingInfo) return;
 
     const currentWeight = getCartWeight();
     const weightInKg = currentWeight / 1000;
     const multiplier = Math.ceil(weightInKg);
 
+    // Only update if weight actually changed
     if (multiplier !== shippingInfo.multiplier || currentWeight !== shippingInfo.weightInGrams) {
       const updatedCharge = getShippingCharge(shippingInfo.pincode, currentWeight);
       setShippingInfo({
@@ -152,11 +163,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         weightInGrams: currentWeight,
         multiplier,
       });
-      return updatedCharge;
     }
-
-    return shippingInfo.charge;
-  }, [shippingInfo, getCartWeight]);
+  }, [cartItems, shippingInfo?.pincode, getCartWeight]);
 
   // Check if all items in cart support COD
   const isCodAvailable = useCallback(() => {

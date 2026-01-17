@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/coffee/Layout";
 import { useCart } from "@/context/CartContext";
@@ -26,6 +26,7 @@ import { COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from "@/lib/shipping";
 import logger from "@/lib/logger";
 import DeliveryDatePicker from "@/components/subscription/DeliveryDatePicker";
 import { addDays } from "date-fns";
+import { PincodeDialog } from "@/components/PincodeDialog";
 
 type CheckoutStep = "shipping" | "delivery-date" | "review" | "payment";
 type PaymentType = "prepaid" | "cod";
@@ -87,6 +88,7 @@ const Checkout = () => {
     getCartTotal,
     clearCart,
     shippingInfo,
+    setShippingPincode,
     getShippingCharge,
     isCodAvailable,
   } = useCart();
@@ -106,6 +108,7 @@ const Checkout = () => {
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState<number>(15);
+  const [showPincodeDialog, setShowPincodeDialog] = useState(false);
 
   const [shippingForm, setShippingForm] = useState<ShippingForm>({
     fullName: "",
@@ -132,6 +135,16 @@ const Checkout = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setShippingForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePincodeValidated = (pincode: string, shippingCharge: number, region: string) => {
+    setShippingPincode(pincode);
+    setShippingForm(prev => ({ ...prev, pincode }));
+    setShowPincodeDialog(false);
+    toast({
+      title: "Pincode Validated",
+      description: `Delivery available to ${pincode} (${region})`,
+    });
   };
 
   const validateShipping = (): boolean => {
@@ -316,11 +329,16 @@ const Checkout = () => {
     }
   };
 
-  const subtotal = getCartTotal();
-  const discount = appliedCoupon?.discount || 0;
-  const shippingCharge = allItemsAreSubscription ? 0 : getShippingCharge();
-  const codFee = paymentType === "cod" ? COD_HANDLING_FEE : 0;
-  const grandTotal = subtotal - discount + shippingCharge + codFee;
+  // Memoize calculations to prevent re-computing on every render
+  const { subtotal, discount, shippingCharge, codFee, grandTotal } = useMemo(() => {
+    const subtotal = getCartTotal();
+    const discount = appliedCoupon?.discount || 0;
+    const shippingCharge = allItemsAreSubscription ? 0 : getShippingCharge();
+    const codFee = paymentType === "cod" ? COD_HANDLING_FEE : 0;
+    const grandTotal = subtotal - discount + shippingCharge + codFee;
+
+    return { subtotal, discount, shippingCharge, codFee, grandTotal };
+  }, [getCartTotal, appliedCoupon, allItemsAreSubscription, getShippingCharge, paymentType]);
 
   return (
     <Layout>
@@ -428,13 +446,32 @@ const Checkout = () => {
                     </div>
                     <div>
                       <Label htmlFor="pincode">Pincode *</Label>
-                      <Input
-                        id="pincode"
-                        name="pincode"
-                        value={shippingForm.pincode}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="pincode"
+                          name="pincode"
+                          value={shippingForm.pincode}
+                          onChange={handleInputChange}
+                          required
+                          readOnly
+                          className="cursor-pointer"
+                          onClick={() => setShowPincodeDialog(true)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowPincodeDialog(true)}
+                        >
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Check
+                        </Button>
+                      </div>
+                      {shippingInfo && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <Truck className="w-3 h-3 inline mr-1" />
+                          Delivering to {shippingInfo.region} - ₹{shippingInfo.charge}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -683,6 +720,14 @@ const Checkout = () => {
             </Card>
           </div>
         </div>
+
+        {/* Pincode Dialog */}
+        <PincodeDialog
+          open={showPincodeDialog}
+          onOpenChange={setShowPincodeDialog}
+          onPincodeValidated={handlePincodeValidated}
+          currentPincode={shippingInfo?.pincode}
+        />
       </div>
     </Layout>
   );
