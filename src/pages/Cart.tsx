@@ -41,7 +41,7 @@ const Cart = () => {
     }
   };
 
-  const handlePincodeValidated = (pincode: string) => {
+  const handlePincodeValidated = (pincode: string, shippingCharge: number, region: string) => {
     setShippingPincode(pincode);
   };
 

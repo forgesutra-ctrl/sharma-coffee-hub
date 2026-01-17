@@ -575,7 +575,7 @@ const ProductDetail = () => {
         <PincodeDialog
           open={showPincodeDialog}
           onOpenChange={setShowPincodeDialog}
-          onValidated={handlePincodeValidated}
+          onPincodeValidated={handlePincodeValidated}
         />
       </div>
     </Layout>

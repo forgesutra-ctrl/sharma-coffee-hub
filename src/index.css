@@ -612,3 +612,142 @@ body > iframe {
   position: absolute !important;
   left: -9999px !important;
 }
+
+/* ===== CROSS-BROWSER COMPATIBILITY ===== */
+
+/* Safari & iOS specific fixes */
+@supports (-webkit-appearance: none) {
+  /* Fix backdrop blur in Safari */
+  .nav-glass,
+  .glass,
+  .glass-dark {
+    -webkit-backdrop-filter: blur(40px);
+  }
+
+  /* Fix smooth scroll in Safari */
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix iOS zoom on input focus */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Firefox specific fixes */
+@-moz-document url-prefix() {
+  /* Better scrollbar for Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) hsl(var(--background));
+  }
+}
+
+/* Microsoft Edge & IE fixes */
+@supports (-ms-ime-align: auto) {
+  /* Fix flexbox issues in Edge */
+  .flex {
+    display: -ms-flexbox;
+    display: flex;
+  }
+}
+
+/* Fix font rendering across browsers */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix transform performance */
+.product-card,
+.category-card,
+.hover-scale,
+.hover-lift {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+/* Fix sticky positioning in older browsers */
+.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+}
+
+/* Fix video playback across browsers */
+video {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Fix input autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px hsl(var(--input)) inset !important;
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Fix button appearance across browsers */
+button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Fix select appearance */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Prevent text size adjustment on mobile */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Fix flexbox gap in older browsers */
+@supports not (gap: 1rem) {
+  .flex > * + *,
+  .grid > * + * {
+    margin-left: 1rem;
+  }
+}
+
+/* Fix aspect ratio in older browsers */
+@supports not (aspect-ratio: 1) {
+  .aspect-hero {
+    padding-bottom: 56.25%; /* 16:9 */
+    position: relative;
+    height: 0;
+  }
+
+  .aspect-product {
+    padding-bottom: 133.33%; /* 3:4 */
+    position: relative;
+    height: 0;
+  }
+
+  .aspect-square {
+    padding-bottom: 100%;
+    position: relative;
+    height: 0;
+  }
+}
