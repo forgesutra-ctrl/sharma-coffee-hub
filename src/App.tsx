@@ -31,6 +31,7 @@ import AccountDashboard from "./pages/account/AccountDashboard";
 import AccountOrders from "./pages/account/AccountOrders";
 import AccountAddresses from "./pages/account/AccountAddresses";
 import AccountSubscriptions from "./pages/account/AccountSubscriptions";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -80,7 +81,12 @@ const App = () => (
                   <Checkout />
                 </ProtectedRoute>
               } />
-              
+              <Route path="/order-confirmation/:orderId" element={
+                <ProtectedRoute>
+                  <OrderConfirmation />
+                </ProtectedRoute>
+              } />
+
               {/* Account Routes */}
               <Route path="/account" element={
                 <ProtectedRoute>
