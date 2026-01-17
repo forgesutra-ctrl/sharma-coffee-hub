@@ -1,4 +1,4 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import Navigation from './Navigation';
 import Footer from './Footer';
 import { ChatBot } from '../chat/ChatBot';
@@ -6,14 +6,14 @@ import BackToTop from './BackToTop';
 import CookieConsent from './CookieConsent';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation />
-      <main className="flex-grow">
+      <main className="flex-1 w-full">
         {children}
       </main>
       <Footer />

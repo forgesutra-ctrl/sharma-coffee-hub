@@ -5,21 +5,22 @@ import { getShippingCharge, getShippingRegion, getShippingRegionLabel, COD_ADVAN
 interface ShippingInfo {
   pincode: string;
   region: string;
-  charge: number;
-  weightInGrams: number;
   multiplier: number;
+  codAvailable: boolean;
+  weight: number;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: CartItem) => void;
-  removeFromCart: (productId: string, weight: number) => void;
-  updateQuantity: (productId: string, weight: number, quantity: number) => void;
+  removeFromCart: (productId: string, weight: number, is_subscription?: boolean) => void;
+  updateQuantity: (productId: string, weight: number, quantity: number, is_subscription?: boolean) => void;
   clearCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
   // Shipping
   shippingInfo: ShippingInfo | null;
+  setShippingInfo: React.Dispatch<React.SetStateAction<ShippingInfo | null>>;
   setShippingPincode: (pincode: string) => boolean;
   getShippingCharge: () => number;
   getCartWeight: () => number;
@@ -67,16 +68,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!region) return false;
 
     const weightInGrams = getCartWeight();
-    const charge = getShippingCharge(pincode, weightInGrams);
     const weightInKg = weightInGrams / 1000;
     const multiplier = Math.ceil(weightInKg);
 
     setShippingInfo({
       pincode,
       region: getShippingRegionLabel(region),
-      charge,
-      weightInGrams,
       multiplier,
+      codAvailable: true,
+      weight: weightInGrams,
     });
     return true;
   }, [getCartWeight]);
@@ -99,24 +99,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const removeFromCart = (productId: string, weight: number) => {
+  const removeFromCart = (productId: string, weight: number, is_subscription?: boolean) => {
     setCartItems((prev) =>
       prev.filter(
         (item) =>
-          !(item.product.id === productId && item.weight === weight)
+          !(
+            item.product.id === productId &&
+            item.weight === weight &&
+            item.is_subscription === (is_subscription || false)
+          )
       )
     );
   };
 
-  const updateQuantity = (productId: string, weight: number, quantity: number) => {
+  const updateQuantity = (productId: string, weight: number, quantity: number, is_subscription?: boolean) => {
     if (quantity <= 0) {
-      removeFromCart(productId, weight);
+      removeFromCart(productId, weight, is_subscription);
       return;
     }
 
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId && item.weight === weight
+        item.product.id === productId &&
+        item.weight === weight &&
+        item.is_subscription === (is_subscription || false)
           ? { ...item, quantity }
           : item
       )
@@ -138,36 +144,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Pure getter - just returns the current shipping charge without side effects
-  const getShippingChargeValue = useCallback(() => {
-    if (!shippingInfo) return 0;
+  // DOES NOT call setShippingInfo - only calculates and returns
+  const getShippingChargeValue = useCallback((): number => {
+    if (!shippingInfo || !shippingInfo.multiplier) return 0;
 
-    const currentWeight = getCartWeight();
-    const updatedCharge = getShippingCharge(shippingInfo.pincode, currentWeight);
-    return updatedCharge;
-  }, [shippingInfo, getCartWeight]);
-
-  // Auto-update shipping info when cart items change
-  useEffect(() => {
-    if (!shippingInfo) return;
-
-    const currentWeight = cartItems.reduce((totalWeight, item) => {
-      return totalWeight + (item.weight * item.quantity);
+    // Calculate weight from cart items
+    const weight = cartItems.reduce((total, item) => {
+      return total + (item.weight * item.quantity);
     }, 0);
 
-    const weightInKg = currentWeight / 1000;
-    const multiplier = Math.ceil(weightInKg);
+    if (weight <= 0) return 0;
 
-    // Only update if weight or multiplier actually changed
-    if (multiplier !== shippingInfo.multiplier || currentWeight !== shippingInfo.weightInGrams) {
-      const updatedCharge = getShippingCharge(shippingInfo.pincode, currentWeight);
-      setShippingInfo(prev => prev ? {
-        ...prev,
-        charge: updatedCharge,
-        weightInGrams: currentWeight,
-        multiplier,
-      } : null);
-    }
-  }, [cartItems]);
+    // Calculate shipping based on weight and multiplier
+    const weightInKg = weight / 1000;
+    const charge = Math.ceil(weightInKg * shippingInfo.multiplier);
+
+    return charge;
+  }, [shippingInfo, cartItems]);
 
   // Check if all items in cart support COD
   const isCodAvailable = useCallback(() => {
@@ -208,6 +201,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getCartTotal,
         getCartCount,
         shippingInfo,
+        setShippingInfo,
         setShippingPincode,
         getShippingCharge: getShippingChargeValue,
         getCartWeight,
