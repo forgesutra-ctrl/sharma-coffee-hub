@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import Layout from "@/components/coffee/Layout";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -122,12 +122,59 @@ const Checkout = () => {
     landmark: "",
   });
 
-  // Redirect to cart if no items or no shipping info (only check once on mount and when items change)
-  useEffect(() => {
-    if (cartItems.length === 0 || !shippingInfo) {
-      navigate("/cart", { replace: true });
-    }
-  }, [cartItems.length, shippingInfo?.pincode, navigate]);
+  // Early return for empty cart - show message instead of redirecting
+  if (cartItems.length === 0) {
+    return (
+      <Layout>
+        <div className="min-h-[70vh] flex items-center justify-center">
+          <div className="text-center px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
+              <Package className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h1 className="text-2xl font-serif font-bold text-foreground mb-2">
+              Your cart is empty
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Add some products to your cart before checking out.
+            </p>
+            <Link to="/shop">
+              <Button className="gap-2">
+                Shop Now
+                <Package className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Early return if no shipping info - prompt to check delivery
+  if (!shippingInfo) {
+    return (
+      <Layout>
+        <div className="min-h-[70vh] flex items-center justify-center">
+          <div className="text-center px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
+              <MapPin className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h1 className="text-2xl font-serif font-bold text-foreground mb-2">
+              Delivery location not set
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Please check delivery availability before proceeding to checkout.
+            </p>
+            <Link to="/cart">
+              <Button className="gap-2">
+                Go to Cart
+                <Truck className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

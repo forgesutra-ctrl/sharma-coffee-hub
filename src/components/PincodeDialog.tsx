@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,21 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
   const [error, setError] = useState('');
   const [isValidated, setIsValidated] = useState(false);
   const [shippingInfo, setShippingInfo] = useState<{ charge: number; region: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setPincode(currentPincode || '');
+      setError('');
+      setIsValidated(false);
+      setShippingInfo(null);
+      // Focus input after dialog animation completes
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [open, currentPincode]);
 
   const handleCheck = () => {
     setError('');
@@ -54,7 +69,17 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={(e) => {
+          // Prevent auto-focus to avoid focus trap issues
+          e.preventDefault();
+        }}
+        onCloseAutoFocus={(e) => {
+          // Prevent close auto-focus to avoid focus trap issues
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-primary" />
@@ -68,6 +93,9 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
         <div className="space-y-4 py-4">
           <div className="flex gap-2">
             <Input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
               placeholder="Enter 6-digit PIN code"
               value={pincode}
               onChange={(e) => {
@@ -77,10 +105,19 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
                 setError('');
                 setShippingInfo(null);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && pincode.length === 6) {
+                  handleCheck();
+                }
+              }}
               maxLength={6}
               className="flex-1"
             />
-            <Button onClick={handleCheck} variant="outline">
+            <Button
+              onClick={handleCheck}
+              variant="outline"
+              disabled={pincode.length !== 6}
+            >
               Check
             </Button>
           </div>
