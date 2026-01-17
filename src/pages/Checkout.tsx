@@ -122,15 +122,12 @@ const Checkout = () => {
     landmark: "",
   });
 
+  // Redirect to cart if no items or no shipping info (only check once on mount and when items change)
   useEffect(() => {
     if (cartItems.length === 0 || !shippingInfo) {
       navigate("/cart", { replace: true });
     }
-  }, [cartItems.length, shippingInfo, navigate]);
-
-  const hasSubscriptionItems = cartItems.some(i => i.is_subscription);
-  const allItemsAreSubscription =
-    cartItems.length > 0 && cartItems.every(i => i.is_subscription);
+  }, [cartItems.length, shippingInfo?.pincode, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -330,15 +327,47 @@ const Checkout = () => {
   };
 
   // Memoize calculations to prevent re-computing on every render
-  const { subtotal, discount, shippingCharge, codFee, grandTotal } = useMemo(() => {
+  const calculatedPrices = useMemo(() => {
     const subtotal = getCartTotal();
     const discount = appliedCoupon?.discount || 0;
-    const shippingCharge = allItemsAreSubscription ? 0 : getShippingCharge();
-    const codFee = paymentType === "cod" ? COD_HANDLING_FEE : 0;
-    const grandTotal = subtotal - discount + shippingCharge + codFee;
+    const subtotalAfterDiscount = Math.max(0, subtotal - discount);
 
-    return { subtotal, discount, shippingCharge, codFee, grandTotal };
-  }, [getCartTotal, appliedCoupon, allItemsAreSubscription, getShippingCharge, paymentType]);
+    // Check if all items are subscription (calculate inside useMemo)
+    const hasSubscriptionItems = cartItems.some(i => i.is_subscription);
+    const allItemsAreSubscription = cartItems.length > 0 && cartItems.every(i => i.is_subscription);
+
+    // Calculate shipping - only if not all subscriptions and shippingInfo exists
+    let shippingCharge = 0;
+    if (!allItemsAreSubscription && shippingInfo) {
+      shippingCharge = getShippingCharge();
+    }
+
+    const codFee = paymentType === "cod" ? COD_HANDLING_FEE : 0;
+    const grandTotal = subtotalAfterDiscount + shippingCharge + codFee;
+    const codBalance = paymentType === "cod" ? Math.max(0, grandTotal - COD_ADVANCE_AMOUNT) : 0;
+
+    return {
+      subtotal,
+      discount,
+      subtotalAfterDiscount,
+      shippingCharge,
+      codHandlingFee: codFee,
+      grandTotal,
+      codBalance,
+      hasSubscriptionItems,
+      allItemsAreSubscription,
+    };
+  }, [cartItems, appliedCoupon, shippingInfo, paymentType, getCartTotal, getShippingCharge]);
+
+  const {
+    subtotal,
+    discount,
+    shippingCharge,
+    codFee,
+    grandTotal,
+    hasSubscriptionItems,
+    allItemsAreSubscription,
+  } = calculatedPrices;
 
   return (
     <Layout>
