@@ -10,6 +10,7 @@ import InstagramFeed from "@/components/coffee/InstagramFeed";
 import AmbientSound from "@/components/coffee/AmbientSound";
 
 import heroVideo from "@/assets/videos/hero-coffee-brewing.mp4";
+import coffeePlantImg from "@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg";
 
 import { useFeaturedProducts, useProducts } from "@/hooks/useProducts";
 import { useCategoriesWithCount } from "@/hooks/useCategories";
@@ -125,7 +126,7 @@ export default function Homepage() {
           "Since 1987, Sharma Coffee Works has been crafting exceptional coffee in the misty hills of Coorg.",
           "Every bean is hand-selected, slow-roasted, and blended with the finest ghee-roasted chicory."
         ]}
-        image="/coffee-plant.jpg"
+        image={coffeePlantImg}
         ctaText="Learn More"
         ctaLink="/about"
         layout="right"

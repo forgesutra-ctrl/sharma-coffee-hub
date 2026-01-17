@@ -16,11 +16,23 @@ html, body {
   flex-direction: column;
 }
 
-/* Hide Lovable badge */
+/* Hide Lovable badge and any external branding - Comprehensive */
 [data-lovable],
+[data-lovable-badge],
+[class*="lovable"],
+[id*="lovable"],
 a[href*="lovable.dev"],
 a[href*="lovable.app"],
+a[href*="lovable."],
+div[class*="lovable"],
 body > div:last-child[style*="position: fixed"][style*="bottom"],
-body > a[style*="position: fixed"][style*="bottom"] {
+body > a[style*="position: fixed"][style*="bottom"],
+body > div[style*="position: fixed"][style*="z-index: 999"],
+iframe[src*="lovable"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
