@@ -571,3 +571,44 @@ video {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+/* ===== FULL SCREEN FIX ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== REMOVE ANY EXTERNAL BADGES ===== */
+[data-lovable],
+[data-testid*="lovable"],
+a[href*="lovable.dev"],
+a[href*="lovable.app"],
+img[src*="lovable"],
+img[alt*="Lovable"],
+img[alt*="lovable"],
+div[class*="lovable"],
+span[class*="lovable"],
+iframe[src*="lovable"],
+script[src*="lovable"],
+body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]),
+body > a[style*="position: fixed"],
+body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]),
+body > iframe {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
