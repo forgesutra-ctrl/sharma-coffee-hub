@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,33 +9,45 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MapPin, Truck, Check } from 'lucide-react';
-import { validatePincode, getShippingRegion, getShippingCharge, getShippingRegionLabel } from '@/lib/shipping';
+import {
+  validatePincode,
+  getShippingRegion,
+  getShippingCharge,
+  getShippingRegionLabel,
+} from '@/lib/shipping';
 
 interface PincodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPincodeValidated: (pincode: string, shippingCharge: number, region: string) => void;
+  onPincodeValidated: (
+    pincode: string,
+    shippingCharge: number,
+    region: string
+  ) => void;
   currentPincode?: string;
 }
 
-export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentPincode }: PincodeDialogProps) {
-  const [pincode, setPincode] = useState(currentPincode || '');
+export function PincodeDialog({
+  open,
+  onOpenChange,
+  onPincodeValidated,
+  currentPincode,
+}: PincodeDialogProps) {
+  const [pincode, setPincode] = useState('');
   const [error, setError] = useState('');
   const [isValidated, setIsValidated] = useState(false);
-  const [shippingInfo, setShippingInfo] = useState<{ charge: number; region: string } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [shippingInfo, setShippingInfo] = useState<{
+    charge: number;
+    region: string;
+  } | null>(null);
 
-  // Reset state when dialog opens
+  // Reset dialog state when opened
   useEffect(() => {
     if (open) {
       setPincode(currentPincode || '');
       setError('');
       setIsValidated(false);
       setShippingInfo(null);
-      // Focus input after dialog animation completes
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
     }
   }, [open, currentPincode]);
 
@@ -56,29 +68,37 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
     }
 
     const charge = getShippingCharge(pincode);
-    setShippingInfo({ charge, region: getShippingRegionLabel(region) });
+    setShippingInfo({
+      charge,
+      region: getShippingRegionLabel(region),
+    });
     setIsValidated(true);
   };
 
   const handleConfirm = () => {
-    if (shippingInfo) {
-      onPincodeValidated(pincode, shippingInfo.charge, shippingInfo.region);
-      onOpenChange(false);
-    }
+    if (!shippingInfo) return;
+
+    onPincodeValidated(
+      pincode,
+      shippingInfo.charge,
+      shippingInfo.region
+    );
+
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      modal={false}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onOpenChange(false);
+      }}
+    >
       <DialogContent
         className="sm:max-w-md"
-        onOpenAutoFocus={(e) => {
-          // Prevent auto-focus to avoid focus trap issues
-          e.preventDefault();
-        }}
-        onCloseAutoFocus={(e) => {
-          // Prevent close auto-focus to avoid focus trap issues
-          e.preventDefault();
-        }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -86,14 +106,14 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
             Check Delivery Availability
           </DialogTitle>
           <DialogDescription>
-            Enter your PIN code to check delivery availability and shipping charges
+            Enter your PIN code to check delivery availability and shipping
+            charges
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="flex gap-2">
             <Input
-              ref={inputRef}
               type="text"
               inputMode="numeric"
               placeholder="Enter 6-digit PIN code"
@@ -101,8 +121,8 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setPincode(value);
-                setIsValidated(false);
                 setError('');
+                setIsValidated(false);
                 setShippingInfo(null);
               }}
               onKeyDown={(e) => {
@@ -113,6 +133,7 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
               maxLength={6}
               className="flex-1"
             />
+
             <Button
               onClick={handleCheck}
               variant="outline"
@@ -132,12 +153,15 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
                 <Check className="w-4 h-4" />
                 <span className="font-medium">Delivery available!</span>
               </div>
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <Truck className="w-4 h-4" />
                   Region: {shippingInfo.region}
                 </span>
-                <span className="font-medium">₹{shippingInfo.charge} shipping</span>
+                <span className="font-medium">
+                  ₹{shippingInfo.charge} shipping
+                </span>
               </div>
             </div>
           )}
@@ -150,6 +174,7 @@ export function PincodeDialog({ open, onOpenChange, onPincodeValidated, currentP
             >
               Cancel
             </Button>
+
             <Button
               onClick={handleConfirm}
               disabled={!isValidated}
