@@ -814,3 +814,48 @@ html {
     height: 0;
   }
 }
+/* Razorpay Modal Visibility Fix - Production */
+.razorpay-container {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background: transparent !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.razorpay-backdrop {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999998 !important;
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.razorpay-checkout-frame {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  z-index: 999999 !important;
+  border: none !important;
+  border-radius: 8px !important;
+}
+
+/* Prevent body scrolling when modal is open */
+body.razorpay-open {
+  overflow: hidden !important;
+}
