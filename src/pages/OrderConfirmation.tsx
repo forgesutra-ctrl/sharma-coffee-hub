@@ -47,6 +47,47 @@ const OrderConfirmation = () => {
   useEffect(() => {
     console.log("OrderConfirmation mounted with orderId:", orderId);
 
+    // Clean up any Razorpay modal elements that might be blocking interaction
+    const cleanupRazorpay = () => {
+      // Remove Razorpay backdrop and modal elements
+      const razorpayElements = document.querySelectorAll(
+        '.razorpay-container, .razorpay-backdrop, [class*="razorpay-container"], [class*="razorpay-backdrop"], iframe[src*="razorpay"], iframe[src*="checkout.razorpay.com"]'
+      );
+      
+      razorpayElements.forEach((el) => {
+        console.log("[OrderConfirmation] Removing Razorpay element:", el.className || el.id);
+        el.remove();
+      });
+
+      // Also check for any invisible overlays blocking interaction
+      const allOverlays = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+      allOverlays.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const styles = getComputedStyle(htmlEl);
+        // Check if it's a blocking overlay (high z-index, full screen)
+        if (
+          parseInt(styles.zIndex) > 1000 &&
+          (styles.width === '100vw' || styles.width === '100%') &&
+          (styles.height === '100vh' || styles.height === '100%')
+        ) {
+          // Check if it's not a known component (toaster, sonner, etc.)
+          const className = htmlEl.className || '';
+          if (!className.includes('toaster') && 
+              !className.includes('sonner') && 
+              !className.includes('razorpay')) {
+            console.log("[OrderConfirmation] Found potential blocking overlay:", className);
+            // Don't remove, but log it for debugging
+          }
+        }
+      });
+    };
+
+    // Clean up immediately on mount
+    cleanupRazorpay();
+
+    // Also clean up after a short delay to catch any late-loading elements
+    const cleanupTimeout = setTimeout(cleanupRazorpay, 100);
+
     const fetchOrder = async () => {
       if (!orderId) {
         console.error("No orderId provided");
@@ -88,11 +129,63 @@ const OrderConfirmation = () => {
         setError(err instanceof Error ? err.message : "Failed to load order");
       } finally {
         setLoading(false);
+        // Clean up again after data loads
+        cleanupRazorpay();
       }
     };
 
     fetchOrder();
+
+    return () => {
+      clearTimeout(cleanupTimeout);
+      cleanupRazorpay();
+    };
   }, [orderId]);
+
+  // Debug effect to check page interactivity
+  useEffect(() => {
+    console.log("OrderConfirmation render state:", {
+      loading,
+      order: !!order,
+      error: !!error,
+      bodyPointerEvents: getComputedStyle(document.body).pointerEvents,
+    });
+
+    // Check for blocking elements
+    const checkBlockingElements = () => {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const elementAtCenter = document.elementFromPoint(centerX, centerY);
+      
+      console.log("[OrderConfirmation] Element at center of screen:", {
+        tag: elementAtCenter?.tagName,
+        className: elementAtCenter?.className,
+        id: elementAtCenter?.id,
+        pointerEvents: getComputedStyle(elementAtCenter || document.body).pointerEvents,
+        zIndex: getComputedStyle(elementAtCenter || document.body).zIndex,
+      });
+
+      // Check for overlays
+      const overlays = document.querySelectorAll('[style*="z-index"]');
+      overlays.forEach((el) => {
+        const styles = getComputedStyle(el);
+        const zIndex = parseInt(styles.zIndex);
+        if (zIndex > 1000) {
+          console.log("[OrderConfirmation] High z-index element:", {
+            tag: el.tagName,
+            className: el.className,
+            zIndex: styles.zIndex,
+            pointerEvents: styles.pointerEvents,
+            display: styles.display,
+            visibility: styles.visibility,
+          });
+        }
+      });
+    };
+
+    // Check after render
+    setTimeout(checkBlockingElements, 100);
+  }, [loading, order, error]);
 
   if (loading) {
     return (
@@ -134,7 +227,28 @@ const OrderConfirmation = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
+      {/* Temporary test button to verify interactivity */}
+      <button
+        onClick={() => {
+          alert("Test button clicked - page is interactive!");
+          console.log("[OrderConfirmation] Test button clicked");
+        }}
+        style={{
+          position: "fixed",
+          top: "10px",
+          right: "10px",
+          zIndex: 99999,
+          padding: "8px 16px",
+          backgroundColor: "#C8A97E",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+        }}
+      >
+        Test Interactivity
+      </button>
+      <div className="container mx-auto px-4 py-12 max-w-4xl" style={{ pointerEvents: "auto" }}>
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -599,10 +599,10 @@ div[class*="lovable"],
 span[class*="lovable"],
 iframe[src*="lovable"],
 script[src*="lovable"],
-body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]),
+body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]),
 body > a[style*="position: fixed"],
-body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]),
-body > iframe {
+body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]),
+body > iframe:not([src*="razorpay"]):not([class*="razorpay"]) {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -611,6 +611,69 @@ body > iframe {
   height: 0 !important;
   position: absolute !important;
   left: -9999px !important;
+}
+
+/* ===== RAZORPAY MODAL FIXES ===== */
+/* Ensure Razorpay modal can display properly - override any hiding rules */
+.razorpay-container,
+[class*="razorpay-container"],
+div[id*="razorpay"],
+iframe[src*="razorpay"],
+iframe[class*="razorpay"],
+iframe[id*="razorpay"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: fixed !important;
+  z-index: 99999 !important;
+}
+
+/* Razorpay backdrop - only show when modal is actually open */
+.razorpay-backdrop:not([style*="display: none"]),
+[class*="razorpay-backdrop"]:not([style*="display: none"]) {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99998 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Hide Razorpay elements when not needed (after payment completes) */
+body:not([data-razorpay-open="true"]) .razorpay-backdrop,
+body:not([data-razorpay-open="true"]) [class*="razorpay-backdrop"],
+body:not([data-razorpay-open="true"]) .razorpay-container:not(:focus-within),
+body:not([data-razorpay-open="true"]) [class*="razorpay-container"]:not(:focus-within) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Razorpay checkout frame */
+.razorpay-checkout-frame,
+iframe[src*="checkout.razorpay.com"] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure body/html don't clip Razorpay modal */
+html, body {
+  overflow-x: hidden;
+  overflow-y: visible !important; /* Allow vertical overflow for modals */
+}
+
+/* Ensure Layout doesn't clip Razorpay */
+#root > div:first-child {
+  overflow: visible !important;
 }
 
 /* ===== CROSS-BROWSER COMPATIBILITY ===== */

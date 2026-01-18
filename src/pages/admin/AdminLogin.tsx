@@ -44,23 +44,54 @@ const AdminLogin = () => {
       }
 
       // Check if user has admin, super_admin, or staff role
+      console.log('[AdminLogin] Checking role for user ID:', data.user.id, 'Email:', data.user.email);
+      
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, user_id, created_at')
         .eq('user_id', data.user.id)
         .maybeSingle();
 
+      console.log('[AdminLogin] Role query result:', { roleData, roleError });
+
       if (roleError) {
+        console.error('[AdminLogin] Error fetching user role:', roleError);
+        // Try to get all roles for debugging
+        const { data: allRoles } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', data.user.id);
+        console.error('[AdminLogin] All roles for user:', allRoles);
         await supabase.auth.signOut();
-        throw new Error('Failed to verify access permissions');
+        throw new Error(`Failed to verify access permissions: ${roleError.message}. Please contact support.`);
       }
 
       // Allow super_admin, admin, and staff roles
       const allowedRoles = ['super_admin', 'admin', 'staff'];
-      if (!roleData || !allowedRoles.includes(roleData.role)) {
+      if (!roleData) {
+        console.error('[AdminLogin] No role found for user:', data.user.id);
+        // Check if user exists in user_roles at all
+        const { data: checkRoles } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', data.user.id);
+        console.error('[AdminLogin] User roles check:', checkRoles);
         await supabase.auth.signOut();
-        throw new Error('You do not have admin access');
+        throw new Error('No admin role assigned. Please contact support to grant access.');
       }
+
+      console.log('[AdminLogin] Current role:', roleData.role, 'Type:', typeof roleData.role);
+      console.log('[AdminLogin] Allowed roles:', allowedRoles);
+      console.log('[AdminLogin] Role in allowed list?', allowedRoles.includes(roleData.role));
+
+      if (!allowedRoles.includes(roleData.role)) {
+        console.error('[AdminLogin] Invalid role:', roleData.role, 'for user:', data.user.id);
+        console.error('[AdminLogin] Full role data:', roleData);
+        await supabase.auth.signOut();
+        throw new Error(`Access denied. Your role (${roleData.role}) does not have admin privileges. Current role must be one of: ${allowedRoles.join(', ')}`);
+      }
+
+      console.log('[AdminLogin] ✅ User authenticated with role:', roleData.role);
 
       toast({
         title: 'Welcome back',

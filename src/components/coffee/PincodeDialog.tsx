@@ -1,15 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { MapPin, Loader2, CheckCircle2, XCircle, Truck, X } from 'lucide-react';
+import {
+  validatePincode,
+  getShippingRegion,
+  getShippingRegionLabel,
+  SHIPPING_CHARGES,
+} from '@/lib/shipping';
 
 interface PincodeDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onPincodeValidated: (pincode: string, region: string, multiplier: number, codAvailable: boolean) => void;
+  onPincodeValidated: (pincode: string, region: string, baseRate: number, codAvailable: boolean) => void;
   initialPincode?: string;
 }
 
@@ -22,124 +26,143 @@ const PincodeDialog = ({
   const [pincode, setPincode] = useState(initialPincode);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState<{ region: string; codAvailable: boolean } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [validationResult, setValidationResult] = useState<{
+    region: string;
+    regionLabel: string;
+    baseRate: number;
+    codAvailable: boolean;
+  } | null>(null);
 
-  // Reset state when dialog opens/closes
+  // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setPincode(initialPincode || '');
       setError('');
-      setSuccess(null);
+      setValidationResult(null);
+      setIsChecking(false);
     }
   }, [isOpen, initialPincode]);
 
-  const handleCheck = async () => {
-    if (pincode.length !== 6) {
+  // Don't render anything if not open
+  if (!isOpen) return null;
+
+  const handleCheck = () => {
+    if (!validatePincode(pincode)) {
       setError('Please enter a valid 6-digit pincode');
       return;
     }
 
     setIsChecking(true);
     setError('');
-    setSuccess(null);
+    setValidationResult(null);
 
-    try {
-      const { data, error: dbError } = await supabase
-        .from('shipping_zones')
-        .select('*')
-        .eq('pincode', pincode)
-        .maybeSingle();
+    setTimeout(() => {
+      const region = getShippingRegion(pincode);
 
-      if (dbError) throw dbError;
-
-      if (data) {
-        setSuccess({ region: data.region, codAvailable: data.cod_available });
-      } else {
-        setError('Sorry, we do not deliver to this pincode yet. Please try another pincode.');
+      if (!region) {
+        setError('Sorry, we do not deliver to this pincode yet.');
+        setIsChecking(false);
+        return;
       }
-    } catch (err) {
-      console.error('Pincode check error:', err);
-      setError('Failed to check pincode. Please try again.');
-    } finally {
+
+      const regionLabel = getShippingRegionLabel(region);
+      const baseRate = SHIPPING_CHARGES[region];
+
+      setValidationResult({
+        region,
+        regionLabel,
+        baseRate,
+        codAvailable: true,
+      });
       setIsChecking(false);
-    }
+    }, 300);
   };
 
   const handleConfirm = () => {
-    if (success) {
-      // Get the shipping rate from the last check
-      supabase
-        .from('shipping_zones')
-        .select('rate_per_kg')
-        .eq('pincode', pincode)
-        .single()
-        .then(({ data }) => {
-          onPincodeValidated(
-            pincode,
-            success.region,
-            data?.rate_per_kg || 0,
-            success.codAvailable
-          );
-        });
+    if (!validationResult) return;
+
+    onPincodeValidated(
+      pincode,
+      validationResult.regionLabel,
+      validationResult.baseRate,
+      validationResult.codAvailable
+    );
+    
+    onClose();
+  };
+
+  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setPincode(value);
+    setError('');
+    setValidationResult(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && pincode.length === 6 && !isChecking) {
+      e.preventDefault();
+      handleCheck();
+    }
+    if (e.key === 'Escape') {
+      onClose();
     }
   };
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          // Focus input after a small delay
-          setTimeout(() => inputRef.current?.focus(), 50);
-        }}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleOverlayClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" />
+      
+      {/* Dialog Content */}
+      <div className="relative bg-background border rounded-lg shadow-lg w-full max-w-md mx-4 p-6">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+
+        {/* Header */}
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
             <MapPin className="w-5 h-5 text-primary" />
             Check Delivery Availability
-          </DialogTitle>
-          <DialogDescription>
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Enter your pincode to check if we deliver to your area.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
 
-        <div className="space-y-4 py-4">
+        {/* Content */}
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="pincode-check">Enter your pincode</Label>
+            <Label htmlFor="pincode-input">Enter your pincode</Label>
             <div className="flex gap-2 mt-2">
               <Input
-                ref={inputRef}
-                id="pincode-check"
+                id="pincode-input"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
                 value={pincode}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  setPincode(value);
-                  setError('');
-                  setSuccess(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && pincode.length === 6 && !isChecking) {
-                    handleCheck();
-                  }
-                }}
+                onChange={handlePincodeChange}
+                onKeyDown={handleKeyDown}
                 placeholder="Enter 6-digit pincode"
                 className="flex-1 text-lg tracking-wider"
               />
               <Button
+                type="button"
                 onClick={handleCheck}
                 disabled={isChecking || pincode.length !== 6}
                 className="px-6"
@@ -162,7 +185,7 @@ const PincodeDialog = ({
           )}
 
           {/* Success Message */}
-          {success && (
+          {validationResult && (
             <div className="space-y-3">
               <div className="flex items-start gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                 <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -170,21 +193,48 @@ const PincodeDialog = ({
                   <p className="text-sm font-medium text-green-700 dark:text-green-400">
                     Great news! We deliver to {pincode}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Region: {success.region}
-                    {success.codAvailable && ' • COD Available'}
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Truck className="w-3 h-3" />
+                    {validationResult.regionLabel} • ₹{validationResult.baseRate}/kg
+                    {validationResult.codAvailable && ' • COD Available'}
                   </p>
                 </div>
               </div>
 
-              <Button onClick={handleConfirm} className="w-full">
-                Confirm & Continue
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="flex-1"
+                >
+                  Confirm & Continue
+                </Button>
+              </div>
             </div>
           )}
+
+          {/* Cancel button when no result yet */}
+          {!validationResult && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 

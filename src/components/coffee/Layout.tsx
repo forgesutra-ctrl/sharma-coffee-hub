@@ -11,9 +11,9 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background" style={{ overflow: 'visible' }}>
       <Navigation />
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full" style={{ overflow: 'visible' }}>
         {children}
       </main>
       <Footer />

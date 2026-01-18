@@ -10,6 +10,8 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
+    // Enable CORS for Razorpay iframe compatibility
+    cors: true,
   },
   plugins: [
     react(),

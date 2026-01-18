@@ -32,22 +32,26 @@ const Cart = () => {
 
   const [isPincodeDialogOpen, setIsPincodeDialogOpen] = useState(false);
 
-  const handlePincodeValidated = (
-    pincode: string,
-    region: string,
-    multiplier: number,
-    codAvailable: boolean
-  ) => {
-    setShippingInfo({
-      pincode,
-      region,
-      multiplier,
-      codAvailable,
-      weight: getCartWeight(),
-    });
-    setIsPincodeDialogOpen(false);
-  };
-
+const handlePincodeValidated = (
+  pincode: string,
+  region: string,
+  baseRate: number,
+  codAvailable: boolean
+) => {
+  const weight = getCartWeight();
+  const weightInKg = weight / 1000;
+  const multiplier = Math.ceil(weightInKg) || 1;
+  
+  setShippingInfo({
+    pincode,
+    region,
+    baseRate,
+    multiplier,
+    codAvailable,
+    weight,
+  });
+  setIsPincodeDialogOpen(false);
+};
   // Show empty cart UI - DON'T navigate, just render
   if (cartItems.length === 0) {
     return (
