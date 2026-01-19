@@ -70,7 +70,6 @@ interface RazorpayOptions {
     ondismiss?: () => void;
     backdropClose?: boolean;
   };
-  // Options to disable problematic features that cause CORS/localhost errors
   readonly?: boolean;
   image?: string;
   config?: {
@@ -83,8 +82,7 @@ interface RazorpayOptions {
       };
     };
   };
-  // Disable wallet and other features that may cause issues
-  [key: string]: any; // Allow additional Razorpay options
+  [key: string]: any;
 }
 
 interface RazorpayInstance {
@@ -116,12 +114,6 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Suppress CORS errors and fingerprint warnings from Razorpay's iframe
-  // These errors are non-critical and don't affect payment functionality:
-  // - CORS errors occur because Razorpay tries to load biometric collectors from localhost ports
-  // - "x-rtb-fingerprint-id" warnings are from Razorpay's fraud detection trying to access headers
-  //   that browsers block for security (these are non-critical fraud detection features)
-  // The modal will function correctly despite these console warnings
   useEffect(() => {
     const originalError = console.error.bind(console);
     const originalWarn = console.warn.bind(console);
@@ -131,8 +123,6 @@ const Checkout = () => {
       const messageStr = String(message);
       const fullMessage = [messageStr, ...args.map(String)].join(" ");
       
-      // Suppress known Razorpay CORS errors and fingerprint/biometric warnings
-      // These are non-critical fraud detection features that don't affect payment functionality
       return (
         messageStr.includes("localhost:7070") ||
         messageStr.includes("localhost:37857") ||
@@ -149,7 +139,6 @@ const Checkout = () => {
       );
     };
 
-    // Override console methods to filter Razorpay CORS and fingerprint errors
     console.error = ((message?: unknown, ...optionalParams: unknown[]) => {
       if (!shouldSuppressError(message, ...optionalParams)) {
         originalError(message, ...optionalParams);
@@ -162,7 +151,6 @@ const Checkout = () => {
       }
     }) as typeof console.warn;
 
-    // Also filter log messages that might contain these errors
     console.log = ((message?: unknown, ...optionalParams: unknown[]) => {
       if (!shouldSuppressError(message, ...optionalParams)) {
         originalLog(message, ...optionalParams);
@@ -180,7 +168,6 @@ const Checkout = () => {
   // COMPUTED VALUES (MUST BE BEFORE ANY EARLY RETURNS)
   // ============================================
   
-  // Calculate subscription status FIRST - before any conditional returns
   const { hasSubscriptionItems, allItemsAreSubscription } = useMemo(() => {
     const hasSubs = cartItems.some((item) => item.is_subscription);
     const allSubs = cartItems.length > 0 && cartItems.every((item) => item.is_subscription);
@@ -223,7 +210,6 @@ const Checkout = () => {
     const discount = appliedCoupon?.discount || 0;
     const subtotalAfterDiscount = Math.max(0, subtotal - discount);
 
-    // Shipping is free for subscriptions
     let shippingCharge = 0;
     if (!allItemsAreSubscription && shippingInfo) {
       shippingCharge = getShippingCharge();
@@ -257,7 +243,6 @@ const Checkout = () => {
   // EARLY RETURNS (After all hooks and memoized values)
   // ============================================
 
-  // Empty cart - show message
   if (cartItems.length === 0) {
     return (
       <Layout>
@@ -284,7 +269,6 @@ const Checkout = () => {
     );
   }
 
-  // No shipping info - prompt to check delivery
   if (!shippingInfo) {
     return (
       <Layout>
@@ -345,21 +329,18 @@ const Checkout = () => {
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      // Check if Razorpay is already available
       if (window.Razorpay) {
         console.log("[Razorpay] Script already loaded, Razorpay available");
         resolve(true);
         return;
       }
 
-      // Remove any existing Razorpay scripts to avoid conflicts
       const existingScripts = document.querySelectorAll('script[src*="razorpay.com"]');
       existingScripts.forEach((script) => {
         console.log("[Razorpay] Removing existing script:", script);
         script.remove();
       });
 
-      // Create and load new script
       console.log("[Razorpay] Loading Razorpay checkout script...");
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -367,7 +348,6 @@ const Checkout = () => {
       
       script.onload = () => {
         console.log("[Razorpay] Script loaded successfully");
-        // Add 100ms delay to ensure Razorpay is fully initialized
         setTimeout(() => {
           if (window.Razorpay) {
             console.log("[Razorpay] Razorpay instance confirmed available after delay");
@@ -422,7 +402,6 @@ const Checkout = () => {
     setIsLoading(true);
 
     try {
-      // Load Razorpay script
       const loaded = await loadRazorpayScript();
       if (!loaded || !window.Razorpay) {
         throw new Error("Payment gateway failed to load. Please refresh and try again.");
@@ -431,13 +410,11 @@ const Checkout = () => {
       const checkoutData = prepareCheckoutData();
       console.log("Checkout data prepared:", checkoutData);
 
-      // Handle subscription orders differently
       if (allItemsAreSubscription) {
         await handleSubscriptionOrder(checkoutData);
         return;
       }
 
-      // Regular order flow
       await handleRegularOrder(checkoutData);
 
     } catch (err) {
@@ -482,15 +459,14 @@ const Checkout = () => {
       throw new Error("Unable to create subscription. Please try again.");
     }
 
-    // Redirect to Razorpay subscription page
     window.location.href = data.shortUrl;
   };
 
   const handleRegularOrder = async (checkoutData: ReturnType<typeof prepareCheckoutData>) => {
-    try {
-      const amount = paymentType === "cod" ? COD_ADVANCE_AMOUNT : grandTotal;
-      console.log("[Razorpay] Creating order for amount:", amount);
+    const amount = paymentType === "cod" ? COD_ADVANCE_AMOUNT : grandTotal;
+    console.log("[Razorpay] Creating order for amount:", amount);
 
+    try {
       // Create Razorpay order
       const { data, error } = await supabase.functions.invoke("create-razorpay-order", {
         body: {
@@ -501,66 +477,33 @@ const Checkout = () => {
       });
 
       if (error) {
-        console.error("[Razorpay] Create order error:", error);
-        toast({
-          title: "Payment Error",
-          description: "Unable to create payment order. Please try again.",
-          variant: "destructive",
-        });
+        console.error("Create order error:", error);
         throw new Error("Unable to create payment order. Please try again.");
       }
 
       if (!data || !data.razorpayOrderId) {
-        console.error("[Razorpay] Invalid response from create-razorpay-order:", data);
-        toast({
-          title: "Payment Error",
-          description: "Invalid response from payment gateway. Please try again.",
-          variant: "destructive",
-        });
+        console.error("Invalid response:", data);
         throw new Error("Invalid response from payment gateway.");
       }
 
-      console.log("[Razorpay] Order created successfully:", data.razorpayOrderId);
-      console.log("[Razorpay] Window.Razorpay available:", !!window.Razorpay);
+      console.log("[Razorpay] Order created:", data.razorpayOrderId);
 
-      // Validate Razorpay instance before proceeding
-      if (!window.Razorpay) {
-        console.error("[Razorpay] window.Razorpay is not available after order creation");
-        toast({
-          title: "Payment Error",
-          description: "Payment gateway not loaded. Please refresh the page and try again.",
-          variant: "destructive",
-        });
-        throw new Error("Payment gateway not available. Please refresh and try again.");
-      }
-
-      // Create Razorpay instance with error handling
-      console.log("[Razorpay] Creating Razorpay instance...");
-      let razorpay: RazorpayInstance;
-      
-      try {
-        // Configure Razorpay options with disabled problematic features
-        // This prevents CORS errors from biometric/tracking resources on localhost
-        const razorpayOptions: RazorpayOptions = {
+      // Use payment link (redirects to Razorpay) instead of modal
+      if (data.shortUrl) {
+        console.log("[Razorpay] Redirecting to payment link:", data.shortUrl);
+        window.location.href = data.shortUrl;
+      } else {
+        // Fallback to modal if shortUrl not available
+        const razorpay = new window.Razorpay({
           key: data.razorpayKeyId,
           amount: data.amount,
-          currency: data.currency || "INR",
+          currency: "INR",
           name: "Sharma Coffee Works",
           description: paymentType === "cod" ? "COD Advance Payment" : "Order Payment",
           order_id: data.razorpayOrderId,
           handler: async (response: RazorpayResponse) => {
-            try {
-              console.log("[Razorpay] Payment handler called, verifying payment...", response);
-              await verifyPaymentAndCreateOrder(response, checkoutData);
-            } catch (err) {
-              console.error("[Razorpay] Error in payment handler:", err);
-              toast({
-                title: "Payment Verification Failed",
-                description: err instanceof Error ? err.message : "Failed to verify payment. Please contact support.",
-                variant: "destructive",
-              });
-              setIsLoading(false);
-            }
+            console.log("Payment successful:", response);
+            await verifyPaymentAndCreateOrder(response, checkoutData);
           },
           prefill: {
             name: shippingForm.fullName,
@@ -568,172 +511,17 @@ const Checkout = () => {
             contact: shippingForm.phone,
           },
           theme: { color: "#C8A97E" },
-          modal: {
-            ondismiss: () => {
-              console.log("[Razorpay] Payment modal dismissed by user");
-              setIsLoading(false);
-              toast({
-                title: "Payment Cancelled",
-                description: "You closed the payment window. Your order was not placed.",
-              });
-            },
-            backdropClose: false, // Prevent accidental dismissal
-          },
-          // Note: Console warnings about CORS and "x-rtb-fingerprint-id" are expected and non-critical
-          // - CORS errors from localhost:7070, localhost:37857, localhost:7071 are from Razorpay's 
-          //   biometric/tracking collectors trying to access non-existent localhost ports
-          // - "Refused to get unsafe header x-rtb-fingerprint-id" warnings are from Razorpay's 
-          //   fraud detection trying to access headers that browsers block for security
-          // These warnings are suppressed in useEffect above and don't affect payment functionality
-          // The modal will render and function correctly - payments will work normally
-        };
-
-        console.log("[Razorpay] Razorpay options configured:", {
-          key: razorpayOptions.key,
-          amount: razorpayOptions.amount,
-          order_id: razorpayOptions.order_id,
-          hasHandler: !!razorpayOptions.handler,
         });
-
-        razorpay = new window.Razorpay(razorpayOptions);
-        console.log("[Razorpay] Instance created successfully");
-      } catch (instanceError) {
-        console.error("[Razorpay] Failed to create Razorpay instance:", instanceError);
-        toast({
-          title: "Payment Error",
-          description: "Failed to initialize payment gateway. Please try again.",
-          variant: "destructive",
-        });
-        throw new Error("Failed to initialize payment gateway.");
-      }
-
-      // Validate instance before opening
-      if (!razorpay || typeof razorpay.open !== "function") {
-        console.error("[Razorpay] Invalid Razorpay instance - open method not available");
-        toast({
-          title: "Payment Error",
-          description: "Payment gateway initialization failed. Please refresh and try again.",
-          variant: "destructive",
-        });
-        throw new Error("Invalid Razorpay instance.");
-      }
-
-      // Open Razorpay modal with error handling
-      console.log("[Razorpay] Attempting to open payment modal...");
-      try {
         razorpay.open();
-        console.log("[Razorpay] razorpay.open() called successfully");
-        
-        // Debug: Check if modal elements are created and visible
-        setTimeout(() => {
-          const container = document.querySelector('.razorpay-container') || 
-                           document.querySelector('[class*="razorpay-container"]') ||
-                           document.querySelector('div[id*="razorpay"]');
-          const iframe = document.querySelector('.razorpay-checkout-frame') ||
-                        document.querySelector('iframe[src*="razorpay"]') ||
-                        document.querySelector('iframe[src*="checkout.razorpay.com"]');
-          
-          console.log("[Razorpay] Debug - Container found:", !!container);
-          console.log("[Razorpay] Debug - Iframe found:", !!iframe);
-          
-          if (container) {
-            const containerStyles = getComputedStyle(container);
-            console.log("[Razorpay] Container computed styles:", {
-              visibility: containerStyles.visibility,
-              display: containerStyles.display,
-              position: containerStyles.position,
-              zIndex: containerStyles.zIndex,
-              opacity: containerStyles.opacity,
-              pointerEvents: containerStyles.pointerEvents,
-              width: containerStyles.width,
-              height: containerStyles.height,
-            });
-            
-            // Check parent elements for clipping
-            let parent = container.parentElement;
-            let depth = 0;
-            while (parent && parent !== document.body && depth < 5) {
-              const styles = getComputedStyle(parent);
-              console.log(`[Razorpay] Parent ${depth} (${parent.className || parent.tagName}):`, {
-                overflow: styles.overflow,
-                overflowX: styles.overflowX,
-                overflowY: styles.overflowY,
-                display: styles.display,
-                position: styles.position,
-                zIndex: styles.zIndex,
-                visibility: styles.visibility,
-              });
-              
-              // Force visibility on parent elements that might be clipping
-              if (styles.overflow === 'hidden' || styles.overflowX === 'hidden' || styles.overflowY === 'hidden') {
-                console.log(`[Razorpay] Fixing overflow:hidden on parent ${depth}`);
-                parent.style.overflow = 'visible';
-              }
-              
-              parent = parent.parentElement;
-              depth++;
-            }
-          }
-          
-          if (iframe) {
-            const iframeStyles = getComputedStyle(iframe);
-            console.log("[Razorpay] Iframe computed styles:", {
-              visibility: iframeStyles.visibility,
-              display: iframeStyles.display,
-              position: iframeStyles.position,
-              zIndex: iframeStyles.zIndex,
-              opacity: iframeStyles.opacity,
-              width: iframeStyles.width,
-              height: iframeStyles.height,
-            });
-            
-            // Force visibility if hidden
-            if (iframeStyles.visibility === 'hidden' || iframeStyles.display === 'none') {
-              console.log("[Razorpay] Fixing iframe visibility");
-              (iframe as HTMLElement).style.visibility = 'visible';
-              (iframe as HTMLElement).style.display = 'block';
-              (iframe as HTMLElement).style.opacity = '1';
-            }
-          }
-          
-          // Workaround: Force visibility of all Razorpay elements
-          const allRazorpayElements = document.querySelectorAll('[class*="razorpay"], [id*="razorpay"], iframe[src*="razorpay"]');
-          allRazorpayElements.forEach((el) => {
-            const htmlEl = el as HTMLElement;
-            const styles = getComputedStyle(htmlEl);
-            if (styles.visibility === 'hidden' || styles.display === 'none' || styles.opacity === '0') {
-              console.log("[Razorpay] Force-fixing element:", el.className || el.id);
-              htmlEl.style.visibility = 'visible';
-              htmlEl.style.display = 'block';
-              htmlEl.style.opacity = '1';
-              htmlEl.style.pointerEvents = 'auto';
-            }
-          });
-        }, 500);
-        
-      } catch (openError) {
-        console.error("[Razorpay] Error calling razorpay.open():", openError);
-        toast({
-          title: "Payment Error",
-          description: "Failed to open payment window. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        throw new Error("Failed to open payment modal.");
       }
-
     } catch (err) {
-      console.error("[Razorpay] Error in handleRegularOrder:", err);
+      console.error("Checkout failed:", err);
+      toast({
+        title: "Payment Failed",
+        description: err instanceof Error ? err.message : "Something went wrong.",
+        variant: "destructive",
+      });
       setIsLoading(false);
-      // Error toast already shown in specific error handlers above
-      if (!(err instanceof Error && err.message.includes("toast"))) {
-        toast({
-          title: "Payment Failed",
-          description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
-          variant: "destructive",
-        });
-      }
-      throw err;
     }
   };
 
@@ -768,22 +556,6 @@ const Checkout = () => {
 
       console.log("Order created successfully:", verifyData.orderId);
 
-      // Clean up Razorpay modal elements before navigation
-      const cleanupRazorpay = () => {
-        const razorpayElements = document.querySelectorAll(
-          '.razorpay-container, .razorpay-backdrop, [class*="razorpay-container"], [class*="razorpay-backdrop"], iframe[src*="razorpay"], iframe[src*="checkout.razorpay.com"]'
-        );
-        razorpayElements.forEach((el) => {
-          console.log("[Checkout] Removing Razorpay element after payment:", el.className || el.id);
-          el.remove();
-        });
-        // Remove data attribute if set
-        document.body.removeAttribute('data-razorpay-open');
-      };
-
-      cleanupRazorpay();
-
-      // Clear cart and navigate to confirmation
       clearCart();
       
       toast({
@@ -791,10 +563,7 @@ const Checkout = () => {
         description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
       });
 
-      // Small delay to ensure cleanup completes before navigation
-      setTimeout(() => {
-        navigate(`/order-confirmation/${verifyData.orderId}`);
-      }, 100);
+      navigate(`/order-confirmation/${verifyData.orderId}`);
 
     } catch (err) {
       console.error("Order creation failed:", err);
