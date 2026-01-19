@@ -180,6 +180,10 @@ export interface SubscriptionPlan {
   billing_cycle: string;
   discount_percentage: number;
   is_active: boolean;
+  product_id?: string | null;
+  variant_id?: string | null;
+  amount?: number | null;
+  razorpay_plan_id?: string | null;
   created_at: string;
   updated_at: string;
 }

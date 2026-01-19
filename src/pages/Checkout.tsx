@@ -437,6 +437,12 @@ const Checkout = () => {
       throw new Error("Subscription plan not found for this product");
     }
 
+    const plan: any = planData;
+
+    if (!plan.razorpay_plan_id) {
+      throw new Error("Subscription plan not configured for this product");
+    }
+
     const { data, error } = await supabase.functions.invoke("create-razorpay-subscription", {
       body: {
         planId: planData.id,

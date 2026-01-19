@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package, AlertCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { Product, ProductV2, ProductVariant } from '@/types';
 import { useProductBySlug, useProducts, isPurchasableProduct, DatabaseProduct } from '@/hooks/useProducts';
 import { PincodeDialog } from '@/components/PincodeDialog';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
+import { validateSubscriptionPlan } from '@/lib/subscription-validation';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -35,6 +36,8 @@ const ProductDetail = () => {
   const [imageError, setImageError] = useState(false);
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
   const [purchaseType, setPurchaseType] = useState<'one-time' | 'subscription'>('one-time');
+  const [subscriptionPlanValid, setSubscriptionPlanValid] = useState(false);
+  const [subscriptionPlanError, setSubscriptionPlanError] = useState<string | null>(null);
 
   // Set default selected child product when product loads
   useEffect(() => {
@@ -57,6 +60,29 @@ const ProductDetail = () => {
     setSelectedChildProduct(child);
     setSelectedWeight(null); // Reset weight selection
   };
+
+  // Validate subscription plan when active product changes
+  useEffect(() => {
+    const checkSubscriptionPlan = async () => {
+      if (!activeProduct?.subscription_eligible) {
+        setSubscriptionPlanValid(false);
+        setSubscriptionPlanError(null);
+        return;
+      }
+
+      if (!activeProduct?.id) {
+        setSubscriptionPlanValid(false);
+        setSubscriptionPlanError(null);
+        return;
+      }
+
+      const validation = await validateSubscriptionPlan(activeProduct.id);
+      setSubscriptionPlanValid(validation.isValid);
+      setSubscriptionPlanError(validation.error || null);
+    };
+
+    checkSubscriptionPlan();
+  }, [activeProduct?.id, activeProduct?.subscription_eligible]);
 
   // Loading state
   if (isLoading) {
@@ -113,6 +139,13 @@ const ProductDetail = () => {
 
     // Same price for both subscription and one-time (no discount)
     const isSubscription = purchaseType === 'subscription' && activeProduct.subscription_eligible;
+
+    // Fail-fast validation: If subscription is selected but plan is not valid, prevent adding to cart
+    if (isSubscription && !subscriptionPlanValid) {
+      const errorMsg = subscriptionPlanError || "Subscription plan not configured for this product";
+      toast.error(errorMsg);
+      return;
+    }
 
     const cartProduct: Product = {
       id: activeProduct.id,
@@ -366,13 +399,23 @@ const ProductDetail = () => {
                       <p className="text-xs text-muted-foreground">Standard shipping rates apply</p>
                     </button>
                     <button
-                      onClick={() => setPurchaseType('subscription')}
+                      onClick={() => {
+                        if (!subscriptionPlanValid) {
+                          const message =
+                            subscriptionPlanError || "Subscription temporarily unavailable for this product";
+                          toast.error(message);
+                          return;
+                        }
+                        setPurchaseType('subscription');
+                      }}
                       className={cn(
                         "p-4 border-2 rounded-lg text-left transition-all relative overflow-hidden",
                         purchaseType === 'subscription'
                           ? "border-primary bg-primary/10"
-                          : "border-primary/50 hover:border-primary"
+                          : "border-primary/50 hover:border-primary",
+                        !subscriptionPlanValid && "opacity-60 cursor-not-allowed"
                       )}
+                      disabled={!subscriptionPlanValid}
                     >
                       <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl">
                         FREE SHIPPING
@@ -385,6 +428,12 @@ const ProductDetail = () => {
                       <p className="text-xs text-muted-foreground">Monthly delivery + Free Shipping</p>
                     </button>
                   </div>
+                  {activeProduct.subscription_eligible && !subscriptionPlanValid && (
+                    <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                      <AlertCircle className="w-4 h-4 mt-0.5" />
+                      <span>Subscription temporarily unavailable for this product.</span>
+                    </div>
+                  )}
                 </div>
               )}
 

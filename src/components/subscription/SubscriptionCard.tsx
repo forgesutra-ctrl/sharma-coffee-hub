@@ -118,6 +118,8 @@ export function SubscriptionCard({
     }
   };
 
+  const isPlanConfigured = !!plan.razorpay_plan_id;
+
   const discountedPrice = selectedVariant
     ? selectedVariant.price * (1 - plan.discount_percentage / 100)
     : 0;
@@ -190,12 +192,18 @@ export function SubscriptionCard({
 
         <Button
           onClick={handleSubscribe}
-          disabled={loading || !selectedVariant}
+          disabled={loading || !selectedVariant || !isPlanConfigured}
           className="w-full"
           size="lg"
         >
           {loading ? 'Creating Subscription…' : 'Subscribe Now'}
         </Button>
+
+        {!isPlanConfigured && (
+          <p className="text-xs text-center text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">
+            Subscription temporarily unavailable for this product.
+          </p>
+        )}
 
         <p className="text-xs text-center text-muted-foreground">
           Manage or cancel your subscription anytime from your account
