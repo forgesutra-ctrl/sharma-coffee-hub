@@ -283,24 +283,20 @@ export default function Navigation() {
         {/* Mobile Navigation Overlay */}
         {isOpen && (
           <div
-            className="lg:hidden fixed inset-0 bg-black/50 z-[60]"
+            className="lg:hidden fixed inset-0 top-16 bg-black/50 z-[60]"
             onClick={() => {
               console.log('[Navigation] Overlay clicked, closing menu');
               setIsOpen(false);
             }}
             aria-hidden="true"
-            style={{ top: 'calc(2.5rem + 4rem)' }}
           />
         )}
 
         {/* Mobile Navigation */}
-        <div 
-          className={cn(
-            'lg:hidden fixed inset-x-0 bottom-0 bg-background z-[70] transform transition-all duration-300 ease-out overflow-y-auto shadow-2xl',
-            isOpen ? 'translate-x-0' : 'translate-x-full'
-          )}
-          style={{ top: 'calc(2.5rem + 4rem)' }}
-        >
+        {isOpen && (
+          <div
+            className="lg:hidden fixed inset-0 top-16 bg-background z-[70] overflow-y-auto shadow-2xl transition-all duration-300 ease-out"
+          >
           <div className="flex flex-col p-6 space-y-1 min-h-full">
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">
                 {link.children ? <>
@@ -360,19 +356,20 @@ export default function Navigation() {
               </Link>
             </div>
 
-            {/* Mobile Contact */}
-            <div className="pt-6 border-t border-border/30">
-              <p className="text-xs text-muted-foreground mb-3">Need help?</p>
-              <a href="tel:+918762988145" className="text-lg font-medium text-primary">
-                +91 8762 988 145
-              </a>
-              <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mt-2 text-green-600 hover:text-green-700">
-                <MessageCircle className="w-5 h-5" />
-                <span>Chat on WhatsApp</span>
-              </a>
+              {/* Mobile Contact */}
+              <div className="pt-6 border-t border-border/30">
+                <p className="text-xs text-muted-foreground mb-3">Need help?</p>
+                <a href="tel:+918762988145" className="text-lg font-medium text-primary">
+                  +91 8762 988 145
+                </a>
+                <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mt-2 text-green-600 hover:text-green-700">
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Chat on WhatsApp</span>
+                </a>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </nav>
     </>
   );

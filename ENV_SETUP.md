@@ -77,15 +77,11 @@ Required for authentication and OTP emails. **Users cannot log in without this.*
 - `send-otp`
 - `verify-otp`
 
-### AI Chatbot - Lovable AI (OPTIONAL)
+### AI Chatbot (OPTIONAL)
 
-Required for the AI customer support chatbot.
+The AI customer support chatbot can be configured with your preferred AI service provider.
 
-| Variable | Description | Required | Where to Get |
-|----------|-------------|----------|--------------|
-| `LOVABLE_API_KEY` | Lovable AI API key | 🔶 Optional | [Lovable Dashboard](https://lovable.dev/) |
-
-**Status:** ⚠️ **NOT CONFIGURED** - Chatbot will show error message
+**Status:** ⚠️ **NOT CONFIGURED** - Chatbot will show error message if enabled
 
 **Affected Features:**
 - AI customer support chatbot
@@ -135,7 +131,7 @@ Required for automated shipping label generation and tracking.
 | **Supabase** | ✅ Configured | None - Working | None |
 | **Razorpay** | ❌ Not Configured | **HIGH** - No payments | Configure immediately |
 | **Resend** | ❌ Not Configured | **HIGH** - No auth | Configure immediately |
-| **Lovable AI** | ❌ Not Configured | **MEDIUM** - Chatbot down | Configure for better UX |
+| **AI Chatbot** | ❌ Not Configured | **MEDIUM** - Chatbot down | Configure for better UX |
 | **DTDC** | ❌ Not Configured | **LOW** - Manual shipping | Optional enhancement |
 
 ### Build Status
@@ -146,7 +142,7 @@ The application compiles and runs without errors. However, the following feature
 
 1. **Payment Processing** - Requires Razorpay
 2. **User Authentication** - Requires Resend
-3. **AI Chatbot** - Requires Lovable AI
+3. **AI Chatbot** - Optional feature
 4. **Automated Shipping** - Requires DTDC
 
 ---
@@ -188,16 +184,9 @@ The application compiles and runs without errors. However, the following feature
 - Use a verified domain in `RESEND_FROM_EMAIL`
 - For testing, you can use Resend's sandbox domain
 
-### Step 3: Configure Lovable AI (OPTIONAL)
+### Step 3: Configure AI Chatbot (OPTIONAL)
 
-1. Go to [Lovable.dev](https://lovable.dev/)
-2. Sign up or log in
-3. Create an API key
-4. Add to Supabase:
-   ```bash
-   # In Supabase Dashboard > Settings > Edge Functions > Secrets
-   LOVABLE_API_KEY=xxxxxxxxxxxxx
-   ```
+The AI chatbot can be configured with your preferred AI service provider. Contact the development team for configuration details.
 
 ### Step 4: Configure DTDC (OPTIONAL)
 
@@ -271,7 +260,7 @@ Common issues:
 - Check Resend dashboard for email delivery status
 
 **Chatbot errors:**
-- Check Lovable API key is configured
+- Check AI service API key is configured
 - Verify API key has not exceeded quota
 - Check browser console for specific error messages
 
@@ -302,7 +291,7 @@ For issues with:
 - **Supabase:** [Supabase Support](https://supabase.com/support)
 - **Razorpay:** [Razorpay Support](https://razorpay.com/support/)
 - **Resend:** [Resend Support](https://resend.com/support)
-- **Lovable AI:** [Lovable Support](https://lovable.dev/support)
+- **AI Chatbot:** Contact development team
 - **DTDC:** Contact your DTDC account manager
 
 ---

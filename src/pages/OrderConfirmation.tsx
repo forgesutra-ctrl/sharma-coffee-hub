@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import Layout from "@/components/coffee/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,20 +192,17 @@ const OrderConfirmation = () => {
 
   if (loading) {
     return (
-      <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
             <p className="mt-4 text-muted-foreground">Loading your order...</p>
           </div>
         </div>
-      </Layout>
     );
   }
 
   if (error || !order) {
     return (
-      <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <Card className="max-w-md">
             <CardContent className="pt-6 text-center">
@@ -223,14 +219,12 @@ const OrderConfirmation = () => {
             </CardContent>
           </Card>
         </div>
-      </Layout>
     );
   }
 
   const hasSubscriptionItems = order.order_items.some(item => item.is_subscription);
 
   return (
-    <Layout>
       {/* Temporary test button to verify interactivity */}
       <button
         onClick={() => {
@@ -522,7 +516,6 @@ const OrderConfirmation = () => {
           </p>
         </div>
       </div>
-    </Layout>
   );
 };
 

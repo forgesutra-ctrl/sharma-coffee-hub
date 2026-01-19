@@ -1,4 +1,3 @@
-import Layout from '@/components/coffee/Layout';
 import WholesaleInquiryForm from '@/components/wholesale/WholesaleInquiryForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { Package, Truck, BadgePercent, HeadphonesIcon, Clock, Shield } from 'lucide-react';
@@ -38,7 +37,6 @@ const benefits = [
 
 export default function Wholesale() {
   return (
-    <Layout>
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto px-4">

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, Search } from 'lucide-react';
-import Layout from '@/components/coffee/Layout';
 import { Input } from '@/components/ui/input';
 import { faqContent } from '@/data/legalContent';
 import { cn } from '@/lib/utils';
@@ -27,7 +26,6 @@ export default function FAQ() {
   })).filter(category => category.questions.length > 0);
 
   return (
-    <Layout>
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="bg-coffee-dark text-white py-12 md:py-16">

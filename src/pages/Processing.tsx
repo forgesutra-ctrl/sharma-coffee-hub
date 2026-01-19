@@ -1,4 +1,3 @@
-import Layout from '@/components/coffee/Layout';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
@@ -73,7 +72,6 @@ const processStages = [
 
 export default function Processing() {
   return (
-    <Layout>
       {/* Hero Section */}
       <section className="relative py-24 md:py-32 bg-gradient-to-b from-muted/50 to-background overflow-hidden">
         <div 

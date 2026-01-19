@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Layout from '@/components/coffee/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,7 +72,6 @@ export default function Contact() {
   };
 
   return (
-    <Layout>
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto px-4">

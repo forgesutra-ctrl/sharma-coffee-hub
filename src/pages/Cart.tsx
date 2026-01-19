@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +54,6 @@ const handlePincodeValidated = (
   // Show empty cart UI - DON'T navigate, just render
   if (cartItems.length === 0) {
     return (
-      <Layout>
         <div className="min-h-screen bg-background py-12">
           <div className="container mx-auto px-4 max-w-4xl">
             <div className="text-center py-20">
@@ -78,7 +76,6 @@ const handlePincodeValidated = (
             </div>
           </div>
         </div>
-      </Layout>
     );
   }
 
@@ -88,7 +85,7 @@ const handlePincodeValidated = (
   const allItemsAreSubscription = cartItems.every(item => item.is_subscription);
 
   return (
-    <Layout>
+    <>
       <div className="min-h-screen bg-background py-8 md:py-12">
         <div className="container mx-auto px-4 max-w-6xl">
           {/* Header */}
@@ -315,7 +312,7 @@ const handlePincodeValidated = (
         onPincodeValidated={handlePincodeValidated}
         initialPincode={shippingInfo?.pincode || ''}
       />
-    </Layout>
+    </>
   );
 };
 

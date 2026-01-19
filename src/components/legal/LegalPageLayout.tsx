@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import Layout from '@/components/coffee/Layout';
 
 interface Section {
   heading: string;
@@ -17,7 +16,6 @@ interface LegalPageLayoutProps {
 
 export default function LegalPageLayout({ title, lastUpdated, sections }: LegalPageLayoutProps) {
   return (
-    <Layout>
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="bg-coffee-dark text-white py-12 md:py-16">

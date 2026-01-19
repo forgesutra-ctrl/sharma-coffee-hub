@@ -285,7 +285,7 @@ All required environment variables are already configured:
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RAZORPAY_KEY_SECRET`
-- `LOVABLE_API_KEY`
+- AI Chatbot API key (optional)
 
 ### Post-Deployment Checklist
 - [ ] Run seed-admins.js to create admin accounts

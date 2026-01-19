@@ -1,4 +1,3 @@
-import Layout from '@/components/coffee/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Droplets, Flame, Coffee } from 'lucide-react';
@@ -113,7 +112,6 @@ const brewingMethods = [
 
 export default function BrewingGuide() {
   return (
-    <Layout>
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto px-4">

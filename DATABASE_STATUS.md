@@ -83,7 +83,7 @@ In Supabase Dashboard > Edge Functions > Manage Secrets, add:
 - `RESEND_FROM_EMAIL` - Verified sender email (e.g., noreply@yourdomain.com)
 
 **Optional (for specific features):**
-- `LOVABLE_API_KEY` - AI chatbot functionality
+- AI Chatbot API key (optional) - AI chatbot functionality
 - `DTDC_API_KEY` - Shipping integration
 - `DTDC_CUSTOMER_CODE` - DTDC customer ID
 - `DTDC_ORIGIN_PINCODE` - Your warehouse pincode

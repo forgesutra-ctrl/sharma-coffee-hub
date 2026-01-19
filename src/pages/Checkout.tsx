@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Layout from "@/components/coffee/Layout";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -245,7 +244,6 @@ const Checkout = () => {
 
   if (cartItems.length === 0) {
     return (
-      <Layout>
         <div className="min-h-[70vh] flex items-center justify-center">
           <div className="text-center px-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
@@ -265,13 +263,11 @@ const Checkout = () => {
             </Link>
           </div>
         </div>
-      </Layout>
     );
   }
 
   if (!shippingInfo) {
     return (
-      <Layout>
         <div className="min-h-[70vh] flex items-center justify-center">
           <div className="text-center px-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
@@ -291,7 +287,6 @@ const Checkout = () => {
             </Link>
           </div>
         </div>
-      </Layout>
     );
   }
 
@@ -602,7 +597,6 @@ const Checkout = () => {
   // ============================================
 
   return (
-    <Layout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Back Button */}
         <div className="flex items-center gap-2 mb-8">
@@ -1024,7 +1018,6 @@ const Checkout = () => {
           currentPincode={shippingInfo?.pincode}
         />
       </div>
-    </Layout>
   );
 };
 

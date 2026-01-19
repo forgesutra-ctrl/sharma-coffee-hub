@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Loader2 } from 'lucide-react';
-import Layout from '@/components/coffee/Layout';
 import ProductCard from '@/components/coffee/ProductCard';
 import { cn } from '@/lib/utils';
 import { useProducts, getUniqueProducts, useProductsByCategoryId } from '@/hooks/useProducts';
@@ -114,7 +113,6 @@ const Shop = () => {
   }));
 
   return (
-    <Layout>
       <div className="min-h-screen bg-background">
         {/* Announcement Bar Style Header */}
         <div className="bg-primary text-primary-foreground py-2.5 text-center text-xs font-medium tracking-[0.2em] uppercase">
@@ -334,7 +332,6 @@ const Shop = () => {
           )}
         </div>
       </div>
-    </Layout>
   );
 };
 

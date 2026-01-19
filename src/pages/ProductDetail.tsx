@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package } from 'lucide-react';
-import Layout from '@/components/coffee/Layout';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -62,18 +61,15 @@ const ProductDetail = () => {
   // Loading state
   if (isLoading) {
     return (
-      <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="font-serif text-2xl mb-4">Error loading product</h1>
@@ -82,14 +78,12 @@ const ProductDetail = () => {
             </Link>
           </div>
         </div>
-      </Layout>
     );
   }
 
   // Product not found
   if (!product) {
     return (
-      <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="font-serif text-2xl mb-4">Product not found</h1>
@@ -98,7 +92,6 @@ const ProductDetail = () => {
             </Link>
           </div>
         </div>
-      </Layout>
     );
   }
 
@@ -172,7 +165,6 @@ const ProductDetail = () => {
   };
 
   return (
-    <Layout>
       <div className="min-h-screen bg-background">
         {/* Announcement Bar */}
         <div className="bg-primary text-primary-foreground py-2.5 text-center text-xs font-medium tracking-[0.2em] uppercase">
@@ -578,7 +570,6 @@ const ProductDetail = () => {
           onPincodeValidated={handlePincodeValidated}
         />
       </div>
-    </Layout>
   );
 };
 
