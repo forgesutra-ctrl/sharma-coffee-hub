@@ -158,6 +158,5 @@ export default function FAQ() {
           </div>
         </div>
       </div>
-    </Layout>
   );
 }
