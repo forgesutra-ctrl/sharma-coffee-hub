@@ -16,7 +16,7 @@ interface LegalPageLayoutProps {
 
 export default function LegalPageLayout({ title, lastUpdated, sections }: LegalPageLayoutProps) {
   return (
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="bg-coffee-dark text-white py-12 md:py-16">
           <div className="max-w-4xl mx-auto px-4">
@@ -79,6 +79,5 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
           </div>
         </div>
       </div>
-    </Layout>
   );
 }
