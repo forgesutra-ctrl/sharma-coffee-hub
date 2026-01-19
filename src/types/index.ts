@@ -26,6 +26,7 @@ export interface ProductV2 {
   meta_description: string | null;
   tags: string[];
   subscription_eligible: boolean;
+  razorpay_plan_id?: string | null;
   featured: boolean;
   display_order: number;
   created_at: string;
@@ -99,6 +100,8 @@ export interface Product {
   is_featured: boolean;
   in_stock: boolean;
   sort_order: number;
+  subscription_eligible?: boolean | null;
+  razorpay_plan_id?: string | null;
   created_at: string;
   updated_at: string;
 }

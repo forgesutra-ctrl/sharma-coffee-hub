@@ -30,5 +30,8 @@ verify_jwt = false
 [functions.create-dtdc-shipment]
 verify_jwt = false
 
+[functions.create-razorpay-subscription]
+verify_jwt = false
+
 [functions.generate-sales-report]
 verify_jwt = false

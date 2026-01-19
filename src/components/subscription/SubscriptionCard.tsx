@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Calendar, Package, Truck, Tag } from 'lucide-react';
-import type { ProductV2, ProductVariant, SubscriptionPlan } from '@/types';
+import type { ProductV2, ProductVariant } from '@/types';
 
 interface SubscriptionCardProps {
   product: ProductV2;
@@ -24,27 +24,14 @@ export function SubscriptionCard({
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
 
   // NEW: delivery day (1–28)
   const [deliveryDay, setDeliveryDay] = useState<number>(1);
 
-  useEffect(() => {
-    fetchSubscriptionPlan();
-  }, []);
+  // Check if product has razorpay_plan_id directly (single source of truth)
+  const isPlanConfigured = !!product.razorpay_plan_id;
 
-  const fetchSubscriptionPlan = async () => {
-    const { data } = await supabase
-      .from('subscription_plans')
-      .select('*')
-      .eq('is_active', true)
-      .eq('billing_cycle', 'monthly')
-      .maybeSingle();
-
-    if (data) setPlan(data);
-  };
-
-  if (!product.subscription_eligible || !plan) {
+  if (!product.subscription_eligible) {
     return null;
   }
 
@@ -60,7 +47,7 @@ export function SubscriptionCard({
       return;
     }
 
-    if (!plan.razorpay_plan_id) {
+    if (!isPlanConfigured) {
       toast.error('Subscription plan not configured');
       return;
     }
@@ -75,7 +62,7 @@ export function SubscriptionCard({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            razorpay_plan_id: plan.razorpay_plan_id,
+            razorpay_plan_id: product.razorpay_plan_id,
           }),
         }
       );
@@ -94,7 +81,6 @@ export function SubscriptionCard({
         .from('user_subscriptions')
         .insert({
           user_id: user.id,
-          plan_id: plan.id,
           razorpay_subscription_id: subscription_id,
           product_id: product.id,
           variant_id: selectedVariant.id,
@@ -118,10 +104,10 @@ export function SubscriptionCard({
     }
   };
 
-  const isPlanConfigured = !!plan.razorpay_plan_id;
-
+  // Default discount percentage (can be overridden if needed)
+  const discountPercentage = 10;
   const discountedPrice = selectedVariant
-    ? selectedVariant.price * (1 - plan.discount_percentage / 100)
+    ? selectedVariant.price * (1 - discountPercentage / 100)
     : 0;
 
   const savings = selectedVariant
@@ -134,7 +120,7 @@ export function SubscriptionCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Subscribe & Save</CardTitle>
           <Badge variant="secondary" className="bg-primary text-primary-foreground">
-            {plan.discount_percentage}% OFF
+            {discountPercentage}% OFF
           </Badge>
         </div>
         <CardDescription>

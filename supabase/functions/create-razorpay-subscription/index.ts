@@ -4,11 +4,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface CreateSubscriptionRequest {
-  planId: string;
+  razorpay_plan_id: string; // Razorpay plan ID from products.razorpay_plan_id
   productId: string;
   variantId?: string;
   quantity: number;
@@ -27,10 +27,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Get Authorization header (Bearer token from supabase.functions.invoke())
     const authHeader = req.headers.get("Authorization");
+    const apikey = req.headers.get("apikey") || req.headers.get("x-api-key");
+    
+    console.log("Auth check:", {
+      hasAuthHeader: !!authHeader,
+      hasApikey: !!apikey,
+      authHeaderPrefix: authHeader?.substring(0, 20) || "none",
+    });
+
     if (!authHeader) {
+      console.error("Missing Authorization header");
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({ error: "Missing authorization header. Please log in and try again." }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,6 +48,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Create Supabase client with auth header
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -48,13 +59,16 @@ Deno.serve(async (req: Request) => {
       }
     );
 
+    // Verify user from token
     const {
       data: { user },
+      error: userError,
     } = await supabaseClient.auth.getUser();
 
-    if (!user) {
+    if (userError) {
+      console.error("User verification error:", userError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: `Authentication failed: ${userError.message}` }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -62,9 +76,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    if (!user) {
+      console.error("No user found in token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized. Please log in and try again." }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log("User authenticated:", user.id);
+
     const requestData: CreateSubscriptionRequest = await req.json();
     const {
-      planId,
+      razorpay_plan_id,
       productId,
       variantId,
       quantity,
@@ -74,7 +101,7 @@ Deno.serve(async (req: Request) => {
       amount,
     } = requestData;
 
-    if (!planId || !productId || !quantity || !preferredDeliveryDate || !shippingAddress || !amount) {
+    if (!razorpay_plan_id || !productId || !quantity || !preferredDeliveryDate || !shippingAddress || !amount) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -108,15 +135,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: plan } = await supabaseClient
-      .from("subscription_plans")
-      .select("*")
-      .eq("id", planId)
-      .maybeSingle();
-
-    if (!plan || !plan.razorpay_plan_id) {
+    // Validate razorpay_plan_id is provided (single source of truth from products table)
+    if (!razorpay_plan_id || typeof razorpay_plan_id !== 'string') {
       return new Response(
-        JSON.stringify({ error: "Invalid subscription plan" }),
+        JSON.stringify({ error: "Invalid Razorpay plan ID" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -141,7 +163,7 @@ Deno.serve(async (req: Request) => {
     const startTimestamp = calculateStartDate(preferredDeliveryDate);
 
     console.log("Creating Razorpay subscription:", {
-      plan_id: plan.razorpay_plan_id,
+      plan_id: razorpay_plan_id,
       total_count: totalDeliveries,
       start_at: startTimestamp,
       quantity,
@@ -156,7 +178,7 @@ Deno.serve(async (req: Request) => {
         "Authorization": `Basic ${authString}`,
       },
       body: JSON.stringify({
-        plan_id: plan.razorpay_plan_id,
+        plan_id: razorpay_plan_id,
         customer_notify: 1,
         total_count: totalDeliveries,
         quantity: quantity,
@@ -201,12 +223,12 @@ Deno.serve(async (req: Request) => {
       return deliveryDate.toISOString().split("T")[0];
     };
 
+    // Note: plan_id is optional in user_subscriptions - we store razorpay_plan_id directly
     const { data: subscription, error: dbError } = await supabaseClient
       .from("user_subscriptions")
       .insert({
         user_id: user.id,
         razorpay_subscription_id: razorpaySubscription.id,
-        plan_id: planId,
         product_id: productId,
         variant_id: variantId || null,
         quantity: quantity,

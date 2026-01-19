@@ -63,26 +63,24 @@ const ProductDetail = () => {
 
   // Validate subscription plan when active product changes
   useEffect(() => {
-    const checkSubscriptionPlan = async () => {
-      if (!activeProduct?.subscription_eligible) {
-        setSubscriptionPlanValid(false);
-        setSubscriptionPlanError(null);
-        return;
-      }
+    if (!activeProduct) {
+      setSubscriptionPlanValid(false);
+      setSubscriptionPlanError(null);
+      return;
+    }
 
-      if (!activeProduct?.id) {
-        setSubscriptionPlanValid(false);
-        setSubscriptionPlanError(null);
-        return;
-      }
+    // Debug log to verify razorpay_plan_id is present
+    console.log("Fetched product:", {
+      id: activeProduct.id,
+      name: activeProduct.name,
+      subscription_eligible: activeProduct.subscription_eligible,
+      razorpay_plan_id: activeProduct.razorpay_plan_id,
+    });
 
-      const validation = await validateSubscriptionPlan(activeProduct.id);
-      setSubscriptionPlanValid(validation.isValid);
-      setSubscriptionPlanError(validation.error || null);
-    };
-
-    checkSubscriptionPlan();
-  }, [activeProduct?.id, activeProduct?.subscription_eligible]);
+    const validation = validateSubscriptionPlan(activeProduct);
+    setSubscriptionPlanValid(validation.isValid);
+    setSubscriptionPlanError(validation.error || null);
+  }, [activeProduct?.id, activeProduct?.subscription_eligible, activeProduct?.razorpay_plan_id]);
 
   // Loading state
   if (isLoading) {
@@ -166,9 +164,19 @@ const ProductDetail = () => {
       is_featured: activeProduct.is_featured || false,
       in_stock: (selectedVariant.stock_quantity ?? 0) > 0,
       sort_order: 0,
+      subscription_eligible: activeProduct.subscription_eligible || false,
+      razorpay_plan_id: activeProduct.razorpay_plan_id || null,
       created_at: activeProduct.created_at,
       updated_at: activeProduct.updated_at,
     };
+
+    // Debug log to verify cart product has razorpay_plan_id
+    console.log("Cart product:", {
+      id: cartProduct.id,
+      name: cartProduct.name,
+      subscription_eligible: cartProduct.subscription_eligible,
+      razorpay_plan_id: cartProduct.razorpay_plan_id,
+    });
 
     addToCart({
       product: cartProduct,

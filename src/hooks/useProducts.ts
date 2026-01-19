@@ -42,6 +42,7 @@ export interface DatabaseProduct {
   is_active: boolean | null;
   subscription_eligible?: boolean | null;
   subscription_discount_percentage?: number | null;
+  razorpay_plan_id?: string | null;
   created_at: string;
   updated_at: string;
   product_variants: ProductVariant[];
@@ -71,6 +72,7 @@ export interface FlatProduct {
   isFeatured: boolean;
   subscription_eligible?: boolean;
   subscription_discount_percentage?: number;
+  razorpay_plan_id?: string | null;
 }
 
 // Fetch all active products with their variants (only parent products)
@@ -95,6 +97,7 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
         is_active,
         subscription_eligible,
         subscription_discount_percentage,
+        razorpay_plan_id,
         created_at,
         updated_at,
         categories (
@@ -154,6 +157,7 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
         is_active,
         subscription_eligible,
         subscription_discount_percentage,
+        razorpay_plan_id,
         created_at,
         updated_at,
         categories (
@@ -205,6 +209,7 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
           is_active,
           subscription_eligible,
           subscription_discount_percentage,
+          razorpay_plan_id,
           created_at,
           updated_at,
           categories (
@@ -267,6 +272,7 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
         is_active,
         subscription_eligible,
         subscription_discount_percentage,
+        razorpay_plan_id,
         created_at,
         updated_at,
         categories (
@@ -335,6 +341,7 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
       isFeatured: product.is_featured || false,
       subscription_eligible: product.subscription_eligible || false,
       subscription_discount_percentage: product.subscription_discount_percentage || undefined,
+      razorpay_plan_id: product.razorpay_plan_id || null,
     };
   });
 }
@@ -366,6 +373,7 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
         isFeatured: product.is_featured || false,
         subscription_eligible: product.subscription_eligible || false,
         subscription_discount_percentage: product.subscription_discount_percentage || undefined,
+        razorpay_plan_id: product.razorpay_plan_id || null,
       }];
     }
 
@@ -390,6 +398,7 @@ export function getFlatProducts(products: DatabaseProduct[]): FlatProduct[] {
       isFeatured: product.is_featured || false,
       subscription_eligible: product.subscription_eligible || false,
       subscription_discount_percentage: product.subscription_discount_percentage || undefined,
+      razorpay_plan_id: product.razorpay_plan_id || null,
     }));
   });
 }
