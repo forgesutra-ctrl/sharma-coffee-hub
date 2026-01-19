@@ -19,6 +19,7 @@ import {
   Instagram,
   Facebook,
   Twitter,
+  MessageCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -165,6 +166,50 @@ export default function Contact() {
                 Contact Information
               </h2>
 
+              {/* Prominent Contact Numbers */}
+              <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-lg border-2 border-green-300">
+                <h3 className="font-bold text-2xl text-green-900 mb-4">📞 Call Us Today</h3>
+                
+                <p className="mb-4 pb-4 border-b border-green-200">
+                  <span className="text-2xl">🔴</span>
+                  <span className="font-bold text-green-900 text-lg ml-2">PRIMARY:</span>
+                  <a href="tel:+918762988145" className="ml-3 text-xl text-green-600 hover:text-green-900 font-bold underline">
+                    +91 8762 988 145
+                  </a>
+                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded font-semibold ml-2">RECOMMENDED</span>
+                </p>
+                
+                <p className="mb-4">
+                  <span className="text-2xl">🟡</span>
+                  <span className="font-bold text-amber-700 text-lg ml-2">SECONDARY:</span>
+                  <a href="tel:+916363235357" className="ml-3 text-lg text-blue-600 hover:text-blue-900 font-bold underline">
+                    +91 6363 235 357
+                  </a>
+                </p>
+                
+                <p className="mb-4">
+                  <span className="text-2xl">🟠</span>
+                  <span className="font-bold text-orange-700 text-lg ml-2">STAFF:</span>
+                  <a href="tel:+918431891360" className="ml-3 text-lg text-blue-600 hover:text-blue-900 font-bold underline">
+                    +91 84318 91360
+                  </a>
+                </p>
+                
+                <p className="mt-6 pt-4 border-t-2 border-green-300">
+                  <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" 
+                     className="text-lg text-green-600 hover:text-green-900 font-bold underline inline-flex items-center gap-2">
+                    <MessageCircle className="w-6 h-6" />
+                    💬 Message us on WhatsApp (Best Option)
+                  </a>
+                </p>
+                
+                <p className="text-sm text-gray-600 mt-6 bg-white p-3 rounded border border-gray-200">
+                  ⏰ Available: 9 AM - 6 PM IST, Monday - Saturday
+                  <br/>
+                  📍 Based in: Mysore, Karnataka
+                </p>
+              </div>
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-6">
@@ -187,7 +232,7 @@ export default function Contact() {
                     <Phone className="w-8 h-8 text-primary mb-3" />
                     <h3 className="font-semibold mb-2">Phone</h3>
                     <p className="text-sm text-muted-foreground">
-                      +91 87629 88145
+                      <a href="tel:+918762988145" className="hover:text-primary font-semibold">+91 8762 988 145</a>
                       <br />
                       Mon–Sat: 9:00 AM – 6:00 PM
                     </p>

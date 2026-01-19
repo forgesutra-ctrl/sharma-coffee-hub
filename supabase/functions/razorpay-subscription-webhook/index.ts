@@ -88,7 +88,10 @@ Deno.serve(async (req: Request) => {
     const webhookData: WebhookPayload = JSON.parse(rawBody);
     const { event, payload } = webhookData;
 
-    console.log("Received webhook event:", event, payload);
+    console.log("=== RAZORPAY SUBSCRIPTION WEBHOOK ===");
+    console.log("Event:", event);
+    console.log("Timestamp:", new Date().toISOString());
+    console.log("Payload:", JSON.stringify(payload, null, 2));
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -161,6 +164,40 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
+        // Get product and variant details for order items
+        const { data: product } = await supabaseAdmin
+          .from("products")
+          .select("name")
+          .eq("id", subscription.product_id)
+          .maybeSingle();
+
+        const { data: variant } = subscription.variant_id
+          ? await supabaseAdmin
+              .from("product_variants")
+              .select("weight, price")
+              .eq("id", subscription.variant_id)
+              .maybeSingle()
+          : { data: null };
+
+        // Create order items
+        if (product) {
+          const unitPrice = variant?.price || (paymentEntity.amount / 100 / subscription.quantity);
+          await supabaseAdmin
+            .from("order_items")
+            .insert({
+              order_id: order.id,
+              product_id: subscription.product_id,
+              variant_id: subscription.variant_id || null,
+              product_name: product.name,
+              weight: variant?.weight || 0,
+              grind_type: "Whole Bean", // Default, can be updated if needed
+              quantity: subscription.quantity,
+              unit_price: unitPrice,
+              total_price: paymentEntity.amount / 100,
+              is_subscription: true,
+            });
+        }
+
         await supabaseAdmin
           .from("subscription_orders")
           .insert({
@@ -185,7 +222,53 @@ Deno.serve(async (req: Request) => {
           })
           .eq("id", subscription.id);
 
-        console.log("Subscription charged successfully:", razorpaySubscriptionId);
+        // Get product details for notification
+        const { data: product } = await supabaseAdmin
+          .from("products")
+          .select("name")
+          .eq("id", subscription.product_id)
+          .maybeSingle();
+
+        // Get user email and phone for notification
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("email, phone")
+          .eq("id", subscription.user_id)
+          .maybeSingle();
+
+        // Send notification about successful charge
+        if (profile?.email || profile?.phone) {
+          try {
+            await supabaseAdmin.functions.invoke("send-order-notification", {
+              body: {
+                orderId: order.id,
+                customerEmail: profile.email || "",
+                customerPhone: profile.phone || "",
+                customerName: subscription.shipping_address?.fullName || "Customer",
+                orderNumber: order.order_number,
+                orderTotal: paymentEntity.amount / 100,
+                orderItems: [{
+                  product_name: product?.name || "Subscription Item",
+                  quantity: subscription.quantity,
+                  unit_price: paymentEntity.amount / 100 / subscription.quantity,
+                  total_price: paymentEntity.amount / 100,
+                }],
+                shippingAddress: subscription.shipping_address || {},
+                paymentType: "prepaid",
+                deliveryDate: nextDeliveryDate.toISOString().split("T")[0],
+              },
+            });
+          } catch (notifError) {
+            console.error("Failed to send subscription charge notification:", notifError);
+          }
+        }
+
+        console.log("Subscription charged successfully:", {
+          razorpaySubscriptionId,
+          orderId: order.id,
+          billingCycle,
+          nextDeliveryDate: nextDeliveryDate.toISOString().split("T")[0],
+        });
         break;
       }
 
@@ -251,6 +334,69 @@ Deno.serve(async (req: Request) => {
           .eq("razorpay_subscription_id", razorpaySubscriptionId);
 
         console.log("Subscription completed:", razorpaySubscriptionId);
+        break;
+      }
+
+      case "subscription.payment_failed": {
+        const paymentEntity = payload.payment?.entity;
+        if (!paymentEntity) break;
+
+        const { data: subscription } = await supabaseAdmin
+          .from("user_subscriptions")
+          .select("*")
+          .eq("razorpay_subscription_id", razorpaySubscriptionId)
+          .maybeSingle();
+
+        if (!subscription) {
+          console.error("Subscription not found for failed payment:", razorpaySubscriptionId);
+          break;
+        }
+
+        // Update subscription with failed payment status
+        await supabaseAdmin
+          .from("user_subscriptions")
+          .update({
+            last_payment_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscription.id);
+
+        // Get user email and phone for notification
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("email, phone")
+          .eq("id", subscription.user_id)
+          .maybeSingle();
+
+        // Send notification about failed payment
+        if (profile?.email || profile?.phone) {
+          try {
+            await supabaseAdmin.functions.invoke("send-order-notification", {
+              body: {
+                orderId: null,
+                customerEmail: profile.email || "",
+                customerPhone: profile.phone || "",
+                customerName: subscription.shipping_address?.fullName || "Customer",
+                orderNumber: `SUB-${subscription.id.substring(0, 8)}`,
+                orderTotal: paymentEntity.amount / 100,
+                orderItems: [{
+                  product_name: "Subscription Payment Failed",
+                  quantity: 1,
+                  unit_price: paymentEntity.amount / 100,
+                  total_price: paymentEntity.amount / 100,
+                }],
+                shippingAddress: subscription.shipping_address || {},
+                paymentType: "prepaid",
+                isPaymentFailed: true,
+                failureReason: "Payment failed. Please update your payment method.",
+              },
+            });
+          } catch (notifError) {
+            console.error("Failed to send payment failure notification:", notifError);
+          }
+        }
+
+        console.log("Subscription payment failed:", razorpaySubscriptionId);
         break;
       }
 

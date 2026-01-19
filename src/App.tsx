@@ -59,21 +59,21 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Layout><Homepage /></Layout>} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/shop/:categorySlug" element={<Shop />} />
-              <Route path="/product/:slug" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/brewing-guide" element={<BrewingGuide />} />
-              <Route path="/processing" element={<Processing />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/wholesale" element={<Wholesale />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/shipping-policy" element={<ShippingPolicy />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/subscriptions" element={<Subscriptions />} />
+              <Route path="/shop" element={<Layout><Shop /></Layout>} />
+              <Route path="/shop/:categorySlug" element={<Layout><Shop /></Layout>} />
+              <Route path="/product/:slug" element={<Layout><ProductDetail /></Layout>} />
+              <Route path="/cart" element={<Layout><Cart /></Layout>} />
+              <Route path="/about" element={<Layout><About /></Layout>} />
+              <Route path="/brewing-guide" element={<Layout><BrewingGuide /></Layout>} />
+              <Route path="/processing" element={<Layout><Processing /></Layout>} />
+              <Route path="/contact" element={<Layout><Contact /></Layout>} />
+              <Route path="/wholesale" element={<Layout><Wholesale /></Layout>} />
+              <Route path="/privacy-policy" element={<Layout><PrivacyPolicy /></Layout>} />
+              <Route path="/terms-of-service" element={<Layout><TermsOfService /></Layout>} />
+              <Route path="/refund-policy" element={<Layout><RefundPolicy /></Layout>} />
+              <Route path="/shipping-policy" element={<Layout><ShippingPolicy /></Layout>} />
+              <Route path="/faq" element={<Layout><FAQ /></Layout>} />
+              <Route path="/subscriptions" element={<Layout><Subscriptions /></Layout>} />
 
               {/* Protected Routes */}
               <Route path="/checkout" element={

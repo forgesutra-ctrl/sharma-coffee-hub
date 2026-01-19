@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Twitter, Youtube, Mail, MapPin, Phone, ArrowRight, Coffee, Leaf, Award, Heart } from 'lucide-react';
+import { Instagram, Facebook, Twitter, Youtube, Mail, MapPin, Phone, ArrowRight, Coffee, Leaf, Award, Heart, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -228,7 +228,7 @@ export default function Footer() {
               <li>
                 <a className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors" href="tel:+918762988145">​<Phone className="w-4 h-4 text-coffee-gold flex-shrink-0" />
                   
-                  ​+918762988145
+                  ​+91 8762 988 145
                 
                 </a>
               </li>
@@ -238,6 +238,49 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Us Section */}
+      <div className="relative border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="border-t border-amber-100 pt-6">
+            <h3 className="font-bold text-amber-900 mb-4 text-lg">CONTACT US</h3>
+            <div className="space-y-2 text-sm text-white/80">
+              <p className="flex items-center gap-2">
+                <span>🔴</span>
+                <strong>Primary:</strong>
+                <a href="tel:+918762988145" className="hover:text-amber-400 font-semibold transition-colors">
+                  +91 8762 988 145
+                </a>
+                <span className="text-xs text-green-400">(WhatsApp)</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span>🟡</span>
+                <strong>Secondary:</strong>
+                <a href="tel:+916363235357" className="hover:text-amber-400 font-semibold transition-colors">
+                  +91 6363 235 357
+                </a>
+              </p>
+              <p className="flex items-center gap-2">
+                <span>🟠</span>
+                <strong>Staff:</strong>
+                <a href="tel:+918431891360" className="hover:text-amber-400 font-semibold transition-colors">
+                  +91 84318 91360
+                </a>
+              </p>
+              <p className="flex items-center gap-2 border-t border-white/10 pt-2 mt-2">
+                <span>💬</span>
+                <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="hover:text-green-400 font-semibold transition-colors flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Chat on WhatsApp (Primary)
+                </a>
+              </p>
+              <p className="text-xs text-white/50 mt-3">
+                ⏰ Available: 9 AM - 6 PM IST (Mon-Sat)
+              </p>
+            </div>
           </div>
         </div>
       </div>

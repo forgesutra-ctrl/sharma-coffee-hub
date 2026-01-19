@@ -4,7 +4,7 @@ import Layout from "@/components/coffee/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Package, MapPin, CreditCard, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle, Package, MapPin, CreditCard, Loader2, ArrowRight, Truck, ExternalLink, HelpCircle, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderItem {
@@ -36,6 +36,8 @@ interface Order {
   payment_type: string;
   created_at: string;
   order_items: OrderItem[];
+  dtdc_awb_number?: string | null;
+  shipment_created_at?: string | null;
 }
 
 const OrderConfirmation = () => {
@@ -103,7 +105,9 @@ const OrderConfirmation = () => {
           .from("orders")
           .select(`
             *,
-            order_items (*)
+            order_items (*),
+            dtdc_awb_number,
+            shipment_created_at
           `)
           .eq("id", orderId)
           .maybeSingle();
@@ -388,6 +392,56 @@ const OrderConfirmation = () => {
           </CardContent>
         </Card>
 
+        {/* Tracking Information */}
+        {order.dtdc_awb_number ? (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-primary" />
+                Track Your Order
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Tracking Number (AWB)</p>
+                  <p className="text-lg font-mono font-semibold text-primary">
+                    {order.dtdc_awb_number}
+                  </p>
+                </div>
+                <Button asChild className="w-full sm:w-auto">
+                  <a
+                    href={`https://www.dtdc.in/tracking/tracking_results.asp?strCnno=${order.dtdc_awb_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    Track Shipment
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </Button>
+                {order.shipment_created_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Shipment created on {format(new Date(order.shipment_created_at), "MMM dd, yyyy 'at' h:mm a")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="mb-6 border-muted">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Truck className="w-5 h-5" />
+                <div>
+                  <p className="text-sm font-medium">Shipment being prepared</p>
+                  <p className="text-xs">Your tracking number will be available shortly. We'll notify you once it's ready.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button asChild variant="outline" size="lg">
@@ -403,6 +457,60 @@ const OrderConfirmation = () => {
             </Link>
           </Button>
         </div>
+
+        {/* Need Help Card */}
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-300 border-2 shadow-lg mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-green-900">
+              <HelpCircle className="w-6 h-6" />
+              Questions? We're Here to Help!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700">We're available anytime to assist you</p>
+            
+            <div className="space-y-2 bg-white p-4 rounded-lg border border-green-200">
+              <p className="font-bold text-gray-800 mb-3">📞 CALL US:</p>
+              
+              <p className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-green-600">🔴</span>
+                <a href="tel:+918762988145" className="text-lg font-bold text-green-700 hover:text-green-900 underline">
+                  +91 8762 988 145
+                </a>
+                <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded font-semibold">PRIMARY</span>
+              </p>
+              
+              <p className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-amber-500">🟡</span>
+                <a href="tel:+916363235357" className="text-lg font-bold text-blue-600 hover:text-blue-900 underline">
+                  +91 6363 235 357
+                </a>
+              </p>
+              
+              <p className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-orange-500">🟠</span>
+                <a href="tel:+918431891360" className="text-lg font-bold text-blue-600 hover:text-blue-900 underline">
+                  +91 84318 91360
+                </a>
+                <span className="text-xs text-gray-500">(Staff)</span>
+              </p>
+              
+              <p className="border-t border-green-200 pt-3 mt-3">
+                <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" 
+                   className="text-lg font-bold text-green-600 hover:text-green-800 underline flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5" />
+                  💬 Chat on WhatsApp (Best Option)
+                </a>
+              </p>
+            </div>
+            
+            <p className="text-sm text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+              ⏰ Available: 9 AM - 6 PM IST (Monday - Saturday)
+              <br/>
+              ⚡ Average Response Time: 5 minutes
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Support Message */}
         <div className="mt-8 text-center text-sm text-muted-foreground">

@@ -135,39 +135,49 @@ export function ManageSubscription() {
 
   const handlePauseResume = async (subscription: UserSubscription) => {
     try {
-      const newStatus = subscription.status === 'active' ? 'paused' : 'active';
+      const action = subscription.status === 'active' ? 'pause' : 'resume';
 
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', subscription.id);
+      const { data, error } = await supabase.functions.invoke('manage-subscription', {
+        body: {
+          subscriptionId: subscription.id,
+          action,
+        },
+      });
 
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to update subscription');
+      }
 
-      toast.success(`Subscription ${newStatus}`);
+      toast.success(`Subscription ${action}d successfully`);
       fetchSubscriptions();
     } catch (err) {
       console.error('Failed to update subscription:', err);
-      toast.error('Failed to update subscription');
+      toast.error(err instanceof Error ? err.message : 'Failed to update subscription');
     }
   };
 
   const handleCancel = async (subscription: UserSubscription) => {
-    if (!confirm('Are you sure you want to cancel this subscription?')) return;
+    if (!confirm('Are you sure you want to cancel this subscription? This action cannot be undone.')) return;
 
     try {
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-        .eq('id', subscription.id);
+      const { data, error } = await supabase.functions.invoke('manage-subscription', {
+        body: {
+          subscriptionId: subscription.id,
+          action: 'cancel',
+        },
+      });
 
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to cancel subscription');
+      }
 
-      toast.success('Subscription cancelled');
+      toast.success('Subscription cancelled successfully');
       fetchSubscriptions();
     } catch (err) {
       console.error('Failed to cancel subscription:', err);
-      toast.error('Failed to cancel subscription');
+      toast.error(err instanceof Error ? err.message : 'Failed to cancel subscription');
     }
   };
 

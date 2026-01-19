@@ -230,6 +230,138 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Fetch order items for notifications and shipment
+    const { data: orderItemsData } = await supabase
+      .from("order_items")
+      .select("*")
+      .eq("order_id", order.id);
+
+    // Calculate total weight for shipment (250g per item, minimum 0.5kg)
+    const calculateTotalWeight = () => {
+      if (!orderItemsData || orderItemsData.length === 0) return 0.5;
+      const totalItems = orderItemsData.reduce((sum, item) => sum + (item.quantity || 1), 0);
+      const weightKg = Math.max(0.5, (totalItems * 0.25)); // 250g per item, min 0.5kg
+      return Math.min(weightKg, 50); // Max 50kg
+    };
+
+    // Create DTDC shipment (fire and forget - don't block response)
+    const createShipment = async () => {
+      try {
+        console.log(`[Payment] Creating DTDC shipment for order: ${order.id}`);
+        
+        const shipmentPayload = {
+          orderId: order.id,
+          customerName: checkout.shipping_address.fullName || "Customer",
+          customerPhone: checkout.shipping_address.phone || "",
+          customerEmail: checkout.shipping_address.email || "",
+          shippingAddress: checkout.shipping_address,
+          orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+            product_name: item.product_name || "",
+            quantity: item.quantity || 0,
+            unit_price: item.unit_price || 0,
+            total_price: item.total_price || 0,
+            weight: item.weight || null,
+          })),
+          totalWeight: calculateTotalWeight(),
+          orderAmount: checkout.total_amount,
+          paymentType: checkout.payment_type,
+          codAmount: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
+        };
+
+        // Call shipment creation function via HTTP
+        const functionUrl = `${supabaseUrl}/functions/v1/create-dtdc-shipment`;
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(shipmentPayload),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[Payment] Failed to create shipment:", errorText);
+          return null;
+        }
+
+        const shipmentResult = await response.json();
+        if (shipmentResult.success && shipmentResult.awbNumber) {
+          console.log(`[Payment] Shipment created successfully. AWB: ${shipmentResult.awbNumber}`);
+          return shipmentResult.awbNumber;
+        } else {
+          console.warn("[Payment] Shipment creation returned no AWB:", shipmentResult);
+          return null;
+        }
+      } catch (error) {
+        console.error("[Payment] Error creating shipment:", error);
+        // Don't throw - shipment creation is non-critical for order completion
+        return null;
+      }
+    };
+
+    // Send email and WhatsApp notifications (fire and forget - don't block response)
+    const sendNotifications = async (awbNumber: string | null) => {
+      try {
+        const notificationPayload = {
+          orderId: order.id,
+          customerEmail: checkout.shipping_address.email || "",
+          customerPhone: checkout.shipping_address.phone || "",
+          customerName: checkout.shipping_address.fullName || "Customer",
+          orderNumber: order.order_number || order.id.substring(0, 8).toUpperCase(),
+          orderTotal: checkout.total_amount,
+          orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+            product_name: item.product_name || "",
+            quantity: item.quantity || 0,
+            unit_price: item.unit_price || 0,
+            total_price: item.total_price || 0,
+            weight: item.weight || null,
+            grind_type: item.grind_type || null,
+          })),
+          shippingAddress: checkout.shipping_address,
+          paymentType: checkout.payment_type,
+          trackingNumber: awbNumber, // Include AWB if available
+        };
+
+        // Call notification function via HTTP
+        const functionUrl = `${supabaseUrl}/functions/v1/send-order-notification`;
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(notificationPayload),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to send notifications:", errorText);
+        } else {
+          console.log("Order notifications sent successfully");
+        }
+      } catch (error) {
+        console.error("Error sending notifications:", error);
+        // Don't throw - notifications are non-critical
+      }
+    };
+
+    // Create shipment first, then send notifications with AWB
+    createShipment()
+      .then((awbNumber) => {
+        // Send notifications with AWB number
+        sendNotifications(awbNumber).catch((err) => {
+          console.error("Notification error:", err);
+        });
+      })
+      .catch((err) => {
+        console.error("Shipment creation error:", err);
+        // Still send notifications without AWB
+        sendNotifications(null).catch((notifyErr) => {
+          console.error("Notification error:", notifyErr);
+        });
+      });
+
     return new Response(
       JSON.stringify({
         verified: true,
