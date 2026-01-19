@@ -72,6 +72,7 @@ const processStages = [
 
 export default function Processing() {
   return (
+    <>
       {/* Hero Section */}
       <section className="relative py-24 md:py-32 bg-gradient-to-b from-muted/50 to-background overflow-hidden">
         <div 
@@ -264,6 +265,6 @@ export default function Processing() {
           </div>
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

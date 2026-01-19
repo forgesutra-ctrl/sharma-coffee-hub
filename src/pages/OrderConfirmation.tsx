@@ -225,6 +225,7 @@ const OrderConfirmation = () => {
   const hasSubscriptionItems = order.order_items.some(item => item.is_subscription);
 
   return (
+    <>
       {/* Temporary test button to verify interactivity */}
       <button
         onClick={() => {
@@ -516,6 +517,7 @@ const OrderConfirmation = () => {
           </p>
         </div>
       </div>
+    </>
   );
 };
 

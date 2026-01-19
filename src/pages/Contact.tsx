@@ -72,6 +72,7 @@ export default function Contact() {
   };
 
   return (
+    <>
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-b from-muted/50 to-background">
         <div className="container mx-auto px-4">
@@ -315,6 +316,6 @@ export default function Contact() {
           </div>
         </div>
       </section>
-    </Layout>
+    </>
   );
 }
