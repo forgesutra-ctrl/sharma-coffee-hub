@@ -588,9 +588,10 @@ html, body {
 }
 
 /* ===== REMOVE ANY EXTERNAL BADGES ===== */
-body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]),
+/* Be careful NOT to hide Razorpay containers (match both class and id). */
+body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]):not([id*="razorpay"]),
 body > a[style*="position: fixed"],
-body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]),
+body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]):not([id*="razorpay"]),
 body > iframe:not([src*="razorpay"]):not([class*="razorpay"]) {
   display: none !important;
   visibility: hidden !important;

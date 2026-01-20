@@ -25,6 +25,7 @@ const Shop = () => {
 
   const [sortBy, setSortBy] = useState<string>('featured');
   const [priceRange, setPriceRange] = useState<string>('all');
+  const [inStockOnly, setInStockOnly] = useState<boolean>(true);
 
   const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
   const { data: currentCategory } = useCategoryBySlug(categorySlug);
@@ -53,16 +54,22 @@ const Shop = () => {
     ];
   }, [dbCategories, rawProducts]);
 
+  // Filter by stock availability
+  const stockFilteredProducts = useMemo(() => {
+    if (!inStockOnly) return allProducts;
+    return allProducts.filter(p => p.inStock);
+  }, [allProducts, inStockOnly]);
+
   // Filter by price range
   const priceFilteredProducts = useMemo(() => {
-    if (priceRange === 'all') return allProducts;
+    if (priceRange === 'all') return stockFilteredProducts;
 
     const [min, max] = priceRange.split('-').map(Number);
-    return allProducts.filter(p => {
+    return stockFilteredProducts.filter(p => {
       if (max) return p.price >= min && p.price <= max;
       return p.price >= min;
     });
-  }, [allProducts, priceRange]);
+  }, [stockFilteredProducts, priceRange]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -177,9 +184,14 @@ const Shop = () => {
                       <AccordionContent className="pb-4">
                         <div className="space-y-2">
                           <label className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
-                            <input type="checkbox" className="w-4 h-4 rounded border-border" defaultChecked />
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 rounded border-border" 
+                              checked={inStockOnly}
+                              onChange={(e) => setInStockOnly(e.target.checked)}
+                            />
                             <span>In Stock</span>
-                            <span className="ml-auto text-xs">({sortedProducts.filter(p => p.inStock).length})</span>
+                            <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
                           </label>
                         </div>
                       </AccordionContent>

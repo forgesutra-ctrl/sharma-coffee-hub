@@ -110,18 +110,172 @@ Deno.serve(async (req: Request) => {
     }
 
     const razorpaySubscriptionId = subscriptionEntity.id;
+    const notes = subscriptionEntity.notes || {};
 
     switch (event) {
-      case "subscription.activated": {
-        await supabaseAdmin
-          .from("user_subscriptions")
-          .update({
-            status: "active",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("razorpay_subscription_id", razorpaySubscriptionId);
+      case "subscription.authenticated": {
+        // ✅ Payment authenticated - move from pending_subscriptions to user_subscriptions
+        console.log("🔔 Subscription authenticated (payment confirmed):", razorpaySubscriptionId);
+        
+        // Find pending subscription
+        const { data: pendingSub, error: pendingError } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .select("*")
+          .eq("razorpay_subscription_id", razorpaySubscriptionId)
+          .maybeSingle();
 
-        console.log("Subscription activated:", razorpaySubscriptionId);
+        if (pendingError) {
+          console.error("❌ Error fetching pending subscription:", pendingError);
+          break;
+        }
+
+        if (!pendingSub) {
+          console.warn("⚠️ No pending subscription found for:", razorpaySubscriptionId);
+          console.warn("   Subscription may have already been processed or expired");
+          break;
+        }
+
+        // Calculate delivery dates
+        const calculateNextDeliveryDate = (dayOfMonth: number): string => {
+          const now = new Date();
+          const currentDay = now.getDate();
+          let deliveryDate: Date;
+
+          if (dayOfMonth > currentDay) {
+            deliveryDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+          } else {
+            deliveryDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+          }
+
+          return deliveryDate.toISOString().split("T")[0];
+        };
+
+        // Create subscription in user_subscriptions
+        const subscriptionData = {
+          user_id: pendingSub.user_id,
+          plan_id: pendingSub.plan_id,
+          razorpay_subscription_id: razorpaySubscriptionId,
+          product_id: pendingSub.product_id,
+          variant_id: pendingSub.variant_id,
+          variant_amount: pendingSub.variant_amount,
+          quantity: pendingSub.quantity,
+          status: "active" as const,
+          preferred_delivery_date: pendingSub.preferred_delivery_date,
+          next_delivery_date: calculateNextDeliveryDate(pendingSub.preferred_delivery_date),
+          next_billing_date: calculateNextDeliveryDate(pendingSub.preferred_delivery_date),
+          total_deliveries: pendingSub.total_deliveries,
+          completed_deliveries: 0,
+          shipping_address: pendingSub.shipping_address,
+        };
+
+        const { data: newSubscription, error: createError } = await supabaseAdmin
+          .from("user_subscriptions")
+          .insert(subscriptionData)
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("❌ Failed to create subscription in user_subscriptions:", createError);
+          break;
+        }
+
+        // Delete from pending_subscriptions
+        const { error: deleteError } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .delete()
+          .eq("id", pendingSub.id);
+
+        if (deleteError) {
+          console.error("⚠️ Failed to delete pending subscription:", deleteError);
+        } else {
+          console.log("✅ Deleted pending subscription:", pendingSub.id);
+        }
+
+        console.log("✅ Subscription created in database after payment confirmation:");
+        console.log("   Subscription ID:", newSubscription.id);
+        console.log("   Razorpay Subscription ID:", razorpaySubscriptionId);
+        console.log("   User ID:", newSubscription.user_id);
+        console.log("   Status: active");
+        break;
+      }
+
+      case "subscription.activated": {
+        // Update existing subscription status (if it already exists)
+        const { data: existingSub } = await supabaseAdmin
+          .from("user_subscriptions")
+          .select("id")
+          .eq("razorpay_subscription_id", razorpaySubscriptionId)
+          .maybeSingle();
+
+        if (existingSub) {
+          await supabaseAdmin
+            .from("user_subscriptions")
+            .update({
+              status: "active",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("razorpay_subscription_id", razorpaySubscriptionId);
+
+          console.log("✅ Subscription activated:", razorpaySubscriptionId);
+        } else {
+          // If subscription doesn't exist, try to create from pending
+          console.log("⚠️ Subscription not found, checking pending_subscriptions...");
+          
+          const { data: pendingSub } = await supabaseAdmin
+            .from("pending_subscriptions")
+            .select("*")
+            .eq("razorpay_subscription_id", razorpaySubscriptionId)
+            .maybeSingle();
+
+          if (pendingSub) {
+            // Same logic as subscription.authenticated
+            const calculateNextDeliveryDate = (dayOfMonth: number): string => {
+              const now = new Date();
+              const currentDay = now.getDate();
+              let deliveryDate: Date;
+
+              if (dayOfMonth > currentDay) {
+                deliveryDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+              } else {
+                deliveryDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+              }
+
+              return deliveryDate.toISOString().split("T")[0];
+            };
+
+            const subscriptionData = {
+              user_id: pendingSub.user_id,
+              plan_id: pendingSub.plan_id,
+              razorpay_subscription_id: razorpaySubscriptionId,
+              product_id: pendingSub.product_id,
+              variant_id: pendingSub.variant_id,
+              variant_amount: pendingSub.variant_amount,
+              quantity: pendingSub.quantity,
+              status: "active" as const,
+              preferred_delivery_date: pendingSub.preferred_delivery_date,
+              next_delivery_date: calculateNextDeliveryDate(pendingSub.preferred_delivery_date),
+              next_billing_date: calculateNextDeliveryDate(pendingSub.preferred_delivery_date),
+              total_deliveries: pendingSub.total_deliveries,
+              completed_deliveries: 0,
+              shipping_address: pendingSub.shipping_address,
+            };
+
+            const { data: newSubscription, error: createError } = await supabaseAdmin
+              .from("user_subscriptions")
+              .insert(subscriptionData)
+              .select()
+              .single();
+
+            if (!createError && newSubscription) {
+              await supabaseAdmin
+                .from("pending_subscriptions")
+                .delete()
+                .eq("id", pendingSub.id);
+
+              console.log("✅ Subscription created from pending on activation:", razorpaySubscriptionId);
+            }
+          }
+        }
         break;
       }
 
@@ -328,7 +482,7 @@ Deno.serve(async (req: Request) => {
         await supabaseAdmin
           .from("user_subscriptions")
           .update({
-            status: "completed",
+            status: "cancelled",
             updated_at: new Date().toISOString(),
           })
           .eq("razorpay_subscription_id", razorpaySubscriptionId);

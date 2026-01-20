@@ -1,0 +1,562 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Razorpay-Signature",
+};
+
+interface WebhookPayload {
+  event: string;
+  payload: {
+    order?: {
+      entity: {
+        id: string;
+        amount: number;
+        status: string;
+        receipt: string;
+        notes?: Record<string, any>;
+      };
+    };
+    payment?: {
+      entity: {
+        id: string;
+        amount: number;
+        status: string;
+        order_id: string;
+        method: string;
+      };
+    };
+    invoice?: {
+      entity: {
+        id: string;
+        status: string;
+        subscription_id: string | null;
+        amount_paid: number;
+        period_start: number;
+        period_end: number;
+        billing_cycle: number | null;
+        notes?: Record<string, any>;
+      };
+    };
+    subscription?: {
+      entity: {
+        id: string;
+        status: string;
+        plan_id: string;
+        created_at: number;
+        charge_at: number;
+        paid_count: number;
+        total_count: number;
+        notes?: Record<string, any>;
+      };
+    };
+  };
+}
+
+// Verify webhook signature
+async function verifyWebhookSignature(
+  rawBody: string,
+  signature: string | null,
+  secret: string
+): Promise<boolean> {
+  if (!signature || !secret) {
+    return false;
+  }
+
+  // Razorpay uses HMAC SHA256
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(rawBody);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+  const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return signature === expectedSignature;
+}
+
+// Calculate next retry time with exponential backoff
+function calculateNextRetry(retryCount: number): Date {
+  const baseDelay = 60; // 1 minute
+  const delaySeconds = baseDelay * Math.pow(2, retryCount);
+  return new Date(Date.now() + delaySeconds * 1000);
+}
+
+// Process webhook event
+async function processWebhookEvent(
+  event: string,
+  payload: WebhookPayload["payload"],
+  supabaseAdmin: ReturnType<typeof createClient>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    switch (event) {
+      case "payment.captured": {
+        // One-time order payment confirmed
+        const paymentEntity = payload.payment?.entity;
+        const orderEntity = payload.order?.entity;
+
+        if (!paymentEntity || !orderEntity) {
+          return { success: false, error: "Missing payment or order entity" };
+        }
+
+        console.log("💰 Processing payment.captured:", {
+          payment_id: paymentEntity.id,
+          order_id: orderEntity.id,
+          amount: paymentEntity.amount / 100,
+        });
+
+        // Find pending order
+        const { data: pendingOrder, error: pendingError } = await supabaseAdmin
+          .from("pending_orders")
+          .select("*")
+          .eq("razorpay_order_id", orderEntity.id)
+          .maybeSingle();
+
+        if (pendingError) {
+          console.error("❌ Error fetching pending order:", pendingError);
+          return { success: false, error: pendingError.message };
+        }
+
+        if (!pendingOrder) {
+          console.warn("⚠️ Pending order not found, may have already been processed");
+          return { success: true }; // Idempotent - already processed
+        }
+
+        // Create order in orders table
+        const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const orderData = {
+          user_id: pendingOrder.user_id,
+          order_number: orderNumber,
+          status: "confirmed",
+          total_amount: pendingOrder.total_amount,
+          subtotal: pendingOrder.total_amount - pendingOrder.shipping_charge,
+          shipping_address: pendingOrder.shipping_address,
+          payment_method: "razorpay",
+          payment_status: "paid",
+          payment_type: pendingOrder.payment_type,
+          razorpay_order_id: orderEntity.id,
+          razorpay_payment_id: paymentEntity.id,
+        };
+
+        const { data: order, error: orderError } = await supabaseAdmin
+          .from("orders")
+          .insert(orderData)
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error("❌ Failed to create order:", orderError);
+          return { success: false, error: orderError.message };
+        }
+
+        // Create order items from cart_data
+        const cartItems = pendingOrder.cart_data as Array<{
+          product_id: string;
+          variant_id: string;
+          quantity: number;
+          price: number;
+        }>;
+
+        for (const item of cartItems) {
+          // Get product and variant details
+          const { data: product } = await supabaseAdmin
+            .from("products")
+            .select("name")
+            .eq("id", item.product_id)
+            .single();
+
+          const { data: variant } = await supabaseAdmin
+            .from("product_variants")
+            .select("weight, price")
+            .eq("id", item.variant_id)
+            .single();
+
+          if (product) {
+            await supabaseAdmin.from("order_items").insert({
+              order_id: order.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              product_name: product.name,
+              weight: variant?.weight || 0,
+              quantity: item.quantity,
+              unit_price: item.price,
+              total_price: item.price * item.quantity,
+              is_subscription: false,
+            });
+          }
+        }
+
+        // Delete pending order
+        await supabaseAdmin.from("pending_orders").delete().eq("id", pendingOrder.id);
+
+        console.log("✅ Order created successfully:", order.id);
+        return { success: true };
+      }
+
+      case "subscription.authenticated":
+      case "subscription.activated": {
+        // Subscription is now active on Razorpay.
+        // Billing is handled by Razorpay; we simply mark our pending
+        // subscription as active and keep delivery scheduling decoupled.
+        const subscriptionEntity = payload.subscription?.entity;
+
+        if (!subscriptionEntity) {
+          return { success: false, error: "Missing subscription entity" };
+        }
+
+        console.log("🔔 Processing subscription.authenticated/activated:", {
+          subscription_id: subscriptionEntity.id,
+          status: subscriptionEntity.status,
+        });
+
+        const { data: pendingSub, error: pendingError } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .select("id, status")
+          .eq("razorpay_subscription_id", subscriptionEntity.id)
+          .maybeSingle();
+
+        if (pendingError) {
+          console.error("❌ Error fetching pending subscription:", pendingError);
+          return { success: false, error: pendingError.message };
+        }
+
+        if (!pendingSub) {
+          console.warn("⚠️ Pending subscription not found for activation, treating as idempotent");
+          return { success: true };
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .update({
+            status: "active",
+            razorpay_subscription_id: subscriptionEntity.id,
+          })
+          .eq("id", pendingSub.id);
+
+        if (updateError) {
+          console.error("❌ Failed to mark pending subscription active:", updateError);
+          return { success: false, error: updateError.message };
+        }
+
+        console.log("✅ Pending subscription marked active:", pendingSub.id);
+        return { success: true };
+      }
+
+      case "subscription.charged": {
+        // Legacy event for recurring charges. In the new architecture we
+        // rely on invoice.paid to drive delivery scheduling, so we simply
+        // log this event and return success.
+        console.log("ℹ️ Received subscription.charged (handled via invoice.paid in new flow)");
+        return { success: true };
+      }
+
+      case "invoice.paid": {
+        // A billing cycle has been successfully paid.
+        // Billing is handled by Razorpay; we create or ensure a delivery
+        // record exists for this cycle in subscription_deliveries.
+        const invoiceEntity = payload.invoice?.entity;
+
+        if (!invoiceEntity || !invoiceEntity.subscription_id) {
+          return { success: false, error: "Missing invoice or subscription_id" };
+        }
+
+        console.log("📄 Processing invoice.paid:", {
+          invoice_id: invoiceEntity.id,
+          subscription_id: invoiceEntity.subscription_id,
+          amount_paid: invoiceEntity.amount_paid / 100,
+          billing_cycle: invoiceEntity.billing_cycle,
+        });
+
+        // Find our internal subscription (pending_subscriptions is our source of truth)
+        const { data: pendingSub, error: pendingError } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .select("id")
+          .eq("razorpay_subscription_id", invoiceEntity.subscription_id)
+          .maybeSingle();
+
+        if (pendingError) {
+          console.error("❌ Error fetching pending subscription for invoice.paid:", pendingError);
+          return { success: false, error: pendingError.message };
+        }
+
+        if (!pendingSub) {
+          console.warn("⚠️ No pending subscription found for invoice.paid, treating as idempotent");
+          return { success: true };
+        }
+
+        // Determine cycle number:
+        // Prefer billing_cycle from invoice if present, otherwise
+        // use count(subscription_deliveries) + 1 to stay consistent.
+        let cycleNumber = invoiceEntity.billing_cycle ?? null;
+
+        if (!cycleNumber) {
+          const { data: existingDeliveries, error: deliveriesError } = await supabaseAdmin
+            .from("subscription_deliveries")
+            .select("id", { count: "exact", head: true })
+            .eq("subscription_id", pendingSub.id);
+
+          if (deliveriesError) {
+            console.error("❌ Error counting deliveries for invoice.paid:", deliveriesError);
+            return { success: false, error: deliveriesError.message };
+          }
+
+          // existingDeliveries?.length is not available with head:true; use count
+          const count = (existingDeliveries as any)?.length ?? 0;
+          cycleNumber = (count || 0) + 1;
+        }
+
+        // Ensure we don't create duplicate delivery for the same cycle
+        const { data: existingDelivery, error: existingDeliveryError } = await supabaseAdmin
+          .from("subscription_deliveries")
+          .select("id")
+          .eq("subscription_id", pendingSub.id)
+          .eq("cycle_number", cycleNumber)
+          .maybeSingle();
+
+        if (existingDeliveryError) {
+          console.error("❌ Error checking existing delivery for invoice.paid:", existingDeliveryError);
+          return { success: false, error: existingDeliveryError.message };
+        }
+
+        if (existingDelivery) {
+          console.log("ℹ️ Delivery already exists for this cycle; skipping creation", {
+            subscription_id: pendingSub.id,
+            cycle_number: cycleNumber,
+          });
+          return { success: true };
+        }
+
+        const defaultDeliveryDate = new Date();
+        defaultDeliveryDate.setDate(defaultDeliveryDate.getDate() + 1); // today + 1
+
+        const deliveryPayload = {
+          subscription_id: pendingSub.id,
+          cycle_number: cycleNumber,
+          delivery_date: defaultDeliveryDate.toISOString().slice(0, 10),
+          status: "scheduled",
+        };
+
+        const { error: insertError } = await supabaseAdmin
+          .from("subscription_deliveries")
+          .insert(deliveryPayload);
+
+        if (insertError) {
+          console.error("❌ Failed to create delivery for invoice.paid:", insertError);
+          return { success: false, error: insertError.message };
+        }
+
+        console.log("✅ Delivery scheduled for paid invoice:", {
+          subscription_id: pendingSub.id,
+          cycle_number: cycleNumber,
+          delivery_date: deliveryPayload.delivery_date,
+        });
+
+        return { success: true };
+      }
+
+      case "subscription.cancelled":
+      case "subscription.paused":
+      case "subscription.completed": {
+        const subscriptionEntity = payload.subscription?.entity;
+        if (!subscriptionEntity) {
+          return { success: false, error: "Missing subscription entity" };
+        }
+
+        const statusMap: Record<string, "cancelled" | "paused"> = {
+          "subscription.cancelled": "cancelled",
+          "subscription.paused": "paused",
+          "subscription.completed": "cancelled", // treat completed as cancelled for deliveries
+        };
+
+        const newStatus = statusMap[event] || "cancelled";
+
+        console.log(`🔔 Processing ${event} for subscription:`, subscriptionEntity.id);
+
+        // Update our internal subscription status in pending_subscriptions
+        const { data: pendingSub } = await supabaseAdmin
+          .from("pending_subscriptions")
+          .select("id")
+          .eq("razorpay_subscription_id", subscriptionEntity.id)
+          .maybeSingle();
+
+        if (pendingSub) {
+          await supabaseAdmin
+            .from("pending_subscriptions")
+            .update({ status: newStatus })
+            .eq("id", pendingSub.id);
+
+          // For cancelled/completed, cancel all future scheduled deliveries
+          if (newStatus === "cancelled") {
+            const todayIso = new Date().toISOString().slice(0, 10);
+            await supabaseAdmin
+              .from("subscription_deliveries")
+              .update({ status: "skipped" })
+              .eq("subscription_id", pendingSub.id)
+              .eq("status", "scheduled")
+              .gt("delivery_date", todayIso);
+          }
+        } else {
+          console.warn("⚠️ No internal subscription found for cancellation/pausing");
+        }
+
+        console.log(`✅ Internal subscription marked ${newStatus}:`, subscriptionEntity.id);
+        return { success: true };
+      }
+
+      case "invoice.failed": {
+        const invoiceEntity = payload.invoice?.entity;
+        console.log("⚠️ invoice.failed received:", {
+          invoice_id: invoiceEntity?.id,
+          subscription_id: invoiceEntity?.subscription_id,
+          status: invoiceEntity?.status,
+        });
+        // We intentionally do not create or alter deliveries on failed invoices.
+        return { success: true };
+      }
+
+      case "payment.failed": {
+        // Delete pending order/subscription on payment failure
+        const paymentEntity = payload.payment?.entity;
+        if (!paymentEntity) {
+          return { success: false, error: "Missing payment entity" };
+        }
+
+        // Try to find pending order
+        const { data: pendingOrder } = await supabaseAdmin
+          .from("pending_orders")
+          .select("id")
+          .eq("razorpay_order_id", paymentEntity.order_id)
+          .maybeSingle();
+
+        if (pendingOrder) {
+          await supabaseAdmin.from("pending_orders").delete().eq("id", pendingOrder.id);
+          console.log("✅ Deleted pending order after payment failure");
+        }
+
+        return { success: true };
+      }
+
+      default:
+        console.log("⚠️ Unhandled event:", event);
+        return { success: true }; // Don't fail on unknown events
+    }
+  } catch (error) {
+    console.error("❌ Error processing webhook event:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  try {
+    // Get webhook secret
+    const webhookSecret = Deno.env.get("RAZORPAY_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("❌ Webhook secret not configured");
+      return new Response(
+        JSON.stringify({ error: "Webhook not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get signature
+    const signature = req.headers.get("X-Razorpay-Signature");
+    const rawBody = await req.text();
+
+    // Verify signature
+    const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
+    if (!isValid) {
+      console.error("❌ Invalid webhook signature");
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse webhook data
+    const webhookData: WebhookPayload = JSON.parse(rawBody);
+    const { event, payload } = webhookData;
+
+    console.log("📥 Webhook received:", event);
+
+    // Log webhook event
+    await supabaseAdmin.from("webhook_logs").insert({
+      event_type: event,
+      razorpay_event_id: payload.subscription?.entity?.id || payload.order?.entity?.id || null,
+      payload: webhookData,
+      processed: false,
+    });
+
+    // Process webhook event
+    const result = await processWebhookEvent(event, payload, supabaseAdmin);
+
+    if (result.success) {
+      // Mark as processed
+      await supabaseAdmin
+        .from("webhook_logs")
+        .update({ processed: true })
+        .eq("event_type", event)
+        .eq("razorpay_event_id", payload.subscription?.entity?.id || payload.order?.entity?.id || null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      console.log("✅ Webhook processed successfully");
+      return new Response(
+        JSON.stringify({ received: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      // Queue for retry
+      console.error("❌ Webhook processing failed, queuing for retry:", result.error);
+
+      await supabaseAdmin.from("webhook_queue").insert({
+        event_type: event,
+        payload: webhookData,
+        retry_count: 0,
+        max_retries: 5,
+        next_retry_at: calculateNextRetry(0).toISOString(),
+        last_error: result.error,
+      });
+
+      // Return 500 so Razorpay retries
+      return new Response(
+        JSON.stringify({ error: "Processing failed, queued for retry" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  } catch (error) {
+    console.error("❌ Error in razorpay-webhook:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+});

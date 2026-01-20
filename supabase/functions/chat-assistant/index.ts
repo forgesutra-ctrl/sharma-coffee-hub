@@ -58,10 +58,18 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: products } = await supabase
+      .supabase
       .from("products")
-      .select("name, description, base_price")
-      .eq("status", "active")
-      .limit(20);
+      .select(`
+        id,
+        name,
+        price,
+        image,
+        description,
+        subscription_eligible,
+        razorpay_plan_id
+      `);
+    
 
     const productInfo = products
       ? products.map((p) => `${p.name} - ₹${p.base_price} - ${p.description || 'Premium coffee blend'}`).join("\n")

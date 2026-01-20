@@ -8,119 +8,127 @@ const corsHeaders = {
 };
 
 interface CreateSubscriptionRequest {
-  razorpay_plan_id: string; // Razorpay plan ID from products.razorpay_plan_id
-  productId: string;
-  variantId?: string;
+  user_id: string;
+  access_token: string;
+  product_id: string;
+  variant_id: string; // REQUIRED - determines which plan to use
   quantity: number;
-  preferredDeliveryDate: number;
-  totalDeliveries: number;
-  shippingAddress: Record<string, string>;
-  amount: number;
+  preferred_delivery_date: number; // 1-28
+  total_deliveries: number;
+  shipping_address: Record<string, any>;
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    // Get Authorization header (Bearer token from supabase.functions.invoke())
-    const authHeader = req.headers.get("Authorization");
-    const apikey = req.headers.get("apikey") || req.headers.get("x-api-key");
-    
-    console.log("Auth check:", {
-      hasAuthHeader: !!authHeader,
-      hasApikey: !!apikey,
-      authHeaderPrefix: authHeader?.substring(0, 20) || "none",
-    });
+    const requestData: CreateSubscriptionRequest = await req.json();
 
-    if (!authHeader) {
-      console.error("Missing Authorization header");
+    // Validate required fields
+    const {
+      user_id,
+      access_token,
+      product_id,
+      variant_id,
+      quantity,
+      preferred_delivery_date,
+      total_deliveries,
+      shipping_address,
+    } = requestData;
+
+    if (!user_id || !access_token || !product_id || !variant_id || !quantity || !preferred_delivery_date || !shipping_address) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header. Please log in and try again." }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create Supabase client with auth header
+    // Validate delivery date
+    if (preferred_delivery_date < 1 || preferred_delivery_date > 28) {
+      return new Response(
+        JSON.stringify({ error: "Delivery date must be between 1 and 28" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify user authentication
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
-        global: {
-          headers: { Authorization: authHeader },
-        },
+        global: { headers: { Authorization: `Bearer ${access_token}` } },
       }
     );
 
-    // Verify user from token
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-    if (userError) {
-      console.error("User verification error:", userError);
+    if (authError || !user || user.id !== user_id) {
+      console.error("Authentication failed:", authError);
       return new Response(
-        JSON.stringify({ error: `Authentication failed: ${userError.message}` }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!user) {
-      console.error("No user found in token");
+    console.log("✅ User authenticated:", user.id);
+
+    // Get Supabase admin client
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // ✅ CRITICAL: Fetch variant to get razorpay_plan_id
+    const { data: variant, error: variantError } = await supabaseAdmin
+      .from("product_variants")
+      .select("id, price, razorpay_plan_id")
+      .eq("id", variant_id)
+      .single();
+
+    if (variantError || !variant) {
+      console.error("❌ Variant not found:", variant_id);
       return new Response(
-        JSON.stringify({ error: "Unauthorized. Please log in and try again." }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Product variant not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("User authenticated:", user.id);
-
-    const requestData: CreateSubscriptionRequest = await req.json();
-    const {
-      razorpay_plan_id,
-      productId,
-      variantId,
-      quantity,
-      preferredDeliveryDate,
-      totalDeliveries,
-      shippingAddress,
-      amount,
-    } = requestData;
-
-    if (!razorpay_plan_id || !productId || !quantity || !preferredDeliveryDate || !shippingAddress || !amount) {
+    // ✅ CRITICAL: Check if variant has razorpay_plan_id
+    if (!variant.razorpay_plan_id) {
+      console.error("❌ Variant missing razorpay_plan_id:", variant_id);
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({
+          error: "Subscription unavailable",
+          details: "This product is currently unavailable for subscription. Please try one-time purchase instead.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (preferredDeliveryDate < 1 || preferredDeliveryDate > 28) {
+    console.log("✅ Variant found:", {
+      variant_id: variant.id,
+      price: variant.price,
+      plan_id: variant.razorpay_plan_id,
+    });
+
+    // Verify product exists
+    const { data: product, error: productError } = await supabaseAdmin
+      .from("products")
+      .select("id, name")
+      .eq("id", product_id)
+      .single();
+
+    if (productError || !product) {
+      console.error("❌ Product not found:", product_id);
       return new Response(
-        JSON.stringify({ error: "Delivery date must be between 1 and 28" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Product not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Get Razorpay credentials
     const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
     const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
@@ -128,48 +136,111 @@ Deno.serve(async (req: Request) => {
       console.error("Razorpay credentials not configured");
       return new Response(
         JSON.stringify({ error: "Payment gateway not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate razorpay_plan_id is provided (single source of truth from products table)
-    if (!razorpay_plan_id || typeof razorpay_plan_id !== 'string') {
+    // ✅ CRITICAL: Verify the plan exists and get its amount
+    // Always and only use the plan ID from the variant row in the database.
+    const planId = variant.razorpay_plan_id;
+
+    if (!planId) {
+      console.error("❌ Variant missing razorpay_plan_id at plan verification step:", {
+        variant_id: variant.id,
+      });
       return new Response(
-        JSON.stringify({ error: "Invalid Razorpay plan ID" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({
+          error: "Subscription unavailable",
+          details: "This product is currently unavailable for subscription. Please try one-time purchase instead.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const calculateStartDate = (dayOfMonth: number): number => {
-      const now = new Date();
-      const currentDay = now.getDate();
-      let startDate: Date;
-
-      if (dayOfMonth > currentDay) {
-        startDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-      } else {
-        startDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
-      }
-
-      return Math.floor(startDate.getTime() / 1000);
-    };
-
-    const startTimestamp = calculateStartDate(preferredDeliveryDate);
-
-    console.log("Creating Razorpay subscription:", {
-      plan_id: razorpay_plan_id,
-      total_count: totalDeliveries,
-      start_at: startTimestamp,
-      quantity,
-    });
 
     const authString = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
+    
+    console.log("🔍 Verifying Razorpay plan using variant.razorpay_plan_id:", planId);
+    
+    const planResponse = await fetch(`https://api.razorpay.com/v1/plans/${planId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Basic ${authString}`,
+      },
+    });
+
+    if (!planResponse.ok) {
+      const errorText = await planResponse.text();
+      console.error("❌ Plan not found in Razorpay:", errorText);
+      return new Response(
+        JSON.stringify({
+          error: "Subscription plan not found",
+          details: "The subscription plan for this product is not configured. Please contact support.",
+        }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const planData = await planResponse.json();
+    const planAmountPaise = planData.item?.amount || planData.amount || 0;
+    const planAmountRupees = planAmountPaise / 100;
+
+    console.log("✅ Plan verified:", {
+      plan_id: planId,
+      amount_paise: planAmountPaise,
+      amount_rupees: planAmountRupees,
+      raw_status: (planData as any).status,
+    });
+
+    // ✅ Plan status validation
+    // Razorpay's /v1/plans API may not always include a `status` field.
+    // Treat missing/undefined status as active, but still respect explicit "inactive"-like values.
+    const planStatus = (planData as any).status as string | undefined;
+
+    if (planStatus && planStatus.toLowerCase() !== "active") {
+      console.error("❌ Plan is not active according to Razorpay status field:", planStatus);
+      return new Response(
+        JSON.stringify({
+          error: "Subscription plan not active",
+          details: "The subscription plan is currently inactive. Please contact support.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ============================================
+    // BILLING START: IMMEDIATE
+    // --------------------------------------------
+    // IMPORTANT: Billing (Razorpay) is decoupled from delivery scheduling.
+    // We always start the subscription *immediately* so the first payment
+    // happens at purchase time. Delivery dates are managed separately in
+    // our own tables (see subscription_deliveries).
+    // ============================================
+    const startTimestamp = Math.floor(Date.now() / 1000);
+
+    // ============================================
+    // CREATE RAZORPAY SUBSCRIPTION (BILLING ONLY)
+    // ============================================
+    const subscriptionPayload = {
+      plan_id: variant.razorpay_plan_id, // ✅ Use variant's plan_id (determines amount)
+      customer_notify: 1,
+      total_count: total_deliveries,
+      quantity: quantity,
+      start_at: startTimestamp,
+      notes: {
+        user_id: user.id,
+        product_id: product_id,
+        variant_id: variant_id,
+        delivery_date: preferred_delivery_date,
+      },
+    };
+
+    console.log("📤 Creating Razorpay subscription (immediate start):", {
+      plan_id: variant.razorpay_plan_id,
+      plan_amount: planAmountRupees,
+      quantity: quantity,
+      total_count: total_deliveries,
+      start_at: new Date(startTimestamp * 1000).toISOString(),
+    });
 
     const razorpayResponse = await fetch("https://api.razorpay.com/v1/subscriptions", {
       method: "POST",
@@ -177,89 +248,96 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
         "Authorization": `Basic ${authString}`,
       },
-      body: JSON.stringify({
-        plan_id: razorpay_plan_id,
-        customer_notify: 1,
-        total_count: totalDeliveries,
-        quantity: quantity,
-        start_at: startTimestamp,
-        notes: {
-          user_id: user.id,
-          product_id: productId,
-          variant_id: variantId || "",
-          delivery_date: preferredDeliveryDate,
-        },
-      }),
+      body: JSON.stringify(subscriptionPayload),
     });
 
     if (!razorpayResponse.ok) {
       const errorText = await razorpayResponse.text();
-      console.error("Razorpay API error:", errorText);
-
+      console.error("❌ Razorpay API error:", errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to create subscription" }),
-        {
-          status: razorpayResponse.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Failed to create subscription", details: errorText }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const razorpaySubscription = await razorpayResponse.json();
 
-    console.log("Razorpay subscription created:", razorpaySubscription.id);
+    console.log("✅ Razorpay subscription created:", razorpaySubscription.id);
 
-    const calculateNextDeliveryDate = (dayOfMonth: number): string => {
-      const now = new Date();
-      const currentDay = now.getDate();
-      let deliveryDate: Date;
-
-      if (dayOfMonth > currentDay) {
-        deliveryDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-      } else {
-        deliveryDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
-      }
-
-      return deliveryDate.toISOString().split("T")[0];
+    // Save to pending_subscriptions table
+    const pendingSubscriptionData = {
+      razorpay_subscription_id: razorpaySubscription.id,
+      user_id: user.id,
+      product_id: product_id,
+      variant_id: variant_id,
+      quantity: quantity,
+      preferred_delivery_date: preferred_delivery_date,
+      total_deliveries: total_deliveries,
+      shipping_address: shipping_address,
     };
 
-    // Note: plan_id is optional in user_subscriptions - we store razorpay_plan_id directly
-    const { data: subscription, error: dbError } = await supabaseClient
-      .from("user_subscriptions")
-      .insert({
-        user_id: user.id,
-        razorpay_subscription_id: razorpaySubscription.id,
-        product_id: productId,
-        variant_id: variantId || null,
-        quantity: quantity,
-        status: "pending",
-        preferred_delivery_date: preferredDeliveryDate,
-        next_delivery_date: calculateNextDeliveryDate(preferredDeliveryDate),
-        next_billing_date: calculateNextDeliveryDate(preferredDeliveryDate),
-        total_deliveries: totalDeliveries,
-        completed_deliveries: 0,
-        shipping_address: shippingAddress,
-      })
+    const { data: pendingSubscription, error: dbError } = await supabaseAdmin
+      .from("pending_subscriptions")
+      .insert(pendingSubscriptionData)
       .select()
       .single();
 
     if (dbError) {
-      console.error("Database error:", dbError);
+      console.error("❌ Failed to save pending subscription:", dbError);
       return new Response(
-        JSON.stringify({ error: "Failed to save subscription" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Failed to save subscription", details: dbError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log("✅ Pending subscription saved:", pendingSubscription.id);
+
+    // ============================================
+    // DELIVERY SCHEDULING (APPLICATION-LEVEL ONLY)
+    // --------------------------------------------
+    // IMPORTANT: Razorpay handles BILLING only. Our application owns
+    // DELIVERY scheduling via the subscription_deliveries table.
+    // First payment = first delivery. Future deliveries are configurable
+    // per billing cycle.
+    // ============================================
+    const firstDeliveryDate = new Date();
+    firstDeliveryDate.setDate(firstDeliveryDate.getDate() + 1); // today + 1 day
+
+    const firstDeliveryPayload = {
+      subscription_id: pendingSubscription.id, // initially link to pending subscription
+      cycle_number: 1,
+      delivery_date: firstDeliveryDate.toISOString().slice(0, 10), // YYYY-MM-DD
+      status: "scheduled",
+    };
+
+    const { error: deliveryError } = await supabaseAdmin
+      .from("subscription_deliveries")
+      .insert(firstDeliveryPayload);
+
+    if (deliveryError) {
+      console.error("❌ Failed to create first delivery schedule:", deliveryError);
+      return new Response(
+        JSON.stringify({
+          error: "Failed to create first delivery schedule",
+          details: deliveryError.message,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ First delivery scheduled for subscription:", {
+      subscription_id: pendingSubscription.id,
+      delivery_date: firstDeliveryPayload.delivery_date,
+      cycle_number: firstDeliveryPayload.cycle_number,
+    });
+
     return new Response(
       JSON.stringify({
-        subscriptionId: subscription.id,
-        razorpaySubscriptionId: razorpaySubscription.id,
-        razorpayKeyId: razorpayKeyId,
-        shortUrl: razorpaySubscription.short_url,
+        razorpay_subscription_id: razorpaySubscription.id,
+        razorpay_key_id: razorpayKeyId,
+        short_url: razorpaySubscription.short_url,
+        pending_subscription_id: pendingSubscription.id,
+        plan_amount: planAmountRupees, // For display purposes only
       }),
       {
         status: 200,
@@ -268,7 +346,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("Error in create-razorpay-subscription:", error);
-
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Internal server error",

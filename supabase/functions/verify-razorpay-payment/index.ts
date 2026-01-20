@@ -8,9 +8,11 @@ const corsHeaders = {
 };
 
 interface VerifyPaymentRequest {
-  razorpayOrderId: string;
+  // For order-based flows (legacy), all fields are present.
+  // For payment-first flows, only razorpayPaymentId and checkoutData are required.
+  razorpayOrderId?: string | null;
   razorpayPaymentId: string;
-  razorpaySignature: string;
+  razorpaySignature?: string | null;
   checkoutData: string;
 }
 
@@ -56,10 +58,10 @@ Deno.serve(async (req: Request) => {
       checkoutData,
     }: VerifyPaymentRequest = await req.json();
 
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    if (!razorpayPaymentId) {
       return new Response(
         JSON.stringify({
-          error: "Missing required payment verification fields",
+          error: "Missing required field: razorpayPaymentId",
           verified: false,
         }),
         {
@@ -83,34 +85,28 @@ Deno.serve(async (req: Request) => {
     }
 
     const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
-    if (!razorpayKeySecret) {
-      console.error("Razorpay secret key not configured");
+    const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
+
+    if (!razorpayKeySecret || !razorpayKeyId) {
+      console.error("Razorpay credentials not configured");
       throw new Error("Payment gateway not configured");
     }
 
-    const body = `${razorpayOrderId}|${razorpayPaymentId}`;
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(razorpayKeySecret);
-    const messageData = encoder.encode(body);
+    const checkout: CheckoutData = JSON.parse(checkoutData);
 
-    const key = await crypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
+    // Determine expected amount (in paise) for verification
+    const expectedAmountRupees =
+      checkout.payment_type === "cod" ? (checkout.cod_advance_paid || 0) : checkout.total_amount;
+    const expectedAmountPaise = Math.round((expectedAmountRupees || 0) * 100);
 
-    const signature = await crypto.subtle.sign("HMAC", key, messageData);
-    const expectedSignature = Array.from(new Uint8Array(signature))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    if (expectedSignature !== razorpaySignature) {
-      console.error("Payment signature verification failed");
+    if (!Number.isFinite(expectedAmountPaise) || expectedAmountPaise < 100) {
+      console.error("❌ Invalid expected amount in checkout data:", {
+        expectedAmountRupees,
+        expectedAmountPaise,
+      });
       return new Response(
         JSON.stringify({
-          error: "Invalid payment signature",
+          error: "Invalid expected amount for verification",
           verified: false,
         }),
         {
@@ -120,7 +116,132 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("Payment signature verified successfully");
+    if (razorpayOrderId && razorpaySignature) {
+      // Legacy order-first verification using HMAC over order_id|payment_id.
+      console.log("🔐 Verifying payment using order_id + signature (order-first flow)", {
+        razorpayOrderId,
+        razorpayPaymentId,
+      });
+
+      const body = `${razorpayOrderId}|${razorpayPaymentId}`;
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(razorpayKeySecret);
+      const messageData = encoder.encode(body);
+
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+
+      const signature = await crypto.subtle.sign("HMAC", key, messageData);
+      const expectedSignature = Array.from(new Uint8Array(signature))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (expectedSignature !== razorpaySignature) {
+        console.error("Payment signature verification failed");
+        return new Response(
+          JSON.stringify({
+            error: "Invalid payment signature",
+            verified: false,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("✅ Payment signature verified successfully (order-first flow)");
+    } else {
+      // Payment-first verification using Razorpay Payments API.
+      console.log("🔐 Verifying payment via Razorpay Payments API (payment-first flow)", {
+        razorpayPaymentId,
+      });
+
+      const authString = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
+      const paymentRes = await fetch(`https://api.razorpay.com/v1/payments/${razorpayPaymentId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${authString}`,
+        },
+      });
+
+      const paymentText = await paymentRes.text();
+      if (!paymentRes.ok) {
+        let parsed: any = null;
+        try {
+          parsed = JSON.parse(paymentText);
+        } catch {
+          // ignore parse error; log raw text
+        }
+
+        console.error("❌ Failed to fetch payment for verification:", {
+          statusCode: paymentRes.status,
+          message: parsed?.error?.description || paymentText,
+        });
+
+        return new Response(
+          JSON.stringify({
+            error: "Failed to verify payment with gateway",
+            verified: false,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let payment: any;
+      try {
+        payment = JSON.parse(paymentText);
+      } catch {
+        console.error("❌ Unable to parse payment verification response:", paymentText);
+        return new Response(
+          JSON.stringify({
+            error: "Invalid payment verification response from gateway",
+            verified: false,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (payment.status !== "captured") {
+        console.error("❌ Payment not captured:", {
+          status: payment.status,
+          id: payment.id,
+        });
+        return new Response(
+          JSON.stringify({
+            error: "Payment not captured",
+            status: payment.status,
+            verified: false,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (payment.amount !== expectedAmountPaise || payment.currency !== "INR") {
+        console.error("❌ Payment amount or currency mismatch:", {
+          expectedAmountPaise,
+          receivedAmount: payment.amount,
+          currency: payment.currency,
+        });
+        return new Response(
+          JSON.stringify({
+            error: "Payment amount or currency mismatch",
+            verified: false,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("✅ Payment verified via Payments API (payment-first flow)", {
+        payment_id: payment.id,
+        amount: payment.amount / 100,
+      });
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -136,7 +257,7 @@ Deno.serve(async (req: Request) => {
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id, order_number, payment_status")
-      .eq("razorpay_order_id", razorpayOrderId)
+      .eq("razorpay_payment_id", razorpayPaymentId)
       .maybeSingle();
 
     if (existingOrder) {

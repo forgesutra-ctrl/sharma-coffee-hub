@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
 import { cn } from '@/lib/utils';
+import { setInertSafely } from '@/lib/accessibility';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
 const announcements = [{
   text: 'FREE SHIPPING',
@@ -74,6 +75,50 @@ export default function Navigation() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Store reference to menu button for focus restoration
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Manage accessibility when mobile menu opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      // Save original styles
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalBodyPosition = document.body.style.position;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalHtmlPosition = document.documentElement.style.position;
+
+      // Ensure menu is not blocked
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'relative';
+      document.documentElement.style.overflow = 'hidden';
+
+      // Use inert on main content (excluding Razorpay) to disable background interaction
+      // This is safer than aria-hidden as it doesn't break focus management
+      const mainContent = document.querySelector('main');
+      if (mainContent) {
+        setInertSafely(mainContent as HTMLElement, true);
+      }
+
+      return () => {
+        // Restore original styles when menu closes
+        document.body.style.overflow = originalBodyOverflow;
+        document.body.style.position = originalBodyPosition;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.documentElement.style.position = originalHtmlPosition;
+
+        // Remove inert from main content
+        if (mainContent) {
+          setInertSafely(mainContent as HTMLElement, false);
+        }
+
+        // Restore focus to menu button for accessibility
+        if (menuButtonRef.current) {
+          menuButtonRef.current.focus();
+        }
+      };
+    }
+  }, [isOpen]);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -175,13 +220,19 @@ export default function Navigation() {
               
               {/* Mobile menu button */}
               <button 
-                className="lg:hidden p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" 
-                onClick={() => {
-                  console.log('[Navigation] Hamburger clicked, toggling menu. Current state:', isOpen);
-                  setIsOpen(!isOpen);
+                ref={menuButtonRef}
+                className="lg:hidden p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all relative z-[100000]" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const newState = !isOpen;
+                  console.log('[Navigation] Hamburger clicked, toggling menu. Current state:', isOpen, '-> New state:', newState);
+                  setIsOpen(newState);
                 }} 
                 aria-label="Toggle menu"
+                aria-expanded={isOpen}
                 type="button"
+                style={{ pointerEvents: 'auto' }}
               >
                 {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -281,21 +332,35 @@ export default function Navigation() {
         </div>
 
         {/* Mobile Navigation Overlay */}
+        {/* Using conditional rendering instead of aria-hidden to avoid focus deadlocks */}
         {isOpen && (
           <div
-            className="lg:hidden fixed inset-0 top-16 bg-black/50 z-[60]"
+            className="lg:hidden fixed inset-0 top-16 bg-black/50 z-[99998]"
             onClick={() => {
               console.log('[Navigation] Overlay clicked, closing menu');
               setIsOpen(false);
             }}
-            aria-hidden="true"
+            style={{ pointerEvents: 'auto', position: 'fixed' }}
+            // No aria-hidden - overlay is non-interactive by design (only closes menu on click)
           />
         )}
 
         {/* Mobile Navigation */}
         {isOpen && (
           <div
-            className="lg:hidden fixed inset-0 top-16 bg-background z-[70] overflow-y-auto shadow-2xl transition-all duration-300 ease-out"
+            className="lg:hidden fixed inset-0 top-16 bg-background z-[99999] overflow-y-auto shadow-2xl transition-all duration-300 ease-out"
+            style={{ 
+              pointerEvents: 'auto', 
+              position: 'fixed',
+              top: '4rem',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'block',
+              visibility: 'visible',
+              opacity: 1,
+            }}
+            data-menu-open={isOpen}
           >
           <div className="flex flex-col p-6 space-y-1 min-h-full">
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">

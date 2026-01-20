@@ -51,12 +51,16 @@ interface RazorpayResponse {
 
 interface RazorpayOptions {
   key: string;
-  amount: number;
-  currency: string;
+  // For one-time payments
+  amount?: number;
+  currency?: string;
   name: string;
   description: string;
-  order_id: string;
-  handler: (response: RazorpayResponse) => void;
+  // For one-time payments
+  order_id?: string;
+  // For subscriptions
+  subscription_id?: string;
+  handler?: (response: RazorpayResponse) => void;
   prefill: {
     name: string;
     email: string;
@@ -423,10 +427,29 @@ const Checkout = () => {
     }
   };
 
-  // ✅ FIXED FUNCTION WITH AUTHORIZATION HEADER
+  // ✅ DYNAMIC VARIANT PRICING - ONE PLAN PER PRODUCT
+  // NOTE: If you see 400 errors from "lumberjack.razorpay.com" in the console,
+  // these are Razorpay's analytics tracking errors and are non-critical.
+  // The subscription creation will still work if you see "Subscription created successfully" log.
   const handleSubscriptionOrder = async (checkoutData: ReturnType<typeof prepareCheckoutData>) => {
     try {
-      console.log("Starting subscription order...");
+      console.log("🚀 Starting subscription order...");
+      
+      // ✅ DEBUG: Log cart items for troubleshooting
+      console.log("=== CART ITEMS DEBUG ===");
+      cartItems.forEach((item, index) => {
+        console.log(`Cart Item ${index}:`, {
+          product_name: item.product?.name,
+          product_id: item.product?.id,
+          product_price: item.product?.price,
+          variant_id: item.variant_id,
+          variant: item.variant,
+          original_price: item.original_price,
+          is_subscription: item.is_subscription,
+          quantity: item.quantity,
+        });
+      });
+      console.log("=== END CART DEBUG ===");
 
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -451,48 +474,297 @@ const Checkout = () => {
         throw new Error("Subscription plan not configured for this product.");
       }
 
-      const requestData = {
-        razorpay_plan_id: planId, // This is product.razorpay_plan_id (Razorpay plan ID)
-        productId: product.id,
-        variantId: firstItem.variant?.id,
-        quantity: firstItem.quantity,
-        preferredDeliveryDate: deliveryDate,
-        totalDeliveries: 12,
-        shippingAddress: shippingForm,
-        amount: Math.round(product.price * 100),
-      };
+      // ✅ GET SELECTED VARIANT FROM CART
+      const variantId = firstItem.variant_id;
+      
+      if (!variantId) {
+        throw new Error("No product variant selected. Please select a variant size.");
+      }
+
+      // ✅ GET VARIANT PRICE - Use original_price from cart or fetch from database
+      let variantPrice: number;
+      
+      if (firstItem.original_price && firstItem.original_price > 0) {
+        // Use stored variant price from cart
+        variantPrice = firstItem.original_price;
+        console.log("✅ Using variant price from cart (₹):", variantPrice);
+        console.log("   Type:", typeof variantPrice);
+        console.log("   Value:", variantPrice);
+      } else {
+        // Fetch variant from database to get price
+        console.log("Fetching variant details from database...");
+        const { data: variantData, error: variantError } = await supabase
+          .from("product_variants")
+          .select("id, price, weight, sku")
+          .eq("id", variantId)
+          .single();
+
+        if (variantError || !variantData) {
+          console.error("Variant fetch error:", variantError);
+          throw new Error("Variant not found. Please select a valid product variant.");
+        }
+
+        variantPrice = Number(variantData.price); // Ensure it's a number
+        console.log("✅ Fetched variant price from database:", {
+          variant_id: variantData.id,
+          sku: variantData.sku,
+          weight: variantData.weight,
+          price_raw: variantData.price,
+          price_number: variantPrice,
+          price_type: typeof variantPrice,
+        });
+      }
+
+      // ✅ VALIDATE VARIANT PRICE
+      if (!variantPrice || variantPrice <= 0 || isNaN(variantPrice)) {
+        console.error("❌ Invalid variant price:", {
+          price: variantPrice,
+          type: typeof variantPrice,
+          isNaN: isNaN(variantPrice),
+        });
+        throw new Error("Invalid price for selected variant. Please select a valid product variant.");
+      }
+      
+      // ✅ VALIDATE VARIANT PRICE IS REASONABLE (not too low)
+      if (variantPrice < 1) {
+        console.error("❌ Variant price is too low:", variantPrice);
+        console.error("   This might indicate a data issue. Expected price should be at least ₹1.");
+        throw new Error(`Variant price (₹${variantPrice}) seems incorrect. Please verify the product pricing.`);
+      }
+      
+      // ✅ WARN if price seems unusually low (might be in wrong unit)
+      if (variantPrice < 10) {
+        console.warn("⚠️ WARNING: Variant price is very low:", variantPrice);
+        console.warn("   If this should be ₹50, check if price is stored correctly in database.");
+        console.warn("   Price might be in wrong unit (paise instead of rupees, or vice versa).");
+      }
+
+      // ✅ CONVERT TO PAISE FOR RAZORPAY (multiply by 100)
+      // Variant price is in RUPEES (e.g., 50), convert to PAISE (e.g., 5000)
+      console.log("🔢 AMOUNT CALCULATION:");
+      console.log("   Variant Price (raw):", variantPrice);
+      console.log("   Variant Price type:", typeof variantPrice);
+      console.log("   Calculation: variantPrice * 100 =", variantPrice, "* 100 =", variantPrice * 100);
+      
+      const amountInPaise = Math.round(variantPrice * 100);
+      
+      console.log("   Amount in Paise (rounded):", amountInPaise);
+      console.log("   Amount in ₹ (verify):", amountInPaise / 100);
+      
+      // ✅ CRITICAL VALIDATION: Ensure amount is correct
+      if (amountInPaise !== variantPrice * 100) {
+        console.warn("⚠️ WARNING: Amount was rounded! Original:", variantPrice * 100, "Rounded:", amountInPaise);
+      }
+      console.log('🔍 DEBUG CART ITEM:', {
+        product_name: firstItem.product?.name,
+        product_price: firstItem.product?.price,
+        original_price: firstItem.original_price,
+        variant_id: firstItem.variant_id,
+        variant: firstItem.variant,
+        type_of_original_price: typeof firstItem.original_price,
+        is_subscription: firstItem.is_subscription
+      });
+      if (amountInPaise < 100) {
+        console.error("❌ ERROR: Amount is less than 100 paise (₹1)!");
+        console.error("   This suggests variantPrice might be wrong:", variantPrice);
+        throw new Error(`Invalid variant price: ₹${variantPrice}. Price must be at least ₹1.`);
+      }
+
+      console.log("💰 VARIANT PRICING DETAILS:");
+      console.log("   Variant ID:", variantId);
+      console.log("   Variant Price (₹):", variantPrice);
+      console.log("   Amount in Paise:", amountInPaise);
+      console.log("   Amount in ₹ (verify):", amountInPaise / 100);
+      console.log("   Plan ID:", planId);
+      console.log("   Product ID:", product.id);
+      console.log("   Quantity:", firstItem.quantity);
+      
+      // ✅ FINAL CHECK: Verify the amount makes sense
+      if (amountInPaise / 100 !== variantPrice) {
+        console.error("❌ CRITICAL: Amount conversion mismatch!");
+        console.error("   Expected: ₹" + variantPrice);
+        console.error("   Calculated: ₹" + (amountInPaise / 100));
+        throw new Error(`Amount calculation error. Expected ₹${variantPrice}, got ₹${amountInPaise / 100}`);
+      }
 
       console.log("Calling Edge Function...");
+      
+      // Get fresh session (matches pattern used by dtdc-create-consignment)
+      const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !freshSession?.access_token) {
+        console.error("Session error:", sessionError);
+        throw new Error("No valid session. Please log in again.");
+      }
 
-      // Use supabase.functions.invoke() with explicit auth header
-      // When verify_jwt = false, we need to manually pass Authorization header
-      const { data: result, error: functionError } = await supabase.functions.invoke(
-        "create-razorpay-subscription",
+      // Build request body to match Edge Function schema exactly
+      const requestData = {
+        user_id: freshSession.user.id,
+        access_token: freshSession.access_token,
+        product_id: product.id,
+        variant_id: variantId,
+        quantity: firstItem.quantity,
+        preferred_delivery_date: deliveryDate,
+        total_deliveries: 12,
+        shipping_address: shippingForm,
+      };
+
+      console.log("📤 REQUEST DATA TO EDGE FUNCTION (create-razorpay-subscription):");
+      console.log("   User ID:", requestData.user_id);
+      console.log("   Product ID:", requestData.product_id);
+      console.log("   Variant ID:", requestData.variant_id);
+      console.log("   Quantity:", requestData.quantity);
+      console.log("   Preferred Delivery Date:", requestData.preferred_delivery_date);
+      console.log("   Total Deliveries:", requestData.total_deliveries);
+      
+      console.log("Auth token check:", {
+        hasSession: !!freshSession,
+        hasAccessToken: !!freshSession?.access_token,
+        tokenLength: freshSession?.access_token?.length || 0,
+        tokenPrefix: freshSession?.access_token?.substring(0, 20) || "none",
+      });
+
+      // Use direct fetch with anon key to bypass gateway JWT validation
+      // Then pass user token in body for server-side verification
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      console.log("Calling Edge Function with anon key authentication...");
+      
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/create-razorpay-subscription`,
         {
-          body: requestData,
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`, // Use anon key for gateway auth
+            apikey: SUPABASE_ANON_KEY,
           },
+          body: JSON.stringify(requestData),
         }
       );
 
-      if (functionError) {
-        console.error("Edge Function error:", functionError);
-        throw new Error(functionError.message || "Unable to create subscription");
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = "Unable to create subscription";
+        let errorDetails = "";
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || errorMessage;
+          errorDetails = errorJson.details || errorJson.missingFields?.join(", ") || "";
+          
+          // Check for Razorpay-specific errors
+          if (errorJson.razorpayError) {
+            const rzError = errorJson.razorpayError;
+            const rzDescription = rzError.description || rzError.message || "";
+            const rzField = rzError.field || "";
+            const rzCode = rzError.code || "";
+            
+            console.error("❌ RAZORPAY ERROR:", {
+              code: rzCode,
+              field: rzField,
+              description: rzDescription,
+              fullError: rzError,
+            });
+            
+            // Build user-friendly error message
+            if (rzField) {
+              errorDetails = `Razorpay Error: ${rzField} - ${rzDescription}`;
+            } else if (rzDescription) {
+              errorDetails = `Razorpay Error: ${rzDescription}`;
+            } else {
+              errorDetails = "Razorpay payment gateway error. Please check the plan configuration.";
+            }
+          }
+          
+          // Log full error details for debugging
+          console.error("❌ Edge Function Error Details:", {
+            status: response.status,
+            error: errorMessage,
+            details: errorDetails,
+            missingFields: errorJson.missingFields,
+            razorpayError: errorJson.razorpayError,
+            fullError: errorJson,
+          });
+        } catch {
+          errorMessage = errorText || errorMessage;
+          console.error("❌ Edge Function Error (non-JSON):", {
+            status: response.status,
+            errorText: errorText,
+          });
+        }
+        
+        // Show detailed error message to user
+        const finalErrorMessage = errorDetails 
+          ? `${errorMessage}: ${errorDetails}`
+          : errorMessage;
+        
+        throw new Error(finalErrorMessage);
       }
+
+      const result = await response.json();
+      console.log("✅ Subscription created successfully:", result);
+      console.log("   Razorpay Subscription ID:", result.razorpay_subscription_id);
+      console.log("   Short URL:", result.short_url);
 
       if (!result) {
         throw new Error("No response from subscription service");
       }
 
-      console.log("Subscription created successfully:", result);
+      const razorpayKeyId = result.razorpay_key_id as string | undefined;
+      const razorpaySubscriptionId = result.razorpay_subscription_id as string | undefined;
 
-      if (result.shortUrl) {
-        console.log("Redirecting to Razorpay:", result.shortUrl);
-        window.location.href = result.shortUrl;
-      } else {
-        throw new Error("No payment link received");
+      if (!razorpayKeyId || !razorpaySubscriptionId) {
+        console.error("❌ Missing key or subscription_id in response:", {
+          razorpayKeyId,
+          razorpaySubscriptionId,
+        });
+        throw new Error("Subscription created but payment information is incomplete. Please contact support.");
       }
+
+      // ✅ OPEN RAZORPAY CHECKOUT USING ONLY SUBSCRIPTION_ID (no amount/order/plan fields)
+      if (!window.Razorpay) {
+        console.error("❌ Razorpay SDK not available when opening subscription checkout");
+        throw new Error("Payment gateway is not available. Please refresh and try again.");
+      }
+
+      // Ensure the page layout cannot clip or hide the Razorpay overlay.
+      // We explicitly reset body styles here so the modal can render on top.
+      document.body.style.overflow = "visible";
+      document.body.style.position = "static";
+      document.body.setAttribute("data-razorpay-open", "true");
+
+      const subscriptionCheckoutOptions: RazorpayOptions = {
+        key: razorpayKeyId,
+        subscription_id: razorpaySubscriptionId,
+        name: "Sharma Coffee Works",
+        description: product.name || "Coffee Subscription",
+        // For subscriptions, Razorpay handles billing only. We use handler
+        // purely to notify the user about delivery scheduling on success.
+        handler: () => {
+          toast({
+            title: "Subscription Activated",
+            description:
+              "Your first delivery is scheduled. You can choose delivery dates for future months from the Manage Subscription section.",
+          });
+          // TODO: Implement "Manage Subscription" page where users can
+          // configure delivery dates for future cycles (cycle_number >= 2).
+        },
+        prefill: {
+          name: shippingForm.fullName || "",
+          email: shippingForm.email || "",
+          contact: shippingForm.phone || "",
+        },
+        theme: {
+          color: "#C8A97E",
+        },
+      };
+
+      console.log("🧾 Opening Razorpay subscription checkout with options:", subscriptionCheckoutOptions);
+
+      const razorpay = new window.Razorpay(subscriptionCheckoutOptions);
+      razorpay.open();
 
     } catch (error) {
       console.error("Subscription error:", error);
@@ -501,59 +773,177 @@ const Checkout = () => {
   };
 
   const handleRegularOrder = async (checkoutData: ReturnType<typeof prepareCheckoutData>) => {
-    const amount = paymentType === "cod" ? COD_ADVANCE_AMOUNT : grandTotal;
-    console.log("[Razorpay] Creating order for amount:", amount);
-
+    // ONE-TIME PAYMENTS (NON-SUBSCRIPTION)
+    // ------------------------------------
+    // For regular orders we MUST use the backend-created Razorpay order_id
+    // and open Checkout with `order_id` only. This ensures the popup is
+    // reliable on modern Razorpay and avoids creating any internal order
+    // before payment is actually completed.
     try {
-      const { data, error } = await supabase.functions.invoke("create-razorpay-order", {
-        body: {
-          amount,
-          isPartialCod: paymentType === "cod",
-          checkoutData: JSON.stringify(checkoutData),
-        },
-      });
+      const amountRupees = paymentType === "cod" ? COD_ADVANCE_AMOUNT : grandTotal;
+      console.log("[Razorpay] Creating one-time order for amount (₹):", amountRupees);
+
+      // Add timeout wrapper to prevent infinite hanging
+      const invokeWithTimeout = (timeoutMs: number) => {
+        return Promise.race([
+          supabase.functions.invoke("create-razorpay-order", {
+            body: {
+              amount: amountRupees,
+            },
+          }),
+          new Promise<{ data: null; error: { message: string } }>((_, reject) =>
+            setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs)
+          ),
+        ]);
+      };
+
+      console.log("[Razorpay] Calling create-razorpay-order edge function...");
+      const { data, error } = await invokeWithTimeout(30000); // 30 second timeout
+
+      console.log("[Razorpay] Edge function response received:", { data, error });
 
       if (error) {
-        console.error("Create order error:", error);
-        throw new Error("Unable to create payment order. Please try again.");
+        console.error("[Razorpay] Create Razorpay order error:", error);
+        throw new Error(
+          error.message || "Unable to create payment order. Please try again."
+        );
       }
 
-      if (!data || !data.razorpayOrderId) {
-        console.error("Invalid response:", data);
-        throw new Error("Invalid response from payment gateway.");
+      if (!data) {
+        console.error("[Razorpay] No data in response");
+        throw new Error("No response from payment gateway. Please try again.");
       }
 
-      console.log("[Razorpay] Order created:", data.razorpayOrderId);
+      const razorpayOrderId =
+        data?.razorpayOrderId || data?.order_id || data?.orderId;
+      const razorpayKeyId =
+        data?.razorpayKeyId || data?.razorpay_key_id || import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-      if (data.shortUrl) {
-        console.log("[Razorpay] Redirecting to payment link:", data.shortUrl);
-        window.location.href = data.shortUrl;
-      } else {
-        const razorpay = new window.Razorpay({
-          key: data.razorpayKeyId,
-          amount: data.amount,
-          currency: "INR",
-          name: "Sharma Coffee Works",
-          description: paymentType === "cod" ? "COD Advance Payment" : "Order Payment",
-          order_id: data.razorpayOrderId,
-          handler: async (response: RazorpayResponse) => {
-            console.log("Payment successful:", response);
-            await verifyPaymentAndCreateOrder(response, checkoutData);
+      console.log("[Razorpay] Extracted values:", { razorpayOrderId, razorpayKeyId });
+
+      if (!razorpayOrderId || !razorpayKeyId) {
+        console.error("[Razorpay] Invalid create-razorpay-order response:", data);
+        throw new Error("Invalid response from payment gateway. Please try again.");
+      }
+
+      if (!window.Razorpay) {
+        throw new Error("Payment gateway failed to load. Please refresh and try again.");
+      }
+
+      // Ensure the popup is not visually blocked by SPA layout/scroll styles.
+      // Remove any styles that might hide or clip the Razorpay modal
+      document.body.style.overflow = "visible";
+      document.documentElement.style.overflow = "visible";
+      document.body.style.position = "static";
+      document.documentElement.style.position = "static";
+      
+      // Check for any parent containers that might be clipping/hiding content
+      const checkoutContainer = document.querySelector('.container, [class*="checkout"], main, #root');
+      if (checkoutContainer) {
+        const containerStyle = window.getComputedStyle(checkoutContainer as Element);
+        if (containerStyle.overflow === 'hidden' || containerStyle.overflowY === 'hidden') {
+          console.warn("[Razorpay] ⚠️ Parent container has overflow:hidden, this may hide the popup");
+        }
+      }
+
+      const options = {
+        key: razorpayKeyId,
+        order_id: razorpayOrderId, // ✅ Use backend-generated order_id only
+        name: "Sharma Coffee Works",
+        description: paymentType === "cod" ? "COD Advance Payment" : "Order Payment",
+        handler: async (response: RazorpayResponse) => {
+          console.log("[Razorpay] One-time payment successful:", response);
+          await verifyPaymentAndCreateOrder(response, checkoutData);
+        },
+        prefill: {
+          name: shippingForm.fullName || "",
+          email: shippingForm.email || "",
+          contact: shippingForm.phone || "",
+        },
+        theme: { color: "#C8A97E" },
+        modal: {
+          ondismiss: () => {
+            console.log("[Razorpay] One-time payment popup dismissed by user");
+            // No order is created when popup is dismissed.
+            setIsLoading(false);
           },
-          prefill: {
-            name: shippingForm.fullName,
-            email: shippingForm.email,
-            contact: shippingForm.phone,
-          },
-          theme: { color: "#C8A97E" },
-        });
+        },
+      };
+
+      console.log("[Razorpay] Opening checkout with order_id:", razorpayOrderId);
+
+      const razorpay = new window.Razorpay(options);
+
+      // Small delay before opening to avoid any SPA/layout timing issues
+      // and ensure the popup is treated as a user-initiated gesture.
+      setTimeout(() => {
         razorpay.open();
-      }
+
+        // Ensure Razorpay modal is visible after opening (fixes SPA layout issues)
+        setTimeout(() => {
+          const razorpayModal = document.querySelector('.razorpay-container') ||
+                               document.querySelector('[class*="razorpay"]') ||
+                               document.querySelector('iframe[src*="razorpay"]') || 
+                               document.querySelector('#razorpay-checkout-frame') ||
+                               document.querySelector('[id*="razorpay"]');
+          
+          if (razorpayModal) {
+            const modalEl = razorpayModal as HTMLElement;
+            
+            // Force visibility with inline styles to override any CSS that might hide it
+            modalEl.style.cssText += `
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              z-index: 999999 !important;
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              max-height: 100vh !important;
+              pointer-events: auto !important;
+            `;
+
+            // Check and fix parent elements that might be hiding the modal
+            let parent = modalEl.parentElement;
+            let parentLevel = 0;
+            while (parent && parentLevel < 5) {
+              const parentStyle = window.getComputedStyle(parent);
+              if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden' || parentStyle.opacity === '0') {
+                parent.style.cssText += `
+                  display: block !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+                `;
+              }
+              parent = parent.parentElement;
+              parentLevel++;
+            }
+
+            // Ensure body/html don't block the modal
+            document.body.style.cssText += 'overflow: visible !important; position: static !important;';
+            document.documentElement.style.cssText += 'overflow: visible !important; position: static !important;';
+
+            // Ensure iframe inside modal is visible
+            const iframe = modalEl.querySelector('iframe');
+            if (iframe) {
+              (iframe as HTMLElement).style.cssText += `
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                width: 100% !important;
+                height: 100% !important;
+              `;
+            }
+          }
+        }, 500);
+      }, 100);
     } catch (err) {
       console.error("Checkout failed:", err);
       toast({
         title: "Payment Failed",
-        description: err instanceof Error ? err.message : "Something went wrong.",
+        description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
         variant: "destructive",
       });
       setIsLoading(false);

@@ -1,4 +1,5 @@
-import { ManageSubscription } from '@/components/subscription/ManageSubscription';
+import { ManageSubscription } from "@/components/subscription/ManageSubscription";
+import { ManageDeliveries } from "@/components/subscription/ManageDeliveries";
 
 export default function AccountSubscriptions() {
   return (
@@ -6,11 +7,16 @@ export default function AccountSubscriptions() {
       <div>
         <h2 className="text-2xl font-bold mb-2">My Subscriptions</h2>
         <p className="text-muted-foreground">
-          Manage your coffee subscriptions, delivery schedule, and preferences
+          Manage your coffee subscriptions, delivery schedule, and preferences.
         </p>
       </div>
 
+      {/* Existing subscription management (status, address, etc.) */}
       <ManageSubscription />
+
+      {/* Delivery schedule management (decoupled from billing) */}
+      <ManageDeliveries />
     </div>
   );
 }
+
