@@ -82,16 +82,9 @@ export default function Navigation() {
   // Manage accessibility when mobile menu opens/closes
   useEffect(() => {
     if (isOpen) {
-      // Save original styles
-      const originalBodyOverflow = document.body.style.overflow;
-      const originalBodyPosition = document.body.style.position;
-      const originalHtmlOverflow = document.documentElement.style.overflow;
-      const originalHtmlPosition = document.documentElement.style.position;
-
-      // Ensure menu is not blocked
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'relative';
-      document.documentElement.style.overflow = 'hidden';
+      // Use a class-based approach instead of inline styles to prevent overflow issues
+      // This allows fixed-position menus to render properly
+      document.body.classList.add('menu-open');
 
       // Use inert on main content (excluding Razorpay) to disable background interaction
       // This is safer than aria-hidden as it doesn't break focus management
@@ -101,11 +94,8 @@ export default function Navigation() {
       }
 
       return () => {
-        // Restore original styles when menu closes
-        document.body.style.overflow = originalBodyOverflow;
-        document.body.style.position = originalBodyPosition;
-        document.documentElement.style.overflow = originalHtmlOverflow;
-        document.documentElement.style.position = originalHtmlPosition;
+        // Remove class when menu closes
+        document.body.classList.remove('menu-open');
 
         // Remove inert from main content
         if (mainContent) {
@@ -221,22 +211,12 @@ export default function Navigation() {
               {/* Mobile menu button */}
               <button 
                 ref={menuButtonRef}
-                className="lg:hidden p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all relative z-[100000]" 
+                className="lg:hidden p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all relative z-[200002]" 
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   const newState = !isOpen;
                   console.log('[Navigation] Hamburger clicked, toggling menu. Current state:', isOpen, '-> New state:', newState);
-                  setIsOpen(newState);
-                }}
-                onTouchStart={(e) => {
-                  // Ensure touch events work on mobile
-                  e.stopPropagation();
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const newState = !isOpen;
                   setIsOpen(newState);
                 }}
                 aria-label="Toggle menu"
@@ -246,6 +226,7 @@ export default function Navigation() {
                   pointerEvents: 'auto',
                   touchAction: 'manipulation',
                   WebkitTapHighlightColor: 'transparent',
+                  zIndex: 200002,
                 }}
               >
                 {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -349,22 +330,23 @@ export default function Navigation() {
         {/* Using conditional rendering instead of aria-hidden to avoid focus deadlocks */}
         {isOpen && (
           <div
-            className="lg:hidden fixed inset-0 top-16 bg-black/50 z-[99998]"
-            onClick={() => {
-              console.log('[Navigation] Overlay clicked, closing menu');
-              setIsOpen(false);
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              setIsOpen(false);
+            className="lg:hidden fixed inset-0 bg-black/50"
+            onClick={(e) => {
+              // Only close if clicking the overlay itself, not child elements
+              if (e.target === e.currentTarget) {
+                console.log('[Navigation] Overlay clicked, closing menu');
+                setIsOpen(false);
+              }
             }}
             style={{ 
               pointerEvents: 'auto', 
               position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
               touchAction: 'manipulation',
+              zIndex: 200001,
             }}
             // No aria-hidden - overlay is non-interactive by design (only closes menu on click)
           />
@@ -373,19 +355,27 @@ export default function Navigation() {
         {/* Mobile Navigation */}
         {isOpen && (
           <div
-            className="lg:hidden fixed inset-0 top-16 bg-background z-[99999] overflow-y-auto shadow-2xl transition-all duration-300 ease-out"
+            className="lg:hidden fixed bg-background overflow-y-auto shadow-2xl"
             style={{ 
               pointerEvents: 'auto', 
               position: 'fixed',
-              top: '4rem',
+              top: '4rem', // Start below nav bar (h-16 = 4rem)
               left: 0,
               right: 0,
               bottom: 0,
+              width: '100vw',
+              height: 'calc(100vh - 4rem)',
               display: 'block',
               visibility: 'visible',
               opacity: 1,
-            }}
+              zIndex: 200002,
+              transform: 'translateX(0)',
+            } as React.CSSProperties}
             data-menu-open={isOpen}
+            onTouchStart={(e) => {
+              // Prevent touch events from bubbling to overlay
+              e.stopPropagation();
+            }}
           >
           <div className="flex flex-col p-6 space-y-1 min-h-full">
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">

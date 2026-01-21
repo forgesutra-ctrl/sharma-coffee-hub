@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -17,12 +18,14 @@ import {
   MapPin,
   CreditCard,
   Truck,
+  Home,
 } from "lucide-react";
 import { shippingAddressSchema } from "@/lib/validation";
-import { COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from "@/lib/shipping";
+import { COD_ADVANCE_AMOUNT, COD_HANDLING_FEE, lookupPincodeDetails, getShippingRegion, getShippingRegionLabel, getShippingCharge } from "@/lib/shipping";
 import DeliveryDatePicker from "@/components/subscription/DeliveryDatePicker";
 import { addDays } from "date-fns";
 import { PincodeDialog } from "@/components/PincodeDialog";
+import { Tables } from "@/integrations/supabase/types";
 
 // ============================================
 // TYPE DEFINITIONS
@@ -30,6 +33,7 @@ import { PincodeDialog } from "@/components/PincodeDialog";
 
 type CheckoutStep = "shipping" | "delivery-date" | "review" | "payment";
 type PaymentType = "prepaid" | "cod";
+type SavedAddress = Tables<'customer_addresses'>;
 
 interface ShippingForm {
   fullName: string;
@@ -191,6 +195,9 @@ const Checkout = () => {
   } | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<number>(15);
   const [showPincodeDialog, setShowPincodeDialog] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [isLookingUpPincode, setIsLookingUpPincode] = useState(false);
 
   const [shippingForm, setShippingForm] = useState<ShippingForm>({
     fullName: "",
@@ -203,6 +210,116 @@ const Checkout = () => {
     pincode: shippingInfo?.pincode || "",
     landmark: "",
   });
+
+  // Fetch saved addresses when user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchSavedAddresses();
+    }
+  }, [user]);
+
+  // Auto-select default address if available
+  useEffect(() => {
+    if (savedAddresses.length > 0) {
+      const defaultAddress = savedAddresses.find(addr => addr.is_default);
+      if (defaultAddress) {
+        handleSelectSavedAddress(defaultAddress.id);
+      }
+    }
+  }, [savedAddresses]);
+
+  const fetchSavedAddresses = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('customer_addresses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSavedAddresses(data || []);
+    } catch (error) {
+      console.error('Error fetching saved addresses:', error);
+    }
+  };
+
+  const handleSelectSavedAddress = (addressId: string) => {
+    if (addressId === "new") {
+      // Reset form for new address
+      setShippingForm({
+        fullName: "",
+        email: user?.email || "",
+        phone: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        pincode: shippingInfo?.pincode || "",
+        landmark: "",
+      });
+      setSelectedAddressId("new");
+      return;
+    }
+
+    const address = savedAddresses.find(addr => addr.id === addressId);
+    if (!address) return;
+
+    setSelectedAddressId(addressId);
+    setShippingForm({
+      fullName: address.full_name,
+      email: user?.email || "",
+      phone: address.phone,
+      addressLine1: address.address_line1,
+      addressLine2: address.address_line2 || "",
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      landmark: address.landmark || "",
+    });
+
+    // Update shipping pincode if different (this will trigger shipping charge recalculation)
+    if (address.pincode !== shippingInfo?.pincode) {
+      const region = getShippingRegion(address.pincode);
+      if (region) {
+        const charge = getShippingCharge(address.pincode);
+        const regionLabel = getShippingRegionLabel(region);
+        handlePincodeValidated(address.pincode, charge, regionLabel);
+      }
+    }
+  };
+
+  // Auto-fill city and state when pincode changes
+  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pincode = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setShippingForm((prev) => ({ ...prev, pincode }));
+
+    // If user manually changes pincode, clear saved address selection
+    if (selectedAddressId !== "new") {
+      setSelectedAddressId("new");
+    }
+
+    // Lookup city and state when pincode is complete
+    if (pincode.length === 6) {
+      setIsLookingUpPincode(true);
+      try {
+        const details = await lookupPincodeDetails(pincode);
+        if (details) {
+          setShippingForm((prev) => ({
+            ...prev,
+            city: details.city || prev.city,
+            state: details.state || prev.state,
+          }));
+        }
+      } catch (error) {
+        console.error('Error looking up pincode:', error);
+      } finally {
+        setIsLookingUpPincode(false);
+      }
+    }
+  };
 
   // ============================================
   // PRICE CALCULATIONS
@@ -300,6 +417,13 @@ const Checkout = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Special handling for pincode to auto-fill city/state
+    if (name === "pincode") {
+      handlePincodeChange(e);
+      return;
+    }
+    
     setShippingForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -1055,6 +1179,40 @@ const Checkout = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Saved Address Selection */}
+                {user && savedAddresses.length > 0 && (
+                  <div>
+                    <Label htmlFor="savedAddress">Use Saved Address</Label>
+                    <Select value={selectedAddressId} onValueChange={handleSelectSavedAddress}>
+                      <SelectTrigger id="savedAddress">
+                        <SelectValue placeholder="Select a saved address or enter new" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            <span>Enter New Address</span>
+                          </div>
+                        </SelectItem>
+                        {savedAddresses.map((address) => (
+                          <SelectItem key={address.id} value={address.id}>
+                            <div className="flex items-center gap-2">
+                              <Home className="w-4 h-4" />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{address.full_name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {address.address_line1}, {address.city}, {address.state} - {address.pincode}
+                                  {address.is_default && " (Default)"}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="fullName">Full Name *</Label>
@@ -1121,6 +1279,7 @@ const Checkout = () => {
                       value={shippingForm.city}
                       onChange={handleInputChange}
                       required
+                      placeholder={isLookingUpPincode ? "Looking up..." : "Auto-filled from pincode"}
                     />
                   </div>
                   <div>
@@ -1131,19 +1290,26 @@ const Checkout = () => {
                       value={shippingForm.state}
                       onChange={handleInputChange}
                       required
+                      placeholder={isLookingUpPincode ? "Looking up..." : "Auto-filled from pincode"}
                     />
                   </div>
                   <div>
                     <Label htmlFor="pincode">Pincode *</Label>
                     <div className="flex gap-2">
-                      <Input
-                        id="pincode"
-                        name="pincode"
-                        value={shippingForm.pincode}
-                        readOnly
-                        className="cursor-pointer"
-                        onClick={() => setShowPincodeDialog(true)}
-                      />
+                      <div className="relative flex-1">
+                        <Input
+                          id="pincode"
+                          name="pincode"
+                          value={shippingForm.pincode}
+                          onChange={handleInputChange}
+                          placeholder="Enter 6-digit pincode"
+                          maxLength={6}
+                          className="pr-8"
+                        />
+                        {isLookingUpPincode && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
                       <Button
                         type="button"
                         variant="outline"
@@ -1157,6 +1323,11 @@ const Checkout = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         <Truck className="w-3 h-3 inline mr-1" />
                         Delivering to {shippingInfo.region} - ₹{getShippingCharge()}
+                      </p>
+                    )}
+                    {shippingForm.pincode.length === 6 && !isLookingUpPincode && (
+                      <p className="text-xs text-green-600 mt-1">
+                        City and State will be auto-filled
                       </p>
                     )}
                   </div>

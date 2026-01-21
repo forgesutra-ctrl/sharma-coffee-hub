@@ -1,4 +1,5 @@
 import { Link, useLocation, Outlet, Navigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -33,9 +34,42 @@ const allSidebarLinks = [
 ];
 
 export default function AdminLayout() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, isSuperAdmin, isStaff, isLoading } = useAuth();
+
+  // Ensure the admin shell is never aria-hidden, to avoid focus deadlocks
+  // and "Blocked aria-hidden" warnings from Chrome when dialogs open.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const ensureNotAriaHidden = () => {
+      if (el.getAttribute('aria-hidden') === 'true') {
+        el.removeAttribute('aria-hidden');
+      }
+      if (el.getAttribute('data-aria-hidden') === 'true') {
+        el.removeAttribute('data-aria-hidden');
+      }
+    };
+
+    // Run once on mount.
+    ensureNotAriaHidden();
+
+    // Observe attribute changes on this container so that Radix or other
+    // libraries can't permanently hide the admin layout.
+    const observer = new MutationObserver(() => {
+      ensureNotAriaHidden();
+    });
+
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'data-aria-hidden'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Filter sidebar links based on role
   const sidebarLinks = allSidebarLinks.filter(link => {
@@ -81,7 +115,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 flex">
+    <div ref={rootRef} className="min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-background border-r hidden md:flex flex-col">
         {/* Logo */}

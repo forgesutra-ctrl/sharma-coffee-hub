@@ -126,3 +126,45 @@ export function getShippingRegionLabel(region: ShippingRegion): string {
 // COD constants
 export const COD_ADVANCE_AMOUNT = 100;
 export const COD_HANDLING_FEE = 50;
+
+// PIN code to City/State lookup
+// Using a free API: https://api.postalpincode.in/pincode/{pincode}
+export interface PincodeDetails {
+  city: string;
+  state: string;
+  district?: string;
+}
+
+export async function lookupPincodeDetails(pincode: string): Promise<PincodeDetails | null> {
+  if (!validatePincode(pincode)) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    const data = await response.json();
+
+    if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+      const postOffice = data[0].PostOffice[0];
+      return {
+        city: postOffice.District || postOffice.Block || '',
+        state: postOffice.State || '',
+        district: postOffice.District || '',
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error looking up pincode:', error);
+    // Fallback to state mapping if API fails
+    const prefix = pincode.substring(0, 2);
+    const state = STATE_PINCODE_MAP[prefix];
+    if (state) {
+      return {
+        city: '',
+        state: state,
+      };
+    }
+    return null;
+  }
+}

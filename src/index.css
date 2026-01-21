@@ -587,22 +587,6 @@ html, body {
   flex-direction: column;
 }
 
-/* ===== REMOVE ANY EXTERNAL BADGES ===== */
-/* Be careful NOT to hide Razorpay containers (match both class and id). */
-body > div:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]):not([id*="razorpay"]),
-body > a[style*="position: fixed"],
-body > div[style*="position: fixed"]:not(#root):not([class*="toaster"]):not([class*="sonner"]):not([class*="razorpay"]):not([id*="razorpay"]),
-body > iframe:not([src*="razorpay"]):not([class*="razorpay"]) {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-  left: -9999px !important;
-}
-
 /* ===== RAZORPAY MODAL FIXES ===== */
 /* Ensure Razorpay modal can display properly - override any hiding rules */
 .razorpay-container,
@@ -659,6 +643,24 @@ iframe[src*="checkout.razorpay.com"] {
 html, body {
   overflow-x: hidden;
   overflow-y: visible !important; /* Allow vertical overflow for modals */
+}
+
+/* Prevent body scroll when mobile menu is open, but allow fixed elements to render */
+body.menu-open {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+/* Ensure mobile menu can render above everything - override any hiding rules */
+body.menu-open [data-menu-open="true"],
+[data-menu-open="true"] {
+  position: fixed !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 200002 !important;
+  pointer-events: auto !important;
 }
 
 /* Ensure Layout doesn't clip Razorpay */
