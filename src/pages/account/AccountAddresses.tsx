@@ -409,7 +409,7 @@ export default function AddressesPage() {
                   id="phone"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="9876543210"
+                  placeholder="8762988145"
                 />
               </div>
 

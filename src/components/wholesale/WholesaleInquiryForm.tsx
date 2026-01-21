@@ -178,7 +178,7 @@ export default function WholesaleInquiryForm() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98765 43210"
+                placeholder="+91 8762 988 145"
                 className="pl-10"
                 required
               />

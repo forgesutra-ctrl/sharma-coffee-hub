@@ -208,16 +208,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // BILLING START: IMMEDIATE
-    // --------------------------------------------
-    // IMPORTANT: Billing (Razorpay) is decoupled from delivery scheduling.
-    // We always start the subscription *immediately* so the first payment
-    // happens at purchase time. Delivery dates are managed separately in
-    // our own tables (see subscription_deliveries).
-    // ============================================
-    const startTimestamp = Math.floor(Date.now() / 1000);
-
-    // ============================================
     // CREATE RAZORPAY SUBSCRIPTION (BILLING ONLY)
     // ============================================
     const subscriptionPayload = {
@@ -225,7 +215,6 @@ Deno.serve(async (req: Request) => {
       customer_notify: 1,
       total_count: total_deliveries,
       quantity: quantity,
-      start_at: startTimestamp,
       notes: {
         user_id: user.id,
         product_id: product_id,
@@ -239,7 +228,6 @@ Deno.serve(async (req: Request) => {
       plan_amount: planAmountRupees,
       quantity: quantity,
       total_count: total_deliveries,
-      start_at: new Date(startTimestamp * 1000).toISOString(),
     });
 
     const razorpayResponse = await fetch("https://api.razorpay.com/v1/subscriptions", {

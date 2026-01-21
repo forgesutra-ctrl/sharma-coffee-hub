@@ -16,7 +16,7 @@ const COMPANY_INFO = {
   manufacturing: "Mysore, Karnataka",
   contact: {
     phone: "+91-XXX-XXX-XXXX",
-    email: "support@sharmacoffeeworks.com",
+    email: "ask@sharmacoffeeworks.com",
   },
   shipping: {
     free_over: 499,
@@ -201,7 +201,7 @@ Your role as customer service agent:
     return new Response(
       JSON.stringify({
         error: error.message || "An error occurred",
-        response: "I apologize for the inconvenience! I'm having trouble processing your request right now. Please try again in a moment, or contact our support team at support@sharmacoffeeworks.com.",
+        response: "I apologize for the inconvenience! I'm having trouble processing your request right now. Please try again in a moment, or contact our support team at ask@sharmacoffeeworks.com.",
       }),
       {
         status: 200,

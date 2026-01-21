@@ -19,6 +19,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Shop = () => {
   const { categorySlug } = useParams<{ categorySlug?: string }>();
@@ -26,6 +35,7 @@ const Shop = () => {
   const [sortBy, setSortBy] = useState<string>('featured');
   const [priceRange, setPriceRange] = useState<string>('all');
   const [inStockOnly, setInStockOnly] = useState<boolean>(true);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
   const { data: currentCategory } = useCategoryBySlug(categorySlug);
@@ -259,49 +269,163 @@ const Shop = () => {
               {/* Products Grid */}
               <main className="flex-1">
                 {/* Toolbar */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50 gap-4">
+                  <p className="text-sm text-muted-foreground flex-shrink-0">
                     {sortedProducts.length} {sortedProducts.length === 1 ? 'product' : 'products'}
                   </p>
 
-                  {/* Mobile Category Selector */}
-                  <div className="lg:hidden">
-                    <Select
-                      value={categorySlug || 'all'}
-                      onValueChange={(val) => {
-                        if (val === 'all') {
-                          window.location.href = '/shop';
-                        } else {
-                          window.location.href = `/shop/${val}`;
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-[160px] bg-transparent border-border/50">
-                        <SelectValue placeholder="Category" />
+                  <div className="flex items-center gap-2 flex-1 justify-end">
+                    {/* Mobile Filters Button */}
+                    <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+                      <SheetTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="lg:hidden"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setMobileFiltersOpen(true);
+                          }}
+                          onTouchStart={(e) => {
+                            e.stopPropagation();
+                          }}
+                          style={{ 
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
+                          }}
+                        >
+                          <Filter className="w-4 h-4 mr-2" />
+                          Filters
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
+                        <SheetHeader>
+                          <SheetTitle>Filters</SheetTitle>
+                        </SheetHeader>
+                        <div className="mt-6 space-y-6">
+                          {/* Availability */}
+                          <Accordion type="single" collapsible defaultValue="availability" className="border-b border-border/50">
+                            <AccordionItem value="availability" className="border-none">
+                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
+                                Availability
+                              </AccordionTrigger>
+                              <AccordionContent className="pb-4">
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                    <input 
+                                      type="checkbox" 
+                                      className="w-4 h-4 rounded border-border" 
+                                      checked={inStockOnly}
+                                      onChange={(e) => setInStockOnly(e.target.checked)}
+                                    />
+                                    <span>In Stock</span>
+                                    <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
+                                  </label>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+
+                          {/* Price */}
+                          <Accordion type="single" collapsible defaultValue="price" className="border-b border-border/50">
+                            <AccordionItem value="price" className="border-none">
+                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
+                                Price
+                              </AccordionTrigger>
+                              <AccordionContent className="pb-4">
+                                <div className="space-y-2">
+                                  {priceRanges.map(range => (
+                                    <label
+                                      key={range.value}
+                                      className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      <input
+                                        type="radio"
+                                        name="price"
+                                        checked={priceRange === range.value}
+                                        onChange={() => setPriceRange(range.value)}
+                                        className="w-4 h-4 border-border"
+                                      />
+                                      <span>{range.label}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+
+                          {/* Categories */}
+                          <Accordion type="single" collapsible defaultValue="categories" className="border-b border-border/50">
+                            <AccordionItem value="categories" className="border-none">
+                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
+                                Categories
+                              </AccordionTrigger>
+                              <AccordionContent className="pb-4">
+                                <div className="space-y-2">
+                                  {categories.map(cat => (
+                                    <Link
+                                      key={cat.id || 'all'}
+                                      to={cat.slug ? `/shop/${cat.slug}` : '/shop'}
+                                      className={cn(
+                                        'flex items-center justify-between w-full text-left py-1.5 text-sm transition-colors',
+                                        (categorySlug === cat.slug || (!categorySlug && !cat.slug))
+                                          ? 'text-primary font-medium'
+                                          : 'text-muted-foreground hover:text-foreground'
+                                      )}
+                                      onClick={() => setMobileFiltersOpen(false)}
+                                    >
+                                      <span>{cat.name}</span>
+                                      <span className="text-xs">({cat.count})</span>
+                                    </Link>
+                                  ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+
+                    {/* Mobile Category Selector */}
+                    <div className="lg:hidden">
+                      <Select
+                        value={categorySlug || 'all'}
+                        onValueChange={(val) => {
+                          if (val === 'all') {
+                            window.location.href = '/shop';
+                          } else {
+                            window.location.href = `/shop/${val}`;
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[140px] bg-transparent border-border/50" style={{ pointerEvents: 'auto' }}>
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[100000]">
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id || 'all'} value={cat.slug || 'all'}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sort */}
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-[140px] lg:w-[180px] bg-transparent border-border/50" style={{ pointerEvents: 'auto' }}>
+                        <SelectValue placeholder="Sort by" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id || 'all'} value={cat.slug || 'all'}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="z-[100000]">
+                        <SelectItem value="featured">Featured</SelectItem>
+                        <SelectItem value="name-az">Alphabetically, A-Z</SelectItem>
+                        <SelectItem value="name-za">Alphabetically, Z-A</SelectItem>
+                        <SelectItem value="price-low">Price, low to high</SelectItem>
+                        <SelectItem value="price-high">Price, high to low</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Sort */}
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] bg-transparent border-border/50">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="featured">Featured</SelectItem>
-                      <SelectItem value="name-az">Alphabetically, A-Z</SelectItem>
-                      <SelectItem value="name-za">Alphabetically, Z-A</SelectItem>
-                      <SelectItem value="price-low">Price, low to high</SelectItem>
-                      <SelectItem value="price-high">Price, high to low</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 {/* Products */}

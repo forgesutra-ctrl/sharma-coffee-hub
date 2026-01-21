@@ -161,104 +161,125 @@ export default function Contact() {
 
             {/* Contact Info */}
             <div className="space-y-8">
-              <h2 className="font-display text-2xl font-bold mb-6">
+              <h2 className="font-display text-2xl font-bold mb-6 text-primary">
                 Contact Information
               </h2>
 
-              {/* Prominent Contact Numbers */}
-              <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-lg border-2 border-green-300">
-                <h3 className="font-bold text-2xl text-green-900 mb-4">📞 Call Us Today</h3>
-                
-                <p className="mb-4 pb-4 border-b border-green-200">
-                  <span className="text-2xl">🔴</span>
-                  <span className="font-bold text-green-900 text-lg ml-2">PRIMARY:</span>
-                  <a href="tel:+918762988145" className="ml-3 text-xl text-green-600 hover:text-green-900 font-bold underline">
-                    +91 8762 988 145
-                  </a>
-                  <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded font-semibold ml-2">RECOMMENDED</span>
-                </p>
-                
-                <p className="mb-4">
-                  <span className="text-2xl">🟡</span>
-                  <span className="font-bold text-amber-700 text-lg ml-2">SECONDARY:</span>
-                  <a href="tel:+916363235357" className="ml-3 text-lg text-blue-600 hover:text-blue-900 font-bold underline">
-                    +91 6363 235 357
-                  </a>
-                </p>
-                
-                <p className="mb-4">
-                  <span className="text-2xl">🟠</span>
-                  <span className="font-bold text-orange-700 text-lg ml-2">STAFF:</span>
-                  <a href="tel:+918431891360" className="ml-3 text-lg text-blue-600 hover:text-blue-900 font-bold underline">
-                    +91 84318 91360
-                  </a>
-                </p>
-                
-                <p className="mt-6 pt-4 border-t-2 border-green-300">
-                  <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" 
-                     className="text-lg text-green-600 hover:text-green-900 font-bold underline inline-flex items-center gap-2">
-                    <MessageCircle className="w-6 h-6" />
-                    💬 Message us on WhatsApp (Best Option)
-                  </a>
-                </p>
-                
-                <p className="text-sm text-gray-600 mt-6 bg-white p-3 rounded border border-gray-200">
-                  ⏰ Available: 9 AM - 6 PM IST, Monday - Saturday
-                  <br/>
-                  📍 Based in: Mysore, Karnataka
-                </p>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <MapPin className="w-8 h-8 text-primary mb-3" />
-                    <h3 className="font-semibold mb-2">Address</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Sharma Coffee Works
-                      <br />
-                      Near Bus Stand
-                      <br />
-                      Madikeri, Coorg
-                      <br />
-                      Karnataka 571201
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
+              {/* Contact Methods */}
+              <div className="space-y-4">
+                <Card className="bg-card border border-border">
                   <CardContent className="p-6">
                     <Phone className="w-8 h-8 text-primary mb-3" />
-                    <h3 className="font-semibold mb-2">Phone</h3>
-                    <p className="text-sm text-muted-foreground">
-                      <a href="tel:+918762988145" className="hover:text-primary font-semibold">+91 8762 988 145</a>
-                      <br />
-                      Mon–Sat: 9:00 AM – 6:00 PM
-                    </p>
+                    <h3 className="font-display text-lg font-semibold text-foreground mb-3">Phone</h3>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        <a href="tel:+918762988145" className="text-primary hover:text-primary/80 font-semibold">
+                          +91 8762 988 145
+                        </a>
+                        <span className="text-muted-foreground ml-2">(Primary)</span>
+                      </p>
+                      <p>
+                        <a href="tel:+916363235357" className="text-foreground/80 hover:text-primary">
+                          +91 6363 235 357
+                        </a>
+                        <span className="text-muted-foreground ml-2">(Secondary)</span>
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <a 
+                        href="https://wa.me/918762988145" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        Chat on WhatsApp
+                      </a>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-card border border-border">
                   <CardContent className="p-6">
                     <Mail className="w-8 h-8 text-primary mb-3" />
-                    <h3 className="font-semibold mb-2">Email</h3>
-                    <p className="text-sm text-muted-foreground">
-                      ask@sharmacoffeeworks.com
+                    <h3 className="font-display text-lg font-semibold text-foreground mb-3">Email</h3>
+                    <p className="text-sm">
+                      <a href="mailto:ask@sharmacoffeeworks.com" className="text-primary hover:text-primary/80">
+                        ask@sharmacoffeeworks.com
+                      </a>
                     </p>
                   </CardContent>
                 </Card>
+              </div>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <Clock className="w-8 h-8 text-primary mb-3" />
-                    <h3 className="font-semibold mb-2">Hours</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Mon – Sat: 9:00 AM – 6:00 PM
-                      <br />
-                      Sunday: Closed
-                    </p>
-                  </CardContent>
-                </Card>
+              {/* Locations */}
+              <div className="space-y-6">
+                <h3 className="font-display text-xl font-semibold text-primary">Our Locations</h3>
+                
+                <div className="grid gap-6">
+                  {/* Madikeri Location */}
+                  <Card className="bg-card border border-border">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <MapPin className="w-10 h-10 text-primary flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="font-display text-lg font-semibold text-foreground mb-2">
+                            Madikeri Manufacturing Unit
+                          </h4>
+                          <p className="text-sm text-primary mb-2">Scotland of India / The Southern Kashmir</p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Sharma Coffee Works
+                            <br />
+                            Opposite to KSRTC Bus Stand
+                            <br />
+                            Bus Stand Road, Madikeri, Coorg
+                            <br />
+                            Karnataka 571201
+                          </p>
+                          <div className="flex items-start gap-2 mt-4 pt-4 border-t border-border">
+                            <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-muted-foreground">
+                              <p className="font-medium text-foreground mb-1">Hours of Operation:</p>
+                              <p>Monday to Saturday: 8:30 AM to 8:30 PM</p>
+                              <p>Sunday: 9:00 AM to 1:00 PM</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Mysore Location */}
+                  <Card className="bg-card border border-border">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <MapPin className="w-10 h-10 text-primary flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="font-display text-lg font-semibold text-foreground mb-2">
+                            Mysore Manufacturing Unit
+                          </h4>
+                          <p className="text-sm text-primary mb-2">The Heritage City / The Cultural Capital of Karnataka</p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Near Sangam Bhandar bus stop
+                            <br />
+                            Prashanthnagar, Bogadi 2nd stage
+                            <br />
+                            Mysore, Karnataka 570026
+                          </p>
+                          <div className="flex items-start gap-2 mt-4 pt-4 border-t border-border">
+                            <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-muted-foreground">
+                              <p className="font-medium text-foreground mb-1">Hours of Operation:</p>
+                              <p>Monday to Saturday:</p>
+                              <p className="ml-4">9:00 AM to 12:30 PM</p>
+                              <p className="ml-4">4:30 PM to 8:30 PM</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
               {/* Social Links */}

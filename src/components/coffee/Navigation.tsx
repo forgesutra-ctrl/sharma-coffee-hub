@@ -159,7 +159,7 @@ export default function Navigation() {
   return (
     <>
       {/* Announcement Bar */}
-      <div className="bg-coffee-dark text-white py-2 relative overflow-hidden">
+      <div className="bg-coffee-dark text-white py-2 relative overflow-hidden z-[200001]" style={{ pointerEvents: 'auto' }}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           {/* Social Links - Left */}
           <div className="hidden md:flex items-center gap-4">
@@ -204,10 +204,10 @@ export default function Navigation() {
       {/* Main Navigation */}
       <nav 
         className={cn(
-          'sticky top-0 z-50 transition-all duration-500',
+          'sticky top-0 z-[200000] transition-all duration-500',
           isScrolled ? 'bg-background/95 backdrop-blur-lg shadow-lg shadow-black/5' : isHomePage ? 'bg-background/80 backdrop-blur-sm' : 'bg-background'
         )}
-        style={{ pointerEvents: 'auto' }}
+        style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
       >
         <div className="max-w-7xl mx-auto px-4">
           {/* Top Row - Logo and Actions */}
@@ -228,11 +228,25 @@ export default function Navigation() {
                   const newState = !isOpen;
                   console.log('[Navigation] Hamburger clicked, toggling menu. Current state:', isOpen, '-> New state:', newState);
                   setIsOpen(newState);
-                }} 
+                }}
+                onTouchStart={(e) => {
+                  // Ensure touch events work on mobile
+                  e.stopPropagation();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const newState = !isOpen;
+                  setIsOpen(newState);
+                }}
                 aria-label="Toggle menu"
                 aria-expanded={isOpen}
                 type="button"
-                style={{ pointerEvents: 'auto' }}
+                style={{ 
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
               >
                 {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -340,7 +354,18 @@ export default function Navigation() {
               console.log('[Navigation] Overlay clicked, closing menu');
               setIsOpen(false);
             }}
-            style={{ pointerEvents: 'auto', position: 'fixed' }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              setIsOpen(false);
+            }}
+            style={{ 
+              pointerEvents: 'auto', 
+              position: 'fixed',
+              touchAction: 'manipulation',
+            }}
             // No aria-hidden - overlay is non-interactive by design (only closes menu on click)
           />
         )}
@@ -365,7 +390,14 @@ export default function Navigation() {
           <div className="flex flex-col p-6 space-y-1 min-h-full">
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">
                 {link.children ? <>
-                    <button className="flex items-center justify-between w-full py-4 text-lg font-serif font-medium text-foreground" onClick={() => setActiveDropdown(activeDropdown === link.name ? null : link.name)}>
+                    <button 
+                      className="flex items-center justify-between w-full py-4 text-lg font-serif font-medium text-foreground" 
+                      onClick={() => setActiveDropdown(activeDropdown === link.name ? null : link.name)}
+                      style={{ 
+                        pointerEvents: 'auto',
+                        touchAction: 'manipulation',
+                      }}
+                    >
                       {link.name}
                       <ChevronDown className={cn('w-5 h-5 transition-transform duration-300', activeDropdown === link.name && 'rotate-180')} />
                     </button>
@@ -375,6 +407,10 @@ export default function Navigation() {
                           to="/shop"
                           className="block py-2 text-foreground/70 hover:text-primary transition-colors font-medium"
                           onClick={() => setIsOpen(false)}
+                          style={{ 
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
+                          }}
                         >
                           All Products
                         </Link>
@@ -385,6 +421,10 @@ export default function Navigation() {
                             to={category.href}
                             className="block py-2 text-foreground/70 hover:text-primary transition-colors"
                             onClick={() => setIsOpen(false)}
+                            style={{ 
+                              pointerEvents: 'auto',
+                              touchAction: 'manipulation',
+                            }}
                           >
                             {category.name}
                           </Link>
@@ -405,14 +445,43 @@ export default function Navigation() {
                     {link.name}
                   </Link>}
               </div>)}
+            
+            {/* Mobile menu close button */}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="lg:hidden absolute top-4 right-4 p-2 text-foreground/70 hover:text-primary rounded-full transition-all"
+              aria-label="Close menu"
+              style={{ 
+                pointerEvents: 'auto',
+                touchAction: 'manipulation',
+              }}
+            >
+              <X className="w-6 h-6" />
+            </button>
 
             {/* Mobile User Actions */}
             <div className="pt-6 mt-auto border-t border-border/30">
-              <Link to={user ? '/account' : '/auth'} className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
+              <Link 
+                to={user ? '/account' : '/auth'} 
+                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" 
+                onClick={() => setIsOpen(false)}
+                style={{ 
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation',
+                }}
+              >
                 <User className="w-5 h-5" />
                 {user ? 'My Account' : 'Sign In'}
               </Link>
-              <Link to="/cart" className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
+              <Link 
+                to="/cart" 
+                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" 
+                onClick={() => setIsOpen(false)}
+                style={{ 
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation',
+                }}
+              >
                 <ShoppingBag className="w-5 h-5" />
                 Shopping Bag
                 {cartCount > 0 && <span className="ml-auto px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
@@ -424,10 +493,26 @@ export default function Navigation() {
               {/* Mobile Contact */}
               <div className="pt-6 border-t border-border/30">
                 <p className="text-xs text-muted-foreground mb-3">Need help?</p>
-                <a href="tel:+918762988145" className="text-lg font-medium text-primary">
+                <a 
+                  href="tel:+918762988145" 
+                  className="text-lg font-medium text-primary"
+                  style={{ 
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation',
+                  }}
+                >
                   +91 8762 988 145
                 </a>
-                <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mt-2 text-green-600 hover:text-green-700">
+                <a 
+                  href="https://wa.me/918762988145" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-2 mt-2 text-green-600 hover:text-green-700"
+                  style={{ 
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation',
+                  }}
+                >
                   <MessageCircle className="w-5 h-5" />
                   <span>Chat on WhatsApp</span>
                 </a>

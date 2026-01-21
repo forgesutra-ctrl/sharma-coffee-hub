@@ -78,13 +78,13 @@ const DeliveryDatePicker = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="flex items-center gap-2 text-sm font-medium text-primary">
         <Calendar className="w-4 h-4" />
-        <Label>Select Your Preferred Monthly Delivery Date</Label>
+        <Label className="text-primary">Select Your Preferred Monthly Delivery Date</Label>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-        <p className="text-blue-900">
+      <div className="bg-muted/50 border border-primary/20 rounded-lg p-3 text-sm">
+        <p className="text-foreground/80">
           Choose a date between the 1st and 28th of each month. Your coffee will be
           delivered on this date every month. We recommend choosing dates between
           1-28 to ensure consistent monthly deliveries.
@@ -108,8 +108,8 @@ const DeliveryDatePicker = ({
                   p-3 rounded-lg border-2 text-left transition-all
                   ${
                     selectedDate === day
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-gray-200 hover:border-primary/50"
+                      ? "border-primary bg-primary/10 shadow-sm text-primary"
+                      : "border-border bg-card hover:border-primary/50 hover:bg-muted/50"
                   }
                   ${option?.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                 `}
@@ -118,7 +118,9 @@ const DeliveryDatePicker = ({
                   {day}
                   {getOrdinalSuffix(day)}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className={`text-xs mt-1 ${
+                  selectedDate === day ? "text-primary/80" : "text-muted-foreground"
+                }`}>
                   {format(nextDelivery, "MMM dd")}
                 </div>
               </button>
@@ -146,13 +148,13 @@ const DeliveryDatePicker = ({
                 htmlFor={`date-${day}`}
                 className={`
                   flex items-center justify-center h-10 rounded-md border-2 text-sm font-medium
-                  cursor-pointer transition-all
-                  peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5
-                  peer-data-[state=checked]:shadow-sm
+                  cursor-pointer transition-all bg-card
+                  peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10
+                  peer-data-[state=checked]:shadow-sm peer-data-[state=checked]:text-primary
                   ${
                     disabled
-                      ? "opacity-40 cursor-not-allowed bg-gray-50"
-                      : "hover:border-primary/50 hover:bg-gray-50"
+                      ? "opacity-40 cursor-not-allowed bg-muted/30"
+                      : "hover:border-primary/50 hover:bg-muted/50"
                   }
                 `}
               >
@@ -164,11 +166,11 @@ const DeliveryDatePicker = ({
       </div>
 
       {selectedDate && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <p className="text-sm font-medium text-green-900">
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+          <p className="text-sm font-medium text-primary">
             Your next delivery: {format(calculateNextDelivery(selectedDate, minDate), "MMMM dd, yyyy")}
           </p>
-          <p className="text-xs text-green-700 mt-1">
+          <p className="text-xs text-foreground/70 mt-1">
             You'll receive your coffee on the {selectedDate}
             {getOrdinalSuffix(selectedDate)} of every month. You can change this anytime
             from your account settings.

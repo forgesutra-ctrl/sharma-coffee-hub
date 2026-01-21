@@ -1183,7 +1183,7 @@ const Checkout = () => {
           {step === "delivery-date" && allItemsAreSubscription && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-primary">
                   <Package className="w-5 h-5" />
                   Select Delivery Date
                 </CardTitle>
@@ -1263,8 +1263,8 @@ const Checkout = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {allItemsAreSubscription && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <h3 className="font-medium flex items-center gap-2 mb-2">
+                  <div className="bg-muted/50 border border-primary/20 rounded-lg p-4">
+                    <h3 className="font-medium flex items-center gap-2 mb-2 text-primary">
                       <CreditCard className="w-4 h-4" />
                       Auto-Payment Setup
                     </h3>
@@ -1273,16 +1273,16 @@ const Checkout = () => {
                       cancel anytime from your account.
                     </p>
                     <ul className="text-xs space-y-1">
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3 h-3 text-green-600" />
+                      <li className="flex items-center gap-2 text-foreground/80">
+                        <Check className="w-3 h-3 text-primary" />
                         Secure bank authorization
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3 h-3 text-green-600" />
+                      <li className="flex items-center gap-2 text-foreground/80">
+                        <Check className="w-3 h-3 text-primary" />
                         Cancel anytime
                       </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-3 h-3 text-green-600" />
+                      <li className="flex items-center gap-2 text-foreground/80">
+                        <Check className="w-3 h-3 text-primary" />
                         Get notified before each charge
                       </li>
                     </ul>
@@ -1314,9 +1314,9 @@ const Checkout = () => {
                 )}
 
                 {paymentType === "cod" && !allItemsAreSubscription && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-                    <p className="font-medium mb-2">COD Payment Details:</p>
-                    <ul className="space-y-1 text-muted-foreground">
+                  <div className="bg-muted/50 border border-primary/20 rounded-lg p-4 text-sm">
+                    <p className="font-medium mb-2 text-primary">COD Payment Details:</p>
+                    <ul className="space-y-1 text-foreground/80">
                       <li>• Pay ₹{COD_ADVANCE_AMOUNT} now to confirm your order</li>
                       <li>• Pay remaining ₹{codBalance.toFixed(2)} on delivery</li>
                       <li>• COD handling fee: ₹{COD_HANDLING_FEE}</li>
@@ -1360,7 +1360,7 @@ const Checkout = () => {
         <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle className="text-primary">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Cart Items */}
@@ -1373,7 +1373,7 @@ const Checkout = () => {
                     <span>
                       {item.product.name} x{item.quantity}
                       {item.is_subscription && (
-                        <span className="text-primary ml-1">(Subscription)</span>
+                        <span className="text-primary/90 ml-1 font-medium">(Subscription)</span>
                       )}
                     </span>
                     <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>

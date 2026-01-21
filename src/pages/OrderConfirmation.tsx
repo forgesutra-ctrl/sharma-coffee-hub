@@ -511,8 +511,8 @@ const OrderConfirmation = () => {
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>
             Need help? Contact us at{" "}
-            <a href="mailto:support@sharmacoffee.com" className="text-primary hover:underline">
-              support@sharmacoffee.com
+            <a href="mailto:ask@sharmacoffeeworks.com" className="text-primary hover:underline">
+              ask@sharmacoffeeworks.com
             </a>
           </p>
         </div>

@@ -62,7 +62,7 @@ export const privacyPolicyContent = {
     },
     {
       heading: "Contact Us",
-      content: `For privacy-related queries, contact us at:\n\nEmail: privacy@sharmacoffeeworks.com\nPhone: +91 98765 43210\nAddress: Sharma Coffee Estate, Madikeri, Coorg, Karnataka 571201`
+      content: `For privacy-related queries, contact us at:\n\nEmail: ask@sharmacoffeeworks.com\nPhone: +91 8762 988 145\nAddress: Sharma Coffee Estate, Madikeri, Coorg, Karnataka 571201`
     }
   ]
 };
@@ -123,7 +123,7 @@ export const termsOfServiceContent = {
     },
     {
       heading: "Contact",
-      content: `For questions about these terms:\n\nEmail: support@sharmacoffeeworks.com\nPhone: +91 98765 43210`
+      content: `For questions about these terms:\n\nEmail: ask@sharmacoffeeworks.com\nPhone: +91 8762 988 145`
     }
   ]
 };
@@ -172,7 +172,7 @@ export const refundPolicyContent = {
       content: `To request a refund:`,
       list: [
         "Contact us within 48 hours of delivery with photos of the issue",
-        "Email us at returns@sharmacoffeeworks.com with your order number",
+        "Email us at ask@sharmacoffeeworks.com with your order number",
         "Our team will review and respond within 2 business days",
         "Approved refunds are processed to the original payment method"
       ]
@@ -202,7 +202,7 @@ export const refundPolicyContent = {
     },
     {
       heading: "Contact for Refunds",
-      content: `Email: returns@sharmacoffeeworks.com\nPhone: +91 98765 43210\nWhatsApp: +91 98765 43210`
+      content: `Email: ask@sharmacoffeeworks.com\nPhone: +91 8762 988 145\nWhatsApp: +91 8762 988 145`
     }
   ]
 };
@@ -294,12 +294,12 @@ export const shippingPolicyContent = {
       list: [
         "Do not accept the delivery if the outer packaging is visibly damaged",
         "If damage is discovered after opening, take photos immediately",
-        "Contact us within 48 hours at support@sharmacoffeeworks.com"
+        "Contact us within 48 hours at ask@sharmacoffeeworks.com"
       ]
     },
     {
       heading: "Contact for Shipping",
-      content: `Email: shipping@sharmacoffeeworks.com\nPhone: +91 98765 43210\nTracking: Track on our website or contact support`
+      content: `Email: ask@sharmacoffeeworks.com\nPhone: +91 8762 988 145\nTracking: Track on our website or contact support`
     }
   ]
 };
@@ -401,7 +401,7 @@ export const faqContent = {
         },
         {
           question: "How do I request a refund?",
-          answer: "Email us at returns@sharmacoffeeworks.com with your order number and photos of the issue. Our team will review and respond within 2 business days. Approved refunds are processed to your original payment method."
+          answer: "Email us at ask@sharmacoffeeworks.com with your order number and photos of the issue. Our team will review and respond within 2 business days. Approved refunds are processed to your original payment method."
         },
         {
           question: "How long do refunds take?",
@@ -417,8 +417,8 @@ export const faqContent = {
 };
 
 export const contactInfo = {
-  email: "support@sharmacoffeeworks.com",
-  phone: "+91 98765 43210",
-  whatsapp: "+91 98765 43210",
+  email: "ask@sharmacoffeeworks.com",
+  phone: "+91 8762 988 145",
+  whatsapp: "+91 8762 988 145",
   address: "Sharma Coffee Estate, Madikeri, Coorg, Karnataka 571201"
 };

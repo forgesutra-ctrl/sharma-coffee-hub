@@ -130,13 +130,13 @@ export default function FAQ() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a 
-                href="mailto:support@sharmacoffeeworks.com"
+                href="mailto:ask@sharmacoffeeworks.com"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-coffee-gold text-coffee-dark font-semibold rounded-lg hover:bg-coffee-gold/90 transition-colors"
               >
                 Email Support
               </a>
               <a 
-                href="https://wa.me/919876543210"
+                href="https://wa.me/918762988145"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"

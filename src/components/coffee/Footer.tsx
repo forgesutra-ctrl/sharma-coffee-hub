@@ -45,10 +45,10 @@ export default function Footer() {
             
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
-                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email address" className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-coffee-gold focus:ring-coffee-gold/20 pr-12" required />
+                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email address" className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-coffee-gold focus:ring-coffee-gold/30 focus:ring-2 pr-12 transition-all" required />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               </div>
-              <Button type="submit" disabled={isLoading} className="h-14 px-8 bg-coffee-gold hover:bg-coffee-gold/90 text-coffee-dark font-semibold group">
+              <Button type="submit" disabled={isLoading} className="h-14 px-8 bg-coffee-gold hover:bg-coffee-gold/90 text-coffee-dark font-semibold group shadow-lg shadow-coffee-gold/20 hover:shadow-coffee-gold/30 transition-all">
                 Subscribe
                 <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>

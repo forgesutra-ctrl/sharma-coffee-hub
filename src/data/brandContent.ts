@@ -21,7 +21,7 @@ export const brandInfo = {
     primaryPhone: "+91-8762988145",
     secondaryPhones: ["+91-6363235357", "+91-9448850596"],
     landline: "08272-229030",
-    email: "sharmacoffeeoffice@gmail.com",
+    email: "ask@sharmacoffeeworks.com",
     whatsapp: "+918762988145",
   },
   
