@@ -2000,8 +2000,8 @@ const Checkout = () => {
                               <span className="font-medium text-primary">₹{((confirmedOrder.cod_advance_paid || 0) + (confirmedOrder.cod_handling_fee || 0)).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs text-muted-foreground pl-2">
-                              <span>• Advance: ₹{confirmedOrder.cod_advance_paid?.toFixed(2) || "100.00"}</span>
-                              <span>• Handling Fee: ₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "50.00"}</span>
+                              <span>• Advance (from product): ₹{confirmedOrder.cod_advance_paid?.toFixed(2) || "100.00"}</span>
+                              <span>• COD Handling Fee: ₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "50.00"}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Balance on Delivery</span>
@@ -2010,6 +2010,9 @@ const Checkout = () => {
                             <div className="flex justify-between text-sm pt-1 border-t">
                               <span className="text-muted-foreground">Total Order Value</span>
                               <span className="font-semibold">₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground pt-1 italic">
+                              Total = Product (₹{confirmedOrder.subtotal?.toFixed(2) || "0.00"}) + Shipping (₹{confirmedOrder.shipping_charge?.toFixed(2) || "0.00"}) + COD Handling (₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "0.00"})
                             </div>
                           </div>
                         </>

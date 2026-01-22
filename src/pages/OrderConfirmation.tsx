@@ -405,8 +405,8 @@ const OrderConfirmation = () => {
                       <span className="font-medium text-primary">₹{((order.cod_advance_paid || 0) + (order.cod_handling_fee || 0)).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground pl-2">
-                      <span>• Advance: ₹{order.cod_advance_paid?.toFixed(2) || "100.00"}</span>
-                      <span>• Handling Fee: ₹{order.cod_handling_fee?.toFixed(2) || "50.00"}</span>
+                      <span>• Advance (from product): ₹{order.cod_advance_paid?.toFixed(2) || "100.00"}</span>
+                      <span>• COD Handling Fee: ₹{order.cod_handling_fee?.toFixed(2) || "50.00"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Balance on Delivery</span>
@@ -415,6 +415,9 @@ const OrderConfirmation = () => {
                     <div className="flex justify-between text-sm pt-1 border-t">
                       <span className="text-muted-foreground">Total Order Value</span>
                       <span className="font-semibold">₹{order.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground pt-1 italic">
+                      Total = Product (₹{order.subtotal.toFixed(2)}) + Shipping (₹{order.shipping_amount?.toFixed(2) || "0.00"}) + COD Handling (₹{order.cod_handling_fee?.toFixed(2) || "0.00"})
                     </div>
                   </div>
                 </>
