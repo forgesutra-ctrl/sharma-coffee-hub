@@ -96,29 +96,37 @@ async function buildProductContext(supabase: any): Promise<string> {
       const children = childProducts.filter(cp => cp.parent_product_id === product.id);
       if (children.length > 0) {
         context += `- Sub-variants/Blends:\n`;
+        context += `  NOTE: Users may refer to these as "${product.name} 1", "${product.name} 2", "${product.name} 3" - these refer to the sub-variants listed below in order.\n`;
+        let childIndex = 1;
         for (const child of children) {
+          // Include both the full name and a numbered reference for easier matching
           context += `  * ${child.name}`;
+          // Add numbered alias for matching
+          const productNameShort = product.name.replace(/\s+Blend.*$/i, "").trim();
+          context += ` (also searchable as "${productNameShort} Blend ${childIndex}" or "${product.name} ${childIndex}")`;
           if (child.description) {
-            context += ` - ${child.description}`;
+            context += `\n    Description: ${child.description}`;
           }
           if (child.flavor_notes && Array.isArray(child.flavor_notes) && child.flavor_notes.length > 0) {
-            context += ` (Flavor: ${child.flavor_notes.join(", ")})`;
+            context += `\n    Flavor Notes: ${child.flavor_notes.join(", ")}`;
           }
           if (child.intensity !== null && child.intensity !== undefined) {
-            context += ` [Intensity: ${child.intensity}/5]`;
+            context += `\n    Intensity: ${child.intensity}/5`;
           }
           context += `\n`;
           
           // Include child product variants
           if (child.product_variants && child.product_variants.length > 0) {
+            context += `    Available sizes:\n`;
             for (const variant of child.product_variants) {
-              context += `    - ${variant.weight}g: ₹${variant.price}`;
+              context += `      - ${variant.weight}g: ₹${variant.price}`;
               if (variant.compare_at_price && variant.compare_at_price > variant.price) {
                 context += ` (was ₹${variant.compare_at_price})`;
               }
               context += `\n`;
             }
           }
+          childIndex++;
         }
       }
 
@@ -210,14 +218,17 @@ async function buildSubscriptionContext(supabase: any): Promise<string> {
     context += "- No minimum commitment or cancellation fees\n";
     context += "- Choose delivery frequency: weekly, bi-weekly, or monthly\n";
     context += "- Manage everything from your account dashboard\n";
-    context += "- IMPORTANT: Subscriptions do NOT include any price discount - only free shipping\n\n";
+    context += "- CRITICAL: Subscriptions pay THE EXACT SAME PRICE as one-time purchases - NO DISCOUNT WHATSOEVER\n";
+    context += "- The ONLY benefit is free shipping - there is NO price reduction\n\n";
 
     context += "SUBSCRIPTION VS ONE-TIME PURCHASE:\n";
-    context += "- Subscriptions: Same price as one-time purchase + FREE shipping + automatic delivery\n";
-    context += "- One-time: Regular price + shipping charges (weight-based: ₹50-100/kg depending on location)\n";
+    context += "- Subscriptions: EXACT SAME PRICE as one-time purchase + FREE shipping + automatic delivery\n";
+    context += "- One-time: Same price + shipping charges (weight-based: ₹50-100/kg depending on location)\n";
     context += "- Subscriptions can be paused/cancelled anytime\n";
     context += "- One-time purchases are single transactions\n";
-    context += "- NO DISCOUNT on subscription prices - only benefit is free shipping\n\n";
+    context += "- ABSOLUTELY NO DISCOUNT on subscription prices - the price is identical\n";
+    context += "- The ONLY difference is: subscriptions get free shipping, one-time purchases pay shipping\n";
+    context += "- NEVER mention any discount percentage (10%, 15%, or any number) - there is NO discount\n\n";
 
     return context;
   } catch (error) {
@@ -431,16 +442,22 @@ CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
 2. PRODUCT VARIANT CLARITY:
    - When a user asks about a product, mention ALL available variants (weights and prices)
    - Highlight differences between variants (e.g., "250g costs ₹X, 500g costs ₹Y")
-   - Mention subscription eligibility and discount for each product
+   - If a user asks for "Gold Blend 1", "Premium Blend 1", etc., match to the first sub-variant listed under that parent product in the context
+   - The context includes numbered aliases (e.g., "Gold Blend 1", "Gold Blend 2") - use these to match user queries
+   - When a product has sub-variants (like "Gold Blend – Balanced Strong"), list ALL sub-variants with their full names
    - If a product has multiple variants, list them all clearly
+   - NEVER mention discounts - subscriptions only provide free shipping (NO price reduction)
 
-3. SUBSCRIPTION VS ONE-TIME:
-   - CRITICAL: Subscriptions do NOT include any price discount - they pay the SAME price as one-time purchases
+3. SUBSCRIPTION VS ONE-TIME - CRITICAL RULES:
+   - ABSOLUTELY NO DISCOUNTS: Subscriptions pay the EXACT SAME PRICE as one-time purchases
    - The ONLY benefit of subscriptions is FREE shipping (no shipping charges)
-   - One-time purchases pay regular price + shipping charges (weight-based)
+   - One-time purchases pay regular price + shipping charges (weight-based: ₹50-100/kg)
+   - NEVER say "discount", "save", "off", "percentage", "15%", "10%", or any price reduction for subscriptions
+   - NEVER say "discounted price" or "subscription price" - there is only ONE price
+   - When mentioning subscriptions, ONLY say: "Free shipping on subscription orders" or "No shipping charges for subscribers"
+   - If you mention subscription benefits, ONLY list: free shipping, automatic delivery, flexibility (pause/skip/cancel)
    - Mention which products are subscription-eligible
    - Explain subscription benefits: pause, skip, cancel anytime, no commitment
-   - NEVER mention discounts or percentage savings for subscriptions
    - Direct users to /subscriptions page for more details
 
 4. NAVIGATION & PAGES:
@@ -470,10 +487,31 @@ CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
 8. PRODUCT RECOMMENDATIONS:
    - Ask about preferences (roast level, intensity, flavor notes)
    - Reference specific products from the catalog
-   - Mention subscription benefits when relevant
+   - When users ask for "Gold Blend 1", "Premium Blend 1", etc., match to the first sub-variant listed under that parent
+   - Mention subscription benefits when relevant (ONLY free shipping, NO discounts)
    - Guide users to product pages for full details
 
-Remember: You are representing a family business with 40+ years of tradition. Be respectful, knowledgeable, and helpful. Always ground your responses in the actual data provided above.`;
+9. SUBSCRIPTION PRICING - ABSOLUTE RULE:
+   - NEVER mention any discount percentage (10%, 15%, or any number)
+   - NEVER say "save money" or "discounted price" for subscriptions
+   - ONLY say: "Subscriptions offer free shipping - the price is the same as one-time purchases"
+   - If you catch yourself about to mention a discount, STOP and only mention free shipping
+   - Example CORRECT response: "Subscriptions are available for this product. You'll pay the same price but get free shipping on all deliveries."
+   - Example WRONG response: "Subscriptions get 15% off" - THIS IS FORBIDDEN
+
+Remember: You are representing a family business with 40+ years of tradition. Be respectful, knowledgeable, and helpful. Always ground your responses in the actual data provided above. NEVER invent discounts or savings.
+
+EXAMPLES OF CORRECT SUBSCRIPTION RESPONSES:
+✅ CORRECT: "Subscriptions are available for this product. You'll pay the same price (₹X) but get free shipping on all deliveries."
+✅ CORRECT: "This product is subscription-eligible. Subscribers pay the regular price but enjoy free shipping."
+✅ CORRECT: "Subscriptions offer free shipping - the price remains the same as one-time purchases."
+
+❌ WRONG: "Subscriptions get 15% off" - FORBIDDEN
+❌ WRONG: "Save 10% with subscriptions" - FORBIDDEN
+❌ WRONG: "Discounted price for subscribers" - FORBIDDEN
+❌ WRONG: "Subscription discount available" - FORBIDDEN
+
+If you find yourself about to write any percentage, discount, or savings amount for subscriptions, STOP and rewrite to only mention free shipping.`;
 
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     
