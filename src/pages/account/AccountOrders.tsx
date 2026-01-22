@@ -87,6 +87,10 @@ export default function OrdersPage() {
               .maybeSingle(),
           ]);
 
+          if (itemsResult.error) {
+            console.error(`Error fetching items for order ${order.id}:`, itemsResult.error);
+          }
+
           return {
             ...order,
             items: itemsResult.data || [],
@@ -195,21 +199,27 @@ export default function OrdersPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Order Items */}
-                  <div className="space-y-2">
-                    {order.items.slice(0, 2).map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {item.product_name} ({item.weight}g × {item.quantity})
-                        </span>
-                        <span className="font-medium">₹{item.total_price}</span>
-                      </div>
-                    ))}
-                    {order.items.length > 2 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{order.items.length - 2} more item(s)
-                      </p>
-                    )}
-                  </div>
+                  {order.items && order.items.length > 0 ? (
+                    <div className="space-y-2">
+                      {order.items.slice(0, 2).map((item) => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {item.product_name} ({item.weight}g × {item.quantity})
+                          </span>
+                          <span className="font-medium">₹{item.total_price}</span>
+                        </div>
+                      ))}
+                      {order.items.length > 2 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{order.items.length - 2} more item(s)
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      Item details unavailable
+                    </p>
+                  )}
 
                   <Separator />
 
@@ -303,17 +313,23 @@ export default function OrdersPage() {
 
               <div className="space-y-3">
                 <h4 className="font-medium text-sm">Items</h4>
-                {selectedOrder.items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <div>
-                      <p>{item.product_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.weight}g • Qty: {item.quantity}
-                      </p>
+                {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                  selectedOrder.items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <div>
+                        <p>{item.product_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.weight}g • Qty: {item.quantity}
+                        </p>
+                      </div>
+                      <span className="font-medium">₹{item.total_price}</span>
                     </div>
-                    <span className="font-medium">₹{item.total_price}</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    No items found for this order. This may be due to a data migration issue.
+                  </p>
+                )}
               </div>
 
               <Separator />

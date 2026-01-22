@@ -49,6 +49,7 @@ export interface ProductVariant {
   status: 'active' | 'out_of_stock' | 'discontinued';
   is_default: boolean;
   sort_order: number;
+  razorpay_plan_id?: string | null;
   created_at: string;
   updated_at: string;
 }

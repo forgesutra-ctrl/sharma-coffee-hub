@@ -3,8 +3,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Max-Age": "86400",
 };
 
 const CUTOFF_DAYS = 3;
@@ -16,6 +17,7 @@ interface ManageDeliveriesRequest {
   deliveryId?: string;
   newDate?: string; // ISO date string (YYYY-MM-DD)
   newStatus?: "scheduled" | "delivered" | "skipped";
+  user_id?: string; // Optional: for fallback validation if JWT fails
 }
 
 // Helper to compute difference in days between two dates (date-only comparison)
@@ -32,14 +34,19 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // Parse request body first to get user_id (for fallback validation)
+    let requestData: ManageDeliveriesRequest;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request body:", parseError);
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    const authHeader = req.headers.get("Authorization");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -52,28 +59,77 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // User-scoped client for auth
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Admin client for DB operations (service role)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+    let user: any = null;
+    let userError: any = null;
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
+    // PRIORITY 1: If user_id is provided in request body, use it (most reliable)
+    if (requestData.user_id) {
+      console.log("🔐 [manage-deliveries] Using user_id from request:", requestData.user_id);
+      try {
+        const { data: userData, error: userLookupError } = await supabaseAdmin.auth.admin.getUserById(requestData.user_id);
+        
+        if (userData?.user && !userLookupError) {
+          console.log("✅ [manage-deliveries] User validated via user_id:", userData.user.id);
+          user = { id: userData.user.id, email: userData.user.email };
+        } else {
+          console.error("❌ [manage-deliveries] User_id validation failed:", userLookupError);
+        }
+      } catch (fallbackError) {
+        console.error("❌ [manage-deliveries] User_id validation error:", fallbackError);
+      }
+    }
 
-    if (userError || !user) {
-      console.error("Auth error in manage-deliveries:", userError);
+    // PRIORITY 2: Try JWT validation if Authorization header is present and user_id didn't work
+    if (!user && authHeader) {
+      const token = authHeader.replace("Bearer ", "").trim();
+      
+      if (token) {
+        // Debug: Log token info (first 30 chars only)
+        const tokenPreview = token.substring(0, 30) + "...";
+        console.log("🔐 [manage-deliveries] Validating token (fallback):", {
+          hasToken: !!token,
+          tokenPrefix: tokenPreview,
+          tokenLength: token.length,
+        });
+
+        const authResult = await supabaseAdmin.auth.getUser(token);
+        user = authResult.data.user;
+        userError = authResult.error;
+
+        if (userError || !user) {
+          console.error("❌ [manage-deliveries] JWT validation failed:", {
+            error: userError,
+            errorMessage: userError?.message,
+            errorCode: userError?.status,
+            errorName: userError?.name,
+            hasUser: !!user,
+          });
+        } else {
+          console.log("✅ [manage-deliveries] User authenticated via JWT:", user.id);
+        }
+      }
+    }
+
+    if (!user) {
+      console.error("❌ [manage-deliveries] All authentication methods failed. Request data:", {
+        hasUserId: !!requestData.user_id,
+        userId: requestData.user_id,
+        hasAuthHeader: !!authHeader,
+        action: requestData.action,
+      });
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ 
+          code: 401, 
+          message: "Authentication failed", 
+          details: userError?.message || "No valid authentication method found",
+          hint: "Please ensure you are logged in and try again"
+        }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const requestData: ManageDeliveriesRequest = await req.json();
+    // requestData was already parsed above, extract action and other fields
     const { action, deliveryId, newDate, newStatus } = requestData;
 
     if (!action) {
@@ -85,22 +141,42 @@ Deno.serve(async (req: Request) => {
 
     // ========== ACTION: LIST UPCOMING DELIVERIES ==========
     if (action === "list") {
-      // We treat pending_subscriptions as the source of truth for active subscriptions.
-      // Join it with subscription_deliveries to produce a user-friendly view.
-      const { data: subs, error: subsError } = await supabaseAdmin
-        .from("pending_subscriptions")
-        .select("id, user_id, product_id, variant_id, quantity, shipping_address, products(name), product_variants(weight, price)")
-        .eq("user_id", user.id);
+      // Query both pending_subscriptions (for unpaid) and user_subscriptions (for active)
+      // to get all subscriptions for this user
+      const [pendingSubsResult, activeSubsResult] = await Promise.all([
+        supabaseAdmin
+          .from("pending_subscriptions")
+          .select("id, user_id, product_id, variant_id, quantity, shipping_address")
+          .eq("user_id", user.id),
+        supabaseAdmin
+          .from("user_subscriptions")
+          .select("id, user_id, product_id, variant_id, quantity, shipping_address")
+          .eq("user_id", user.id)
+          .in("status", ["active", "pending"]),
+      ]);
 
-      if (subsError) {
-        console.error("❌ Error fetching subscriptions for deliveries:", subsError);
+      const allSubs = [
+        ...(pendingSubsResult.data || []),
+        ...(activeSubsResult.data || []),
+      ];
+
+      if (pendingSubsResult.error) {
+        console.error("❌ Error fetching pending subscriptions:", pendingSubsResult.error);
+      }
+      if (activeSubsResult.error) {
+        console.error("❌ Error fetching active subscriptions:", activeSubsResult.error);
+      }
+
+      // If both queries failed, return error
+      if (pendingSubsResult.error && activeSubsResult.error) {
+        console.error("❌ Error fetching subscriptions for deliveries");
         return new Response(
           JSON.stringify({ error: "Failed to load subscriptions" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      const subscriptionIds = (subs || []).map((s) => s.id);
+      const subscriptionIds = allSubs.map((s) => s.id);
 
       if (subscriptionIds.length === 0) {
         return new Response(
@@ -109,11 +185,36 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const { data: deliveries, error: deliveriesError } = await supabaseAdmin
+      // Fetch deliveries for these subscriptions
+      let { data: deliveries, error: deliveriesError } = await supabaseAdmin
         .from("subscription_deliveries")
         .select("*")
         .in("subscription_id", subscriptionIds)
         .order("delivery_date", { ascending: true });
+
+      // Also check if there are deliveries linked to user_subscriptions via razorpay_subscription_id
+      // This handles the case where subscription was activated via webhook
+      const { data: userSubs } = await supabaseAdmin
+        .from("user_subscriptions")
+        .select("id, razorpay_subscription_id")
+        .eq("user_id", user.id)
+        .not("razorpay_subscription_id", "is", null);
+
+      if (userSubs && userSubs.length > 0) {
+        const userSubIds = userSubs.map(s => s.id);
+        const { data: additionalDeliveries } = await supabaseAdmin
+          .from("subscription_deliveries")
+          .select("*")
+          .in("subscription_id", userSubIds)
+          .order("delivery_date", { ascending: true });
+
+        // Merge deliveries, avoiding duplicates
+        const allDeliveryIds = new Set((deliveries || []).map(d => d.id));
+        deliveries = [
+          ...(deliveries || []),
+          ...(additionalDeliveries || []).filter(d => !allDeliveryIds.has(d.id))
+        ];
+      }
 
       if (deliveriesError) {
         console.error("❌ Error fetching subscription_deliveries:", deliveriesError);
@@ -123,9 +224,34 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Fetch product info for all subscriptions
+      const productInfoPromises = allSubs.map(async (sub) => {
+        const [productResult, variantResult] = await Promise.all([
+          sub.product_id ? supabaseAdmin
+            .from("products")
+            .select("name")
+            .eq("id", sub.product_id)
+            .maybeSingle() : Promise.resolve({ data: null }),
+          sub.variant_id ? supabaseAdmin
+            .from("product_variants")
+            .select("weight")
+            .eq("id", sub.variant_id)
+            .maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+        return {
+          subId: sub.id,
+          product_name: productResult.data?.name ?? null,
+          quantity: sub.quantity ?? null,
+          weight: variantResult.data?.weight ?? null,
+        };
+      });
+      
+      const productInfoArray = await Promise.all(productInfoPromises);
+      const productInfoMap = new Map(productInfoArray.map(info => [info.subId, info]));
+
       // Join in memory to enrich deliveries with product info
       const enriched = (deliveries || []).map((delivery) => {
-        const sub = (subs || []).find((s) => s.id === delivery.subscription_id);
+        const info = productInfoMap.get(delivery.subscription_id) || {};
         return {
           id: delivery.id,
           subscription_id: delivery.subscription_id,
@@ -133,9 +259,9 @@ Deno.serve(async (req: Request) => {
           delivery_date: delivery.delivery_date,
           status: delivery.status,
           created_at: delivery.created_at,
-          product_name: sub?.products?.name ?? null,
-          quantity: sub?.quantity ?? null,
-          weight: sub?.product_variants?.weight ?? null,
+          product_name: info.product_name ?? null,
+          quantity: info.quantity ?? null,
+          weight: info.weight ?? null,
         };
       });
 

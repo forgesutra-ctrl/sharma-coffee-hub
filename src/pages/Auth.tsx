@@ -1,52 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, ArrowLeft, Loader2, Coffee } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Loader2, Coffee } from 'lucide-react';
 
-type AuthStep = 'email' | 'otp';
+type AuthMode = 'signin' | 'signup';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [step, setStep] = useState<AuthStep>('email');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [mode, setMode] = useState<AuthMode>('signin');
   const [isLoading, setIsLoading] = useState(false);
-  const [maskedEmail, setMaskedEmail] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [attempts, setAttempts] = useState(0);
   
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   
   const redirectTo = (location.state as any)?.from || '/account';
 
-  // Resend cooldown timer
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-  // Auto-focus first OTP input
-  useEffect(() => {
-    if (step === 'otp') {
-      otpRefs.current[0]?.focus();
-    }
-  }, [step]);
-
-  // Auto-submit when OTP is complete
-  useEffect(() => {
-    if (otp.every(digit => digit !== '')) {
-      handleVerifyOtp();
-    }
-  }, [otp]);
-
-  const handleSendOtp = async () => {
+  const handleSignUp = async () => {
     if (!email || !email.includes('@')) {
       toast({
         title: 'Invalid email',
@@ -56,85 +31,46 @@ const Auth = () => {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await supabase.functions.invoke('send-otp', {
-        body: { email },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to send OTP');
-      }
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
-
-      setMaskedEmail(response.data.maskedEmail || email);
-      setStep('otp');
-      setResendCooldown(30);
+    if (!password || password.length < 6) {
       toast({
-        title: 'OTP Sent',
-        description: 'Check your email for the verification code',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send OTP',
+        title: 'Invalid password',
+        description: 'Password must be at least 6 characters long',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  };
 
-  const handleVerifyOtp = async () => {
-    const otpString = otp.join('');
-    if (otpString.length !== 6) return;
-
-    if (attempts >= 5) {
+    if (password !== confirmPassword) {
       toast({
-        title: 'Too many attempts',
-        description: 'Please request a new OTP',
+        title: 'Passwords do not match',
+        description: 'Please make sure both passwords are the same',
         variant: 'destructive',
       });
       return;
     }
 
     setIsLoading(true);
-    setAttempts(prev => prev + 1);
-
     try {
-      const response = await supabase.functions.invoke('verify-otp', {
-        body: { email, otp: otpString },
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to verify OTP');
+      if (error) {
+        throw error;
       }
 
-      if (response.data?.error) {
-        throw new Error(response.data.error);
+      if (!data.user) {
+        throw new Error('Failed to create account');
       }
 
-      // Use the token hash to verify the session
-      if (response.data?.tokenHash) {
-        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: response.data.tokenHash,
-          type: 'magiclink',
-        });
-
-        if (verifyError) {
-          throw new Error(verifyError.message || 'Session verification failed');
-        }
-
-        if (!verifyData?.session) {
-          throw new Error('No session created. Please try again.');
-        }
-
-        const userId = verifyData.user?.id;
+      // Check if user needs email confirmation (Supabase setting)
+      // If email confirmation is disabled, user is automatically signed in
+      if (data.session) {
+        const userId = data.user.id;
         let finalRedirect = redirectTo;
 
+        // Check user role for admin redirect
         if (userId) {
           const { data: userRole } = await supabase
             .from('user_roles')
@@ -148,56 +84,114 @@ const Auth = () => {
         }
 
         toast({
-          title: response.data?.isNewUser ? 'Account Created' : 'Welcome Back',
-          description: 'You have been successfully logged in',
+          title: 'Account Created',
+          description: 'Your account has been created successfully',
         });
 
         navigate(finalRedirect, { replace: true });
       } else {
-        throw new Error('Invalid verification response');
+        // Email confirmation required
+        toast({
+          title: 'Check your email',
+          description: 'We sent you a confirmation email. Please verify your email to continue.',
+        });
+        setMode('signin');
       }
     } catch (error: any) {
       toast({
-        title: 'Invalid OTP',
-        description: error.message || 'Please check the code and try again',
+        title: 'Error',
+        description: error.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
-      setOtp(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
+  const handleSignIn = async () => {
+    if (!email || !email.includes('@')) {
+      toast({
+        title: 'Invalid email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
+    if (!password) {
+      toast({
+        title: 'Password required',
+        description: 'Please enter your password',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.session || !data.user) {
+        throw new Error('Login failed. Please try again.');
+      }
+
+      const userId = data.user.id;
+      let finalRedirect = redirectTo;
+
+      // Check user role for admin redirect
+      if (userId) {
+        const { data: userRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
+          finalRedirect = '/admin/dashboard';
+        }
+      }
+
+      toast({
+        title: 'Welcome Back',
+        description: 'You have been successfully logged in',
+      });
+
+      navigate(finalRedirect, { replace: true });
+    } catch (error: any) {
+      let errorMessage = 'Failed to sign in. Please check your credentials and try again.';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Please verify your email address before signing in.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: 'Sign In Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
-    
-    const newOtp = [...otp];
-    pastedData.split('').forEach((digit, i) => {
-      if (i < 6) newOtp[i] = digit;
-    });
-    setOtp(newOtp);
+    if (mode === 'signup') {
+      handleSignUp();
+    } else {
+      handleSignIn();
+    }
   };
 
   return (
@@ -209,130 +203,119 @@ const Auth = () => {
             <Coffee className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-2xl font-serif font-bold text-foreground">Sharma Coffee Works</h1>
-          <p className="text-muted-foreground text-sm mt-1">Est. 1985 • Coorg, Karnataka</p>
+          <p className="text-muted-foreground text-sm mt-1">Est. 1987 • Coorg, Karnataka</p>
         </div>
 
         {/* Auth Card */}
         <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
-          {step === 'email' ? (
-            <>
-              <button
-                onClick={() => navigate(-1)}
-                className="flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                <span className="text-sm">Back</span>
-              </button>
-              <h2 className="text-xl font-semibold text-center mb-2">Welcome</h2>
-              <p className="text-muted-foreground text-center text-sm mb-6">
-                Enter your email to sign in or create an account
-              </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            <span className="text-sm">Back</span>
+          </button>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
-                    className="pl-10 h-12 bg-background"
-                    disabled={isLoading}
-                  />
-                </div>
+          <h2 className="text-xl font-semibold text-center mb-2">
+            {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
+          </h2>
+          <p className="text-muted-foreground text-center text-sm mb-6">
+            {mode === 'signin'
+              ? 'Sign in to your account to continue'
+              : 'Enter your details to create a new account'}
+          </p>
 
-                <Button
-                  onClick={handleSendOtp}
-                  disabled={isLoading || !email}
-                  className="w-full h-12 text-base font-medium"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    'Send OTP'
-                  )}
-                </Button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10 h-12 bg-background"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="password"
+                placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password (min. 6 characters)'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10 h-12 bg-background"
+                disabled={isLoading}
+                required
+                minLength={mode === 'signup' ? 6 : undefined}
+              />
+            </div>
+
+            {mode === 'signup' && (
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pl-10 h-12 bg-background"
+                  disabled={isLoading}
+                  required
+                  minLength={6}
+                />
               </div>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  setStep('email');
-                  setOtp(['', '', '', '', '', '']);
-                  setAttempts(0);
-                }}
-                className="flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Back
-              </button>
+            )}
 
-              <h2 className="text-xl font-semibold text-center mb-2">Verify Email</h2>
-              <p className="text-muted-foreground text-center text-sm mb-6">
-                Enter the 6-digit code sent to<br />
-                <span className="text-foreground font-medium">{maskedEmail}</span>
-              </p>
-
-              <div className="flex justify-center gap-2 mb-6" onPaste={handleOtpPaste}>
-                {otp.map((digit, index) => (
-                  <Input
-                    key={index}
-                    ref={(el) => (otpRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className="w-12 h-14 text-center text-xl font-bold bg-background"
-                    disabled={isLoading}
-                  />
-                ))}
-              </div>
-
-              <Button
-                onClick={handleVerifyOtp}
-                disabled={isLoading || otp.some(d => !d)}
-                className="w-full h-12 text-base font-medium mb-4"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify OTP'
-                )}
-              </Button>
-
-              <div className="text-center">
-                {resendCooldown > 0 ? (
-                  <p className="text-muted-foreground text-sm">
-                    Resend OTP in {resendCooldown}s
-                  </p>
-                ) : (
-                  <button
-                    onClick={handleSendOtp}
-                    disabled={isLoading}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    Resend OTP
-                  </button>
-                )}
-              </div>
-
-              {attempts > 0 && (
-                <p className="text-muted-foreground text-xs text-center mt-4">
-                  Attempts: {attempts}/5
-                </p>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 text-base font-medium"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {mode === 'signin' ? 'Signing in...' : 'Creating account...'}
+                </>
+              ) : (
+                mode === 'signin' ? 'Sign In' : 'Create Account'
               )}
-            </>
-          )}
+            </Button>
+          </form>
+
+          <div className="mt-6 space-y-3">
+            {mode === 'signin' && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-sm text-primary hover:underline font-medium"
+                  disabled={isLoading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode(mode === 'signin' ? 'signup' : 'signin');
+                    setPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="text-primary hover:underline font-medium"
+                  disabled={isLoading}
+                >
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+            </div>
+          </div>
         </div>
 
         <p className="text-muted-foreground text-xs text-center mt-6">

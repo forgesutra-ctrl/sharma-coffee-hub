@@ -4,7 +4,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, authorization, x-client-info, apikey, content-type",
+  "Access-Control-Max-Age": "86400",
 };
 
 interface VerifyPaymentRequest {
@@ -43,6 +44,7 @@ interface CheckoutData {
 }
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight - must be first and return immediately
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -51,12 +53,30 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Parse request body safely
+    let requestBody: VerifyPaymentRequest;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request body:", parseError);
+      return new Response(
+        JSON.stringify({
+          error: "Invalid request body",
+          verified: false,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const {
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,
       checkoutData,
-    }: VerifyPaymentRequest = await req.json();
+    } = requestBody;
 
     if (!razorpayPaymentId) {
       return new Response(
@@ -252,7 +272,8 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const checkout: CheckoutData = JSON.parse(checkoutData);
+    // checkout is already parsed above, reuse it
+    // const checkout: CheckoutData = JSON.parse(checkoutData);
 
     const { data: existingOrder } = await supabase
       .from("orders")
@@ -322,7 +343,7 @@ Deno.serve(async (req: Request) => {
         product_name: item.product_name,
         product_id: item.product_id || null,
         weight: item.weight,
-        grind_type: item.grind_type || "Whole Bean",
+        // grind_type column doesn't exist in order_items table, removed
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,

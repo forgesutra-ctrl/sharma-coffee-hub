@@ -61,7 +61,7 @@ const ProductDetail = () => {
     setSelectedWeight(null); // Reset weight selection
   };
 
-  // Validate subscription plan when active product changes
+  // Validate subscription plan when active product or selected variant changes
   useEffect(() => {
     if (!activeProduct) {
       setSubscriptionPlanValid(false);
@@ -69,18 +69,36 @@ const ProductDetail = () => {
       return;
     }
 
+    // Get selected variant
+    const currentVariant = variants.find(v => v.weight === selectedWeight) || variants[0];
+
+    // Check plan ID: variant first, then product (same priority as checkout)
+    const planId = currentVariant?.razorpay_plan_id || activeProduct.razorpay_plan_id;
+
     // Debug log to verify razorpay_plan_id is present
     console.log("Fetched product:", {
       id: activeProduct.id,
       name: activeProduct.name,
       subscription_eligible: activeProduct.subscription_eligible,
-      razorpay_plan_id: activeProduct.razorpay_plan_id,
+      product_razorpay_plan_id: activeProduct.razorpay_plan_id,
+      variant_razorpay_plan_id: currentVariant?.razorpay_plan_id,
+      final_plan_id: planId,
     });
 
-    const validation = validateSubscriptionPlan(activeProduct);
+    // Validate using a product-like object with the final plan ID
+    const validation = validateSubscriptionPlan({
+      subscription_eligible: activeProduct.subscription_eligible,
+      razorpay_plan_id: planId,
+    });
     setSubscriptionPlanValid(validation.isValid);
     setSubscriptionPlanError(validation.error || null);
-  }, [activeProduct?.id, activeProduct?.subscription_eligible, activeProduct?.razorpay_plan_id]);
+  }, [
+    activeProduct?.id,
+    activeProduct?.subscription_eligible,
+    activeProduct?.razorpay_plan_id,
+    selectedWeight,
+    variants,
+  ]);
 
   // Loading state
   if (isLoading) {

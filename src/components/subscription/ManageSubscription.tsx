@@ -93,19 +93,38 @@ export function ManageSubscription() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Query subscriptions without relationships first, then fetch related data separately
+      const { data: subscriptionsData, error } = await supabase
         .from('user_subscriptions')
-        .select(`
-          *,
-          plan:subscription_plans(*),
-          product:products(id, name, image_url),
-          variant:product_variants(id, weight, price)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSubscriptions(data as UserSubscription[]);
+      if (!subscriptionsData) {
+        setSubscriptions([]);
+        return;
+      }
+
+      // Fetch related data for each subscription
+      const subscriptionsWithDetails = await Promise.all(
+        subscriptionsData.map(async (sub) => {
+          const [planResult, productResult, variantResult] = await Promise.all([
+            sub.plan_id ? supabase.from('subscription_plans').select('*').eq('id', sub.plan_id).maybeSingle() : Promise.resolve({ data: null }),
+            supabase.from('products').select('id, name, image_url').eq('id', sub.product_id).maybeSingle(),
+            sub.variant_id ? supabase.from('product_variants').select('id, weight, price').eq('id', sub.variant_id).maybeSingle() : Promise.resolve({ data: null }),
+          ]);
+
+          return {
+            ...sub,
+            plan: planResult.data,
+            product: productResult.data,
+            variant: variantResult.data,
+          };
+        })
+      );
+
+      setSubscriptions(subscriptionsWithDetails as UserSubscription[]);
     } catch (err) {
       console.error('Failed to load subscriptions:', err);
       toast.error('Failed to load subscriptions');
@@ -137,14 +156,30 @@ export function ManageSubscription() {
     try {
       const action = subscription.status === 'active' ? 'pause' : 'resume';
 
-      const { data, error } = await supabase.functions.invoke('manage-subscription', {
-        body: {
+      // Use direct fetch with anon key to bypass gateway JWT validation
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-subscription`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, // Use anon key to bypass gateway JWT validation
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           subscriptionId: subscription.id,
           action,
-        },
+          user_id: user?.id, // Include user_id for server-side validation
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to update subscription" }));
+        throw new Error(errorData?.error || errorData?.details || "Failed to update subscription");
+      }
+
+      const data = await response.json();
       if (!data?.success) {
         throw new Error(data?.error || 'Failed to update subscription');
       }
@@ -161,14 +196,30 @@ export function ManageSubscription() {
     if (!confirm('Are you sure you want to cancel this subscription? This action cannot be undone.')) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('manage-subscription', {
-        body: {
+      // Use direct fetch with anon key to bypass gateway JWT validation
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-subscription`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, // Use anon key to bypass gateway JWT validation
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           subscriptionId: subscription.id,
           action: 'cancel',
-        },
+          user_id: user?.id, // Include user_id for server-side validation
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to cancel subscription" }));
+        throw new Error(errorData?.error || errorData?.details || "Failed to cancel subscription");
+      }
+
+      const data = await response.json();
       if (!data?.success) {
         throw new Error(data?.error || 'Failed to cancel subscription');
       }

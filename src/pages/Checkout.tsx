@@ -590,14 +590,7 @@ const Checkout = () => {
       }
 
       const product = firstItem.product;
-      const planId = product.razorpay_plan_id;
-
-      console.log("Product plan ID:", planId);
-
-      if (!planId) {
-        throw new Error("Subscription plan not configured for this product.");
-      }
-
+      
       // ✅ GET SELECTED VARIANT FROM CART
       const variantId = firstItem.variant_id;
       
@@ -605,7 +598,38 @@ const Checkout = () => {
         throw new Error("No product variant selected. Please select a variant size.");
       }
 
-      // ✅ GET VARIANT PRICE - Use original_price from cart or fetch from database
+      // ✅ FETCH VARIANT TO GET PLAN ID AND PRICE
+      // The Edge Function uses variant.razorpay_plan_id, so we must check that first
+      console.log("Fetching variant details from database...");
+      const { data: variantData, error: variantError } = await supabase
+        .from("product_variants")
+        .select("id, price, weight, razorpay_plan_id")
+        .eq("id", variantId)
+        .single();
+
+      if (variantError || !variantData) {
+        console.error("Variant fetch error:", variantError);
+        throw new Error("Variant not found. Please select a valid product variant.");
+      }
+
+      // ✅ CHECK PLAN ID - Priority: variant > product
+      const planId = variantData.razorpay_plan_id || product.razorpay_plan_id;
+      
+      console.log("Plan ID check:", {
+        variant_plan_id: variantData.razorpay_plan_id,
+        product_plan_id: product.razorpay_plan_id,
+        final_plan_id: planId,
+      });
+
+      if (!planId) {
+        throw new Error(
+          `Subscription plan not configured for "${product.name}". ` +
+          `This product is currently unavailable for subscription. ` +
+          `Please try one-time purchase instead.`
+        );
+      }
+
+      // ✅ GET VARIANT PRICE - Use original_price from cart or fetched price
       let variantPrice: number;
       
       if (firstItem.original_price && firstItem.original_price > 0) {
@@ -615,19 +639,6 @@ const Checkout = () => {
         console.log("   Type:", typeof variantPrice);
         console.log("   Value:", variantPrice);
       } else {
-        // Fetch variant from database to get price
-        console.log("Fetching variant details from database...");
-        const { data: variantData, error: variantError } = await supabase
-          .from("product_variants")
-          .select("id, price, weight, sku")
-          .eq("id", variantId)
-          .single();
-
-        if (variantError || !variantData) {
-          console.error("Variant fetch error:", variantError);
-          throw new Error("Variant not found. Please select a valid product variant.");
-        }
-
         variantPrice = Number(variantData.price); // Ensure it's a number
         console.log("✅ Fetched variant price from database:", {
           variant_id: variantData.id,
@@ -865,15 +876,24 @@ const Checkout = () => {
         name: "Sharma Coffee Works",
         description: product.name || "Coffee Subscription",
         // For subscriptions, Razorpay handles billing only. We use handler
-        // purely to notify the user about delivery scheduling on success.
-        handler: () => {
+        // to notify the user and redirect to subscriptions page.
+        handler: async (response: any) => {
+          console.log("✅ Subscription payment successful:", response);
+          
+          // Clear the cart since subscription is activated
+          clearCart();
+          
+          // Show success message
           toast({
-            title: "Subscription Activated",
+            title: "Subscription Activated! 🎉",
             description:
-              "Your first delivery is scheduled. You can choose delivery dates for future months from the Manage Subscription section.",
+              "Your subscription is now active. You can manage delivery dates and preferences from your account.",
           });
-          // TODO: Implement "Manage Subscription" page where users can
-          // configure delivery dates for future cycles (cycle_number >= 2).
+          
+          // Navigate to subscriptions page after a short delay to let the toast show
+          setTimeout(() => {
+            navigate("/account/subscriptions", { replace: true });
+          }, 1500);
         },
         prefill: {
           name: shippingForm.fullName || "",
@@ -882,6 +902,17 @@ const Checkout = () => {
         },
         theme: {
           color: "#C8A97E",
+        },
+        modal: {
+          ondismiss: () => {
+            console.log("[Razorpay] Subscription payment popup dismissed by user");
+            setIsLoading(false);
+            toast({
+              title: "Payment Cancelled",
+              description: "Subscription setup was cancelled. You can try again anytime.",
+              variant: "default",
+            });
+          },
         },
       };
 
@@ -1081,22 +1112,58 @@ const Checkout = () => {
     try {
       console.log("Verifying payment with backend...");
 
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
-        "verify-razorpay-payment",
-        {
-          body: {
-            razorpayOrderId: razorpayResponse.razorpay_order_id,
-            razorpayPaymentId: razorpayResponse.razorpay_payment_id,
-            razorpaySignature: razorpayResponse.razorpay_signature,
-            checkoutData: JSON.stringify(checkoutData),
-          },
+      // Ensure we have a valid session before calling the function
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error:", sessionError);
+        // Try to refresh the session
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshedSession) {
+          throw new Error("Session expired. Please log in again.");
         }
-      );
-
-      if (verifyError) {
-        console.error("Verification error:", verifyError);
-        throw new Error("Payment verification failed. Please contact support.");
       }
+
+      // Use direct fetch to avoid CORS issues with supabase.functions.invoke()
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      
+      // Use direct fetch with proper Supabase Edge Function headers
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+      };
+      
+      // Add Authorization header if user is logged in
+      if (currentSession?.access_token) {
+        headers["Authorization"] = `Bearer ${currentSession.access_token}`;
+      }
+      
+      console.log("Calling verify-razorpay-payment via direct fetch...");
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-razorpay-payment`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          razorpayOrderId: razorpayResponse.razorpay_order_id,
+          razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+          razorpaySignature: razorpayResponse.razorpay_signature,
+          checkoutData: JSON.stringify(checkoutData),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Payment verification failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        });
+        throw new Error(`Payment verification failed: ${response.status} ${response.statusText}`);
+      }
+
+      const verifyData = await response.json();
 
       if (!verifyData?.verified) {
         console.error("Payment not verified:", verifyData);

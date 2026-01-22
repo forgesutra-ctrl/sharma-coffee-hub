@@ -100,13 +100,12 @@ const OrderConfirmation = () => {
       try {
         console.log("Fetching order from Supabase:", orderId);
 
+        // Query order with items - dtdc_awb_number and shipment_created_at may not exist in all schemas
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select(`
             *,
-            order_items (*),
-            dtdc_awb_number,
-            shipment_created_at
+            order_items (*)
           `)
           .eq("id", orderId)
           .maybeSingle();

@@ -112,7 +112,8 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
           price,
           compare_at_price,
           stock_quantity,
-          cod_enabled
+          cod_enabled,
+          razorpay_plan_id
         ),
         product_images (
           id,
@@ -172,7 +173,8 @@ async function fetchProductBySlug(slug: string): Promise<DatabaseProduct | null>
           price,
           compare_at_price,
           stock_quantity,
-          cod_enabled
+          cod_enabled,
+          razorpay_plan_id
         ),
         product_images (
           id,
@@ -287,7 +289,8 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
           price,
           compare_at_price,
           stock_quantity,
-          cod_enabled
+          cod_enabled,
+          razorpay_plan_id
         ),
         product_images (
           id,

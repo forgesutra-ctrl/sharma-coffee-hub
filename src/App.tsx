@@ -12,6 +12,7 @@ import { setupFocusGuard } from "./lib/accessibility";
 import Homepage from "./pages/Homepage";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -68,6 +69,7 @@ const App = () => {
                 {/* Public Routes */}
                 <Route path="/" element={<Layout><Homepage /></Layout>} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />
                 <Route path="/shop/:categorySlug" element={<Layout><Shop /></Layout>} />
                 <Route path="/product/:slug" element={<Layout><ProductDetail /></Layout>} />

@@ -76,23 +76,37 @@ export function ChatBot() {
     try {
       console.log("📤 Sending message to Edge Function:", text);
 
-      const { data, error } = await supabase.functions.invoke("chat-assistant", {
-        body: {
+      // Use direct fetch to avoid authentication issues
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/chat-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           message: text,
           conversationHistory: messages.slice(-6).map((m) => ({
             role: m.role,
             content: m.content,
           })),
-        },
+        }),
       });
 
-      console.log("📥 Raw response from Edge Function:", data);
-      console.log("❌ Error from Edge Function:", error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Chat service error: ${response.status} - ${errorText}`);
+      }
 
-      if (error) throw error;
+      const data = await response.json();
+
+      console.log("📥 Raw response from Edge Function:", data);
 
       // ✅ BULLETPROOF RESPONSE NORMALIZATION
-      // Handles ALL possible Supabase Edge Function return shapes
+      // Handles ALL possible response shapes
       let assistantText = "Sorry, I couldn't process that.";
 
       if (data) {
@@ -171,7 +185,7 @@ export function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-4 w-[90vw] md:w-96 h-[600px] bg-card border rounded-2xl shadow-2xl z-50 flex flex-col"
+            className="fixed bottom-20 right-4 w-[90vw] md:w-80 h-[500px] bg-card border rounded-2xl shadow-2xl z-[9999] flex flex-col"
           >
             {/* Header */}
             <div className="bg-primary text-primary-foreground p-4 flex justify-between">
