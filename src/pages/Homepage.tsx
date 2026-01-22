@@ -135,11 +135,71 @@ export default function Homepage() {
 
       {/* REVIEWS */}
       <section className="w-full py-24 bg-secondary">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-semibold">
-            What Our Customers Say
-          </h2>
-          <div className="sk-ww-google-reviews" data-embed-id="25643427" />
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-4xl md:text-5xl font-semibold mb-4">
+              What Our Customers Say
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Read what our customers have to say about their experience with Sharma Coffee Works
+            </p>
+          </div>
+          
+          {/* Scrollable Reviews Container */}
+          <div className="flex justify-center">
+            <div 
+              className="relative w-full max-w-5xl mx-auto rounded-xl border border-primary/20 overflow-hidden bg-background/50"
+              style={{ 
+                maxHeight: '700px',
+              }}
+            >
+              <div 
+                className="google-reviews-scroll overflow-y-auto overflow-x-hidden"
+                style={{
+                  maxHeight: '700px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(200, 169, 126, 0.5) transparent',
+                }}
+              >
+                <div 
+                  className="sk-ww-google-reviews p-6" 
+                  data-embed-id="25643427"
+                  style={{ 
+                    width: '100%',
+                    minHeight: '500px',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Scrollbar Styling */}
+          <style>{`
+            .google-reviews-scroll::-webkit-scrollbar {
+              width: 8px;
+            }
+            .google-reviews-scroll::-webkit-scrollbar-track {
+              background: transparent;
+              border-radius: 4px;
+            }
+            .google-reviews-scroll::-webkit-scrollbar-thumb {
+              background: rgba(200, 169, 126, 0.5);
+              border-radius: 4px;
+            }
+            .google-reviews-scroll::-webkit-scrollbar-thumb:hover {
+              background: rgba(200, 169, 126, 0.7);
+            }
+            .sk-ww-google-reviews {
+              width: 100%;
+            }
+            .sk-ww-google-reviews iframe {
+              border-radius: 8px;
+              width: 100% !important;
+            }
+            .sk-ww-google-reviews > div {
+              width: 100% !important;
+            }
+          `}</style>
         </div>
       </section>
 

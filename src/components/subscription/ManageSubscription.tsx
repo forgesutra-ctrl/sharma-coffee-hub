@@ -324,15 +324,15 @@ export function ManageSubscription() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'paused':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -363,41 +363,41 @@ export function ManageSubscription() {
           const weight = subscription.variant ? subscription.variant.weight : 0;
 
           return (
-            <Card key={subscription.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-4">
-                    {subscription.product.image_url && (
-                      <img
-                        src={subscription.product.image_url}
-                        alt={subscription.product.name}
-                        className="w-16 h-16 object-cover rounded-md"
-                      />
-                    )}
-                    <div>
-                      <CardTitle>{subscription.product.name}</CardTitle>
-                      <CardDescription>
-                        {weight}g · Qty {subscription.quantity}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge className={getStatusColor(subscription.status)}>
-                    {subscription.status}
-                  </Badge>
-                </div>
-              </CardHeader>
+            <Card key={subscription.id} className="relative">
+              {/* Status Badge - Top Right */}
+              <div className="absolute top-4 right-4 z-10">
+                <Badge className={getStatusColor(subscription.status)}>
+                  {subscription.status}
+                </Badge>
+              </div>
 
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+              <CardContent className="pt-6">
+                <div className="flex gap-4 mb-4">
+                  {/* Product Image */}
+                  {subscription.product.image_url && (
+                    <img
+                      src={subscription.product.image_url}
+                      alt={subscription.product.name}
+                      className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                    />
+                  )}
+                  {/* Product Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg mb-1">{subscription.product.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {weight}g • Qty {subscription.quantity}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subscription Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Monthly Price</p>
                     <p className="font-medium text-lg">₹{price.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground mb-1 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Next Delivery
-                    </p>
+                    <p className="text-muted-foreground mb-1">Next Delivery</p>
                     <p className="font-medium">
                       {subscription.next_delivery_date
                         ? format(new Date(subscription.next_delivery_date), 'MMM dd, yyyy')
@@ -405,10 +405,7 @@ export function ManageSubscription() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground mb-1 flex items-center gap-1">
-                      <Truck className="h-3 w-3" />
-                      Delivery Date
-                    </p>
+                    <p className="text-muted-foreground mb-1">Delivery Date</p>
                     <p className="font-medium">
                       {subscription.preferred_delivery_date
                         ? `${subscription.preferred_delivery_date}${
@@ -424,29 +421,24 @@ export function ManageSubscription() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground mb-1 flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      Deliveries
-                    </p>
+                    <p className="text-muted-foreground mb-1">Deliveries</p>
                     <p className="font-medium">
                       {subscription.completed_deliveries} / {subscription.total_deliveries}
                     </p>
                   </div>
                 </div>
 
-                {subscription.shipping_address && (
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                    <p className="font-medium flex items-center gap-2 mb-1">
-                      <MapPin className="h-4 w-4" />
-                      Delivery Address
-                    </p>
-                    <div className="text-muted-foreground">
-                      <p>{subscription.shipping_address.fullName}</p>
-                      <p>{subscription.shipping_address.addressLine1}</p>
+                {/* Delivery Address - Only show for active subscriptions */}
+                {subscription.status !== 'cancelled' && subscription.shipping_address && (
+                  <div className="bg-muted/50 rounded-lg p-4 mb-4 text-sm">
+                    <p className="font-medium mb-2 text-muted-foreground">Delivery Address</p>
+                    <div className="space-y-1">
+                      <p className="font-medium">{subscription.shipping_address.fullName}</p>
+                      <p className="text-muted-foreground">{subscription.shipping_address.addressLine1}</p>
                       {subscription.shipping_address.addressLine2 && (
-                        <p>{subscription.shipping_address.addressLine2}</p>
+                        <p className="text-muted-foreground">{subscription.shipping_address.addressLine2}</p>
                       )}
-                      <p>
+                      <p className="text-muted-foreground">
                         {subscription.shipping_address.city}, {subscription.shipping_address.state} -{' '}
                         {subscription.shipping_address.pincode}
                       </p>
@@ -454,39 +446,38 @@ export function ManageSubscription() {
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2 pt-3 border-t">
-                  {subscription.status === 'active' && (
-                    <Button size="sm" variant="outline" onClick={() => handlePauseResume(subscription)}>
-                      <Pause className="h-4 w-4 mr-1" /> Pause
+                {/* Action Buttons - Only show for non-cancelled subscriptions */}
+                {subscription.status !== 'cancelled' && subscription.status !== 'completed' && (
+                  <div className="flex flex-wrap gap-2 pt-4 border-t">
+                    {subscription.status === 'active' && (
+                      <Button size="sm" variant="outline" onClick={() => handlePauseResume(subscription)}>
+                        <Pause className="h-4 w-4 mr-1" /> Pause
+                      </Button>
+                    )}
+                    {subscription.status === 'paused' && (
+                      <Button size="sm" variant="outline" onClick={() => handlePauseResume(subscription)}>
+                        <Play className="h-4 w-4 mr-1" /> Resume
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => openDeliveryDateDialog(subscription)}>
+                      <Calendar className="h-4 w-4 mr-1" /> Change Date
                     </Button>
-                  )}
-                  {subscription.status === 'paused' && (
-                    <Button size="sm" variant="outline" onClick={() => handlePauseResume(subscription)}>
-                      <Play className="h-4 w-4 mr-1" /> Resume
+                    <Button size="sm" variant="outline" onClick={() => openAddressDialog(subscription)}>
+                      <MapPin className="h-4 w-4 mr-1" /> Update Address
                     </Button>
-                  )}
-                  {subscription.status !== 'cancelled' && subscription.status !== 'completed' && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => openDeliveryDateDialog(subscription)}>
-                        <Calendar className="h-4 w-4 mr-1" /> Change Date
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openAddressDialog(subscription)}>
-                        <MapPin className="h-4 w-4 mr-1" /> Update Address
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleCancel(subscription)}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Cancel
-                      </Button>
-                    </>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => openHistoryDialog(subscription)}>
-                    <Clock className="h-4 w-4 mr-1" /> History
-                  </Button>
-                </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleCancel(subscription)}
+                    >
+                      <X className="h-4 w-4 mr-1" /> Cancel
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openHistoryDialog(subscription)}>
+                      <Clock className="h-4 w-4 mr-1" /> History
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );

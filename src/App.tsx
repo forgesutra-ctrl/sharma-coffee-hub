@@ -35,6 +35,7 @@ import AccountOrders from "./pages/account/AccountOrders";
 import AccountAddresses from "./pages/account/AccountAddresses";
 import AccountSubscriptions from "./pages/account/AccountSubscriptions";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import SubscriptionConfirmation from "./pages/SubscriptionConfirmation";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -61,7 +62,12 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <ScrollToTop />
           <AuthProvider>
             <CartProvider>
@@ -98,6 +104,13 @@ const App = () => {
                   <ProtectedRoute>
                     <Layout>
                       <OrderConfirmation />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/subscription-confirmation/:subscriptionId" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <SubscriptionConfirmation />
                     </Layout>
                   </ProtectedRoute>
                 } />
