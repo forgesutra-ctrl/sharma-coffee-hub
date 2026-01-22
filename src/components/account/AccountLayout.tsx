@@ -56,7 +56,8 @@ export default function AccountLayout() {
                 ))}
               </nav>
               
-              <div className="hidden md:block border-t mt-4 pt-4">
+              {/* Logout Button - Visible on all screen sizes */}
+              <div className="border-t mt-4 pt-4">
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start text-muted-foreground hover:text-destructive"

@@ -1206,6 +1206,9 @@ const Checkout = () => {
       // Fetch order details for the confirmation modal
       setLoadingOrderDetails(true);
       try {
+        // Add a small delay to ensure order is fully committed to database
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select(`
@@ -1217,12 +1220,42 @@ const Checkout = () => {
 
         if (orderError) {
           console.error("Error fetching order details:", orderError);
-          // Still show success toast and navigate
-          toast({
-            title: "Order Placed Successfully!",
-            description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
-          });
-          navigate(`/order-confirmation/${verifyData.orderId}`);
+          // Retry once after a short delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const { data: retryData, error: retryError } = await supabase
+            .from("orders")
+            .select(`
+              *,
+              order_items (*)
+            `)
+            .eq("id", verifyData.orderId)
+            .maybeSingle();
+          
+          if (!retryError && retryData) {
+            setConfirmedOrder(retryData);
+            setShowOrderConfirmation(true);
+            toast({
+              title: "Order Placed Successfully!",
+              description: `Order #${retryData.order_number || verifyData.orderId} has been confirmed.`,
+            });
+          } else {
+            // If retry also fails, show modal with basic info
+            setConfirmedOrder({
+              id: verifyData.orderId,
+              order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
+              created_at: new Date().toISOString(),
+              shipping_address: checkoutData.shipping_address,
+              subtotal: checkoutData.subtotal,
+              total_amount: checkoutData.total_amount,
+              payment_type: checkoutData.payment_type,
+              order_items: [],
+            } as any);
+            setShowOrderConfirmation(true);
+            toast({
+              title: "Order Placed Successfully!",
+              description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
+            });
+          }
         } else if (orderData) {
           setConfirmedOrder(orderData);
           setShowOrderConfirmation(true);
@@ -1231,21 +1264,56 @@ const Checkout = () => {
             description: `Order #${orderData.order_number || verifyData.orderId} has been confirmed.`,
           });
         } else {
-          // Order not found, navigate to confirmation page
+          // Order not found yet, show modal with basic info and retry in background
+          setConfirmedOrder({
+            id: verifyData.orderId,
+            order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
+            created_at: new Date().toISOString(),
+            shipping_address: checkoutData.shipping_address,
+            subtotal: checkoutData.subtotal,
+            total_amount: checkoutData.total_amount,
+            payment_type: checkoutData.payment_type,
+            order_items: [],
+          } as any);
+          setShowOrderConfirmation(true);
           toast({
             title: "Order Placed Successfully!",
             description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
           });
-          navigate(`/order-confirmation/${verifyData.orderId}`);
+          
+          // Try to fetch order details in background
+          setTimeout(async () => {
+            const { data: bgOrderData } = await supabase
+              .from("orders")
+              .select(`
+                *,
+                order_items (*)
+              `)
+              .eq("id", verifyData.orderId)
+              .maybeSingle();
+            if (bgOrderData) {
+              setConfirmedOrder(bgOrderData);
+            }
+          }, 2000);
         }
       } catch (fetchError) {
         console.error("Error fetching order:", fetchError);
-        // Still show success and navigate
+        // Show modal with basic info even on error
+        setConfirmedOrder({
+          id: verifyData.orderId,
+          order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
+          created_at: new Date().toISOString(),
+          shipping_address: checkoutData.shipping_address,
+          subtotal: checkoutData.subtotal,
+          total_amount: checkoutData.total_amount,
+          payment_type: checkoutData.payment_type,
+          order_items: [],
+        } as any);
+        setShowOrderConfirmation(true);
         toast({
           title: "Order Placed Successfully!",
           description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
         });
-        navigate(`/order-confirmation/${verifyData.orderId}`);
       } finally {
         setLoadingOrderDetails(false);
         setIsLoading(false);
@@ -1763,7 +1831,10 @@ const Checkout = () => {
           navigate("/shop");
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-3xl max-h-[90vh] overflow-y-auto z-[9999]"
+          style={{ zIndex: 9999 }}
+        >
           {loadingOrderDetails ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />

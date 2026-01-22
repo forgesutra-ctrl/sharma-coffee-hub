@@ -11,28 +11,42 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
   const [widgetError, setWidgetError] = useState(false);
 
   useEffect(() => {
+    // Ensure widget container exists before proceeding
+    if (!widgetRef.current) {
+      return;
+    }
+
     // Force widget to be visible immediately
     setWidgetReady(true);
     
     // Wait for the SociableKit script to load and check for widget content
     const checkWidget = () => {
-      const widgetElement = widgetRef.current?.querySelector('.sk-ww-instagram-reels');
+      if (!widgetRef.current) return false;
+      
+      const widgetElement = widgetRef.current.querySelector('.sk-instagram-feed');
       if (widgetElement) {
-        // Check if widget has initialized (has iframe or content)
-        const iframe = widgetElement.querySelector('iframe');
-        const hasContent = widgetElement.children.length > 0 && 
-                          widgetElement.innerHTML.trim().length > 50; // More than just whitespace
-        
-        if (iframe || hasContent) {
-          setWidgetError(false);
-          return true;
+        try {
+          // Check if widget has initialized (has iframe or content)
+          const iframe = widgetElement.querySelector('iframe');
+          const hasContent = widgetElement.children.length > 0 && 
+                            widgetElement.innerHTML.trim().length > 50; // More than just whitespace
+          
+          if (iframe || hasContent) {
+            setWidgetError(false);
+            return true;
+          }
+        } catch (error) {
+          // Silently handle any errors from widget manipulation
+          console.warn('Widget check error (suppressed):', error);
         }
       }
       return false;
     };
 
-    // Check immediately
-    checkWidget();
+    // Delay initial check to ensure DOM is ready
+    const initialCheck = setTimeout(() => {
+      checkWidget();
+    }, 100);
 
     // Poll for widget initialization
     const interval = setInterval(() => {
@@ -41,20 +55,29 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
       }
     }, 1000);
 
-    // Also listen for DOM changes
-    const observer = new MutationObserver(() => {
-      if (checkWidget()) {
-        clearInterval(interval);
-        observer.disconnect();
+    // Also listen for DOM changes with error handling
+    const observer = new MutationObserver((mutations) => {
+      try {
+        if (checkWidget()) {
+          clearInterval(interval);
+          observer.disconnect();
+        }
+      } catch (error) {
+        // Silently handle mutation observer errors
+        console.warn('MutationObserver error (suppressed):', error);
       }
     });
 
     if (widgetRef.current) {
-      observer.observe(widgetRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-      });
+      try {
+        observer.observe(widgetRef.current, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+        });
+      } catch (error) {
+        console.warn('Observer setup error (suppressed):', error);
+      }
     }
 
     // Set error state after 10 seconds if widget hasn't loaded
@@ -67,6 +90,7 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
     }, 10000);
 
     return () => {
+      clearTimeout(initialCheck);
       clearInterval(interval);
       observer.disconnect();
       clearTimeout(timeout);
@@ -112,8 +136,8 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
               }}
             >
               <div 
-                className="sk-ww-instagram-reels p-4" 
-                data-embed-id="25643033"
+                className="sk-instagram-feed p-4" 
+                data-embed-id="25646541"
                 style={{ 
                   width: '100%',
                   minHeight: '400px',
@@ -156,7 +180,7 @@ export default function InstagramFeed({ className = '' }: InstagramFeedProps) {
           .instagram-widget-scroll::-webkit-scrollbar-thumb:hover {
             background: rgba(200, 169, 126, 0.7);
           }
-          .sk-ww-instagram-reels iframe {
+          .sk-instagram-feed iframe {
             border-radius: 8px;
           }
         `}</style>

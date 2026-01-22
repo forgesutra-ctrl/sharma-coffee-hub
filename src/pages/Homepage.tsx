@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Truck, RefreshCw, Award, Loader2 } from "lucide-react";
+import { ArrowRight, Truck, RefreshCw, Award, Loader2, Instagram, ExternalLink } from "lucide-react";
 import { useEffect } from "react";
 
 import HeroVideo from "@/components/coffee/HeroVideo";
 import BestSellersCarousel from "@/components/coffee/BestSellersCarousel";
 import CategoryGrid from "@/components/coffee/CategoryGrid";
 import StorySection from "@/components/coffee/StorySection";
-import InstagramFeed from "@/components/coffee/InstagramFeed";
 import AmbientSound from "@/components/coffee/AmbientSound";
 
 import heroVideo from "@/assets/videos/hero-coffee-brewing.mp4";
@@ -29,6 +28,19 @@ export default function Homepage() {
     if (!existingScript) {
       const script = document.createElement("script");
       script.src = "https://widgets.sociablekit.com/google-reviews/widget.js";
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  // Load Instagram Feed widget
+  useEffect(() => {
+    const existingScript = document.querySelector(
+      'script[src*="instagram-feed/widget.js"]'
+    );
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = "https://widgets.sociablekit.com/instagram-feed/widget.js";
       script.defer = true;
       document.body.appendChild(script);
     }
@@ -204,7 +216,95 @@ export default function Homepage() {
       </section>
 
       {/* INSTAGRAM */}
-      <InstagramFeed />
+      <section className="w-full py-24 bg-secondary/30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Instagram className="w-8 h-8 text-primary" />
+              <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase">
+                @sharma_coffee_works
+              </p>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Follow Our Journey
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Join our coffee community on Instagram for brewing tips, behind-the-scenes 
+              glimpses, and the latest from our Coorg estates.
+            </p>
+          </div>
+          
+          {/* Scrollable Instagram Container */}
+          <div className="flex justify-center">
+            <div 
+              className="relative w-full max-w-5xl mx-auto rounded-xl border border-primary/20 overflow-hidden bg-background/50"
+              style={{ 
+                maxHeight: '700px',
+              }}
+            >
+              <div 
+                className="instagram-widget-scroll overflow-y-auto overflow-x-hidden"
+                style={{
+                  maxHeight: '700px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(200, 169, 126, 0.5) transparent',
+                }}
+              >
+                <div 
+                  className="sk-instagram-feed p-6" 
+                  data-embed-id="25646541"
+                  style={{ 
+                    width: '100%',
+                    minHeight: '500px',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Scrollbar Styling */}
+          <style>{`
+            .instagram-widget-scroll::-webkit-scrollbar {
+              width: 8px;
+            }
+            .instagram-widget-scroll::-webkit-scrollbar-track {
+              background: transparent;
+              border-radius: 4px;
+            }
+            .instagram-widget-scroll::-webkit-scrollbar-thumb {
+              background: rgba(200, 169, 126, 0.5);
+              border-radius: 4px;
+            }
+            .instagram-widget-scroll::-webkit-scrollbar-thumb:hover {
+              background: rgba(200, 169, 126, 0.7);
+            }
+            .sk-instagram-feed {
+              width: 100%;
+            }
+            .sk-instagram-feed iframe {
+              border-radius: 8px;
+              width: 100% !important;
+            }
+            .sk-instagram-feed > div {
+              width: 100% !important;
+            }
+          `}</style>
+
+          {/* CTA */}
+          <div className="text-center mt-10">
+            <a
+              href="https://www.instagram.com/sharma_coffee_works/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium transition-colors group"
+            >
+              <Instagram className="w-5 h-5" />
+              <span>Follow us on Instagram</span>
+              <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </a>
+          </div>
+        </div>
+      </section>
 
       {/* CTA */}
       <section className="relative w-full py-32">
@@ -224,7 +324,7 @@ export default function Homepage() {
 
       {/* AMBIENT SOUND */}
       <AmbientSound
-        audioSrc="/coffee-pour.mp3"
+        audioSrc="/coffee-pour.mp3.mp3"
         label="Coffee Pouring"
         volume={0.4}
         autoPlay
