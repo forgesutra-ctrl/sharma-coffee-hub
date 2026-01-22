@@ -351,10 +351,44 @@ export default function OrdersPage() {
                     <span>-₹{selectedOrder.discount_amount}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold pt-2 border-t">
-                  <span>Total</span>
-                  <span>₹{selectedOrder.total_amount}</span>
-                </div>
+                {selectedOrder.payment_type === "cod" && selectedOrder.cod_handling_fee && selectedOrder.cod_handling_fee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">COD Handling Fee</span>
+                    <span>₹{selectedOrder.cod_handling_fee}</span>
+                  </div>
+                )}
+                
+                {/* COD Breakdown */}
+                {selectedOrder.payment_type === "cod" && (
+                  <>
+                    <div className="pt-2 border-t space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Upfront Payment</span>
+                        <span className="font-medium text-primary">₹{((selectedOrder.cod_advance_paid || 0) + (selectedOrder.cod_handling_fee || 0))}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground pl-2">
+                        <span>• Advance: ₹{selectedOrder.cod_advance_paid || 100}</span>
+                        <span>• Handling: ₹{selectedOrder.cod_handling_fee || 50}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Balance on Delivery</span>
+                        <span className="font-medium">₹{selectedOrder.cod_balance || 0}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between font-bold pt-2 border-t">
+                      <span>Total Order Value</span>
+                      <span>₹{selectedOrder.total_amount}</span>
+                    </div>
+                  </>
+                )}
+                
+                {/* Prepaid Payment */}
+                {selectedOrder.payment_type !== "cod" && (
+                  <div className="flex justify-between font-bold pt-2 border-t">
+                    <span>Total Paid</span>
+                    <span>₹{selectedOrder.total_amount}</span>
+                  </div>
+                )}
               </div>
 
               {selectedOrder.notes && (

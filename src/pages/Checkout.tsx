@@ -352,7 +352,9 @@ const Checkout = () => {
 
     const codHandlingFee = paymentType === "cod" ? COD_HANDLING_FEE : 0;
     const grandTotal = subtotalAfterDiscount + shippingCharge + codHandlingFee;
-    const codBalance = paymentType === "cod" ? Math.max(0, grandTotal - COD_ADVANCE_AMOUNT) : 0;
+    // For COD: Customer pays ₹150 upfront (₹100 advance + ₹50 handling fee)
+    const codUpfrontAmount = COD_ADVANCE_AMOUNT + COD_HANDLING_FEE; // ₹150
+    const codBalance = paymentType === "cod" ? Math.max(0, grandTotal - codUpfrontAmount) : 0;
 
     return {
       subtotal,
@@ -516,9 +518,10 @@ const Checkout = () => {
       shipping_region: shippingInfo?.region || "rest_of_india",
       shipping_charge: shippingCharge,
       payment_type: paymentType,
-      cod_advance_paid: paymentType === "cod" ? COD_ADVANCE_AMOUNT : 0,
+      cod_advance_paid: paymentType === "cod" ? COD_ADVANCE_AMOUNT : 0, // Still store as ₹100 for record keeping
       cod_handling_fee: paymentType === "cod" ? COD_HANDLING_FEE : 0,
       cod_balance: paymentType === "cod" ? codBalance : 0,
+      cod_upfront_amount: paymentType === "cod" ? (COD_ADVANCE_AMOUNT + COD_HANDLING_FEE) : 0, // ₹150 total upfront
       promotion_id: appliedCoupon?.promotionId || null,
       discount_amount: discount,
       items: cartItems.map((item) => ({
@@ -964,7 +967,8 @@ const Checkout = () => {
     // reliable on modern Razorpay and avoids creating any internal order
     // before payment is actually completed.
     try {
-      const amountRupees = paymentType === "cod" ? COD_ADVANCE_AMOUNT : grandTotal;
+      // For COD: Charge ₹150 upfront (₹100 advance + ₹50 handling fee)
+      const amountRupees = paymentType === "cod" ? (COD_ADVANCE_AMOUNT + COD_HANDLING_FEE) : grandTotal;
       console.log("[Razorpay] Creating one-time order for amount (₹):", amountRupees);
 
       // Add timeout wrapper to prevent infinite hanging
@@ -1247,7 +1251,11 @@ const Checkout = () => {
               shipping_address: checkoutData.shipping_address,
               subtotal: checkoutData.subtotal,
               total_amount: checkoutData.total_amount,
+              shipping_charge: checkoutData.shipping_charge,
               payment_type: checkoutData.payment_type,
+              cod_advance_paid: checkoutData.cod_advance_paid,
+              cod_handling_fee: checkoutData.cod_handling_fee,
+              cod_balance: checkoutData.cod_balance,
               order_items: [],
             } as any);
             setShowOrderConfirmation(true);
@@ -1272,7 +1280,11 @@ const Checkout = () => {
             shipping_address: checkoutData.shipping_address,
             subtotal: checkoutData.subtotal,
             total_amount: checkoutData.total_amount,
+            shipping_charge: checkoutData.shipping_charge,
             payment_type: checkoutData.payment_type,
+            cod_advance_paid: checkoutData.cod_advance_paid,
+            cod_handling_fee: checkoutData.cod_handling_fee,
+            cod_balance: checkoutData.cod_balance,
             order_items: [],
           } as any);
           setShowOrderConfirmation(true);
@@ -1306,7 +1318,11 @@ const Checkout = () => {
           shipping_address: checkoutData.shipping_address,
           subtotal: checkoutData.subtotal,
           total_amount: checkoutData.total_amount,
+          shipping_charge: checkoutData.shipping_charge,
           payment_type: checkoutData.payment_type,
+          cod_advance_paid: checkoutData.cod_advance_paid,
+          cod_handling_fee: checkoutData.cod_handling_fee,
+          cod_balance: checkoutData.cod_balance,
           order_items: [],
         } as any);
         setShowOrderConfirmation(true);
@@ -1682,7 +1698,7 @@ const Checkout = () => {
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="cod" id="cod" />
                         <Label htmlFor="cod" className="cursor-pointer">
-                          Cash on Delivery (₹{COD_ADVANCE_AMOUNT} advance + ₹{COD_HANDLING_FEE} handling)
+                          Cash on Delivery (₹{COD_ADVANCE_AMOUNT + COD_HANDLING_FEE} upfront: ₹{COD_ADVANCE_AMOUNT} advance + ₹{COD_HANDLING_FEE} handling)
                         </Label>
                       </div>
                     </RadioGroup>
@@ -1693,9 +1709,8 @@ const Checkout = () => {
                   <div className="bg-muted/50 border border-primary/20 rounded-lg p-4 text-sm">
                     <p className="font-medium mb-2 text-primary">COD Payment Details:</p>
                     <ul className="space-y-1 text-foreground/80">
-                      <li>• Pay ₹{COD_ADVANCE_AMOUNT} now to confirm your order</li>
+                      <li>• Pay ₹{COD_ADVANCE_AMOUNT + COD_HANDLING_FEE} now (₹{COD_ADVANCE_AMOUNT} advance + ₹{COD_HANDLING_FEE} handling fee)</li>
                       <li>• Pay remaining ₹{codBalance.toFixed(2)} on delivery</li>
-                      <li>• COD handling fee: ₹{COD_HANDLING_FEE}</li>
                     </ul>
                   </div>
                 )}
@@ -1720,7 +1735,7 @@ const Checkout = () => {
                         {allItemsAreSubscription 
                           ? "Setup Subscription" 
                           : paymentType === "cod"
-                            ? `Pay ₹${COD_ADVANCE_AMOUNT} & Place Order`
+                            ? `Pay ₹${COD_ADVANCE_AMOUNT + COD_HANDLING_FEE} & Place Order`
                             : `Pay ₹${grandTotal.toFixed(2)} & Place Order`
                         }
                       </>
@@ -1806,7 +1821,7 @@ const Checkout = () => {
                 
                 {paymentType === "cod" && !allItemsAreSubscription && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    <p>Pay now: ₹{COD_ADVANCE_AMOUNT}</p>
+                    <p>Pay now: ₹{COD_ADVANCE_AMOUNT + COD_HANDLING_FEE} (₹{COD_ADVANCE_AMOUNT} advance + ₹{COD_HANDLING_FEE} handling)</p>
                     <p>Pay on delivery: ₹{codBalance.toFixed(2)}</p>
                   </div>
                 )}
@@ -1957,16 +1972,56 @@ const Checkout = () => {
                           <span>-₹{confirmedOrder.discount_amount.toFixed(2)}</span>
                         </div>
                       )}
+                      {confirmedOrder.shipping_charge > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Shipping</span>
+                          <span>₹{confirmedOrder.shipping_charge?.toFixed(2) || "0.00"}</span>
+                        </div>
+                      )}
+                      {confirmedOrder.payment_type === "cod" && confirmedOrder.cod_handling_fee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">COD Handling Fee</span>
+                          <span>₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "0.00"}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Payment Method</span>
                         <span className="capitalize">
                           {confirmedOrder.payment_type === "cod" ? "Cash on Delivery" : "Online Payment"}
                         </span>
                       </div>
-                      <div className="pt-2 border-t flex justify-between font-semibold">
-                        <span>Total Paid</span>
-                        <span>₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
-                      </div>
+                      
+                      {/* COD Breakdown */}
+                      {confirmedOrder.payment_type === "cod" && (
+                        <>
+                          <div className="pt-2 border-t space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Upfront Payment</span>
+                              <span className="font-medium text-primary">₹{((confirmedOrder.cod_advance_paid || 0) + (confirmedOrder.cod_handling_fee || 0)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground pl-2">
+                              <span>• Advance: ₹{confirmedOrder.cod_advance_paid?.toFixed(2) || "100.00"}</span>
+                              <span>• Handling Fee: ₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "50.00"}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Balance on Delivery</span>
+                              <span className="font-medium">₹{confirmedOrder.cod_balance?.toFixed(2) || "0.00"}</span>
+                            </div>
+                            <div className="flex justify-between text-sm pt-1 border-t">
+                              <span className="text-muted-foreground">Total Order Value</span>
+                              <span className="font-semibold">₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Prepaid Payment */}
+                      {confirmedOrder.payment_type !== "cod" && (
+                        <div className="pt-2 border-t flex justify-between font-semibold">
+                          <span>Total Paid</span>
+                          <span>₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

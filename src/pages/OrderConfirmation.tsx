@@ -21,6 +21,8 @@ interface Order {
   total_amount: number;
   subtotal: number;
   discount_amount: number;
+  shipping_amount?: number;
+  shipping_charge?: number;
   shipping_address: {
     fullName: string;
     email: string;
@@ -33,6 +35,9 @@ interface Order {
     landmark: string;
   };
   payment_type: string;
+  cod_advance_paid?: number | null;
+  cod_handling_fee?: number | null;
+  cod_balance?: number | null;
   created_at: string;
   order_items: OrderItem[];
   dtdc_awb_number?: string | null;
@@ -374,14 +379,54 @@ const OrderConfirmation = () => {
                   <span>-₹{order.discount_amount.toFixed(2)}</span>
                 </div>
               )}
+              {order.shipping_amount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span>₹{order.shipping_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {order.payment_type === "cod" && order.cod_handling_fee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">COD Handling Fee</span>
+                  <span>₹{order.cod_handling_fee?.toFixed(2) || "0.00"}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Payment Method</span>
                 <span className="capitalize">{order.payment_type === "cod" ? "Cash on Delivery" : "Online Payment"}</span>
               </div>
-              <div className="pt-2 border-t flex justify-between font-semibold">
-                <span>Total Paid</span>
-                <span>₹{order.total_amount.toFixed(2)}</span>
-              </div>
+              
+              {/* COD Breakdown */}
+              {order.payment_type === "cod" && (
+                <>
+                  <div className="pt-2 border-t space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Upfront Payment</span>
+                      <span className="font-medium text-primary">₹{((order.cod_advance_paid || 0) + (order.cod_handling_fee || 0)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground pl-2">
+                      <span>• Advance: ₹{order.cod_advance_paid?.toFixed(2) || "100.00"}</span>
+                      <span>• Handling Fee: ₹{order.cod_handling_fee?.toFixed(2) || "50.00"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Balance on Delivery</span>
+                      <span className="font-medium">₹{order.cod_balance?.toFixed(2) || "0.00"}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-1 border-t">
+                      <span className="text-muted-foreground">Total Order Value</span>
+                      <span className="font-semibold">₹{order.total_amount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Prepaid Payment */}
+              {order.payment_type !== "cod" && (
+                <div className="pt-2 border-t flex justify-between font-semibold">
+                  <span>Total Paid</span>
+                  <span>₹{order.total_amount.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

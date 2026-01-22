@@ -29,6 +29,7 @@ interface CheckoutData {
   cod_advance_paid?: number;
   cod_handling_fee?: number;
   cod_balance?: number;
+  cod_upfront_amount?: number; // Total upfront payment (advance + handling fee)
   promotion_id?: string;
   discount_amount?: number;
   items: Array<{
@@ -115,8 +116,11 @@ Deno.serve(async (req: Request) => {
     const checkout: CheckoutData = JSON.parse(checkoutData);
 
     // Determine expected amount (in paise) for verification
+    // For COD: Customer pays ₹150 upfront (₹100 advance + ₹50 handling fee)
     const expectedAmountRupees =
-      checkout.payment_type === "cod" ? (checkout.cod_advance_paid || 0) : checkout.total_amount;
+      checkout.payment_type === "cod" 
+        ? (checkout.cod_upfront_amount || (checkout.cod_advance_paid || 0) + (checkout.cod_handling_fee || 0))
+        : checkout.total_amount;
     const expectedAmountPaise = Math.round((expectedAmountRupees || 0) * 100);
 
     if (!Number.isFinite(expectedAmountPaise) || expectedAmountPaise < 100) {
