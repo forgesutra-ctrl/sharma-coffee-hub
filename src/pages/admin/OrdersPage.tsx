@@ -65,11 +65,16 @@ export default function OrdersPage() {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
+      filtered = filtered.filter((order) => {
+        const addr = order.shipping_address as any;
+        const name = addr?.full_name || addr?.fullName;
+        const nameMatches = name ? String(name).toLowerCase().includes(query) : false;
+
+        return (
           order.order_number.toLowerCase().includes(query) ||
-          (order.shipping_address as any)?.full_name?.toLowerCase().includes(query)
-      );
+          nameMatches
+        );
+      });
     }
 
     if (statusFilter !== 'all') {
@@ -250,6 +255,8 @@ export default function OrdersPage() {
               <TableBody>
                 {filteredOrders.map((order) => {
                   const isSubscription = order.order_number?.startsWith('SUB-');
+                  const addr = order.shipping_address as any;
+                  const customerName = addr?.full_name || addr?.fullName || 'N/A';
                   return (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.order_number}</TableCell>
@@ -259,7 +266,7 @@ export default function OrdersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {(order.shipping_address as any)?.full_name || 'N/A'}
+                      {customerName}
                     </TableCell>
                     <TableCell>
                       {new Date(order.created_at).toLocaleDateString('en-IN', {
@@ -332,14 +339,36 @@ export default function OrdersPage() {
                 <h4 className="font-semibold mb-2">Shipping Address</h4>
                 {selectedOrder.shipping_address ? (
                   <div className="text-sm text-muted-foreground">
-                    <p>{(selectedOrder.shipping_address as any).full_name}</p>
-                    <p>{(selectedOrder.shipping_address as any).address_line1}</p>
-                    <p>
-                      {(selectedOrder.shipping_address as any).city},{' '}
-                      {(selectedOrder.shipping_address as any).state} -{' '}
-                      {(selectedOrder.shipping_address as any).pincode}
-                    </p>
-                    <p>Phone: {(selectedOrder.shipping_address as any).phone}</p>
+                    {(() => {
+                      const addr = selectedOrder.shipping_address as any;
+                      const name = addr?.full_name || addr?.fullName;
+                      const line1 = addr?.address_line1 || addr?.addressLine1;
+                      const line2 = addr?.address_line2 || addr?.addressLine2;
+                      const city = addr?.city;
+                      const state = addr?.state;
+                      const pincode = addr?.pincode;
+                      const phone = addr?.phone;
+                      const email = addr?.email;
+
+                      return (
+                        <>
+                          {name && <p>{name}</p>}
+                          {line1 && <p>{line1}</p>}
+                          {line2 && <p>{line2}</p>}
+                          {(city || state || pincode) && (
+                            <p>
+                              {city}
+                              {city && state && ', '}
+                              {state}
+                              {(city || state) && pincode && ' - '}
+                              {pincode}
+                            </p>
+                          )}
+                          {phone && <p>Phone: {phone}</p>}
+                          {email && <p>Email: {email}</p>}
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No address available</p>
