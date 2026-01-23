@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, ShoppingCart, Users, IndianRupee, TrendingUp, AlertCircle } from 'lucide-react';
+import { Package, ShoppingCart, Users, IndianRupee, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -27,28 +28,103 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Check current user session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('🔍 Dashboard: Current user:', user?.email, user?.id);
+      if (userError) {
+        console.error('❌ Dashboard: Error getting user:', userError);
+      }
+      
+      // Check session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔍 Dashboard: Session exists:', !!session, 'Access token:', !!session?.access_token);
+      if (sessionError) {
+        console.error('❌ Dashboard: Error getting session:', sessionError);
+      }
+      
+      // Check user role
+      if (user) {
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        console.log('🔍 Dashboard: User role:', roleData?.role, 'Role error:', roleError);
+        
+        if (!roleData) {
+          console.warn('⚠️ Dashboard: No role found for user! This might cause RLS to block access.');
+        }
+      } else {
+        console.warn('⚠️ Dashboard: No user found! Cannot fetch orders.');
+        setError('You must be logged in to view orders. Please log in again.');
+        return;
+      }
+      
       // Fetch orders
-      const { data: orders } = await supabase
+      console.log('🔍 Dashboard: Fetching orders...');
+      const { data: orders, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (error) {
+        console.error('❌ Dashboard: Error fetching orders:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        setError(`Failed to fetch orders: ${error.message || 'Unknown error'}. Error code: ${error.code || 'N/A'}`);
+        throw error;
+      } else {
+        setError(null);
+      }
+
       if (orders) {
-        setRecentOrders(orders.slice(0, 10));
+        console.log(`✅ Dashboard: Fetched ${orders.length} orders from database`);
+        console.log('📦 Dashboard: Sample orders:', orders.slice(0, 3));
         
-        const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+        const recentOrdersList = orders.slice(0, 10);
+        console.log(`📦 Dashboard: Setting ${recentOrdersList.length} recent orders`);
+        setRecentOrders(recentOrdersList);
+        
+        const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
         const pendingOrders = orders.filter((o) => o.status === 'pending').length;
         const uniqueCustomers = new Set(orders.map((o) => o.user_id).filter(Boolean)).size;
 
-        setStats({
+        const statsData = {
           totalOrders: orders.length,
           totalRevenue,
           totalCustomers: uniqueCustomers,
           pendingOrders,
+        };
+        console.log('📊 Dashboard: Stats:', statsData);
+        setStats(statsData);
+      } else {
+        console.warn('⚠️ Dashboard: No orders data returned from query (orders is null/undefined)');
+        setRecentOrders([]);
+        setStats({
+          totalOrders: 0,
+          totalRevenue: 0,
+          totalCustomers: 0,
+          pendingOrders: 0,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
+      setError(error.message || 'Failed to load dashboard data. Please check your admin permissions.');
+      // Set empty state on error
+      setRecentOrders([]);
+      setStats({
+        totalOrders: 0,
+        totalRevenue: 0,
+        totalCustomers: 0,
+        pendingOrders: 0,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +158,15 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchDashboardData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Link to="/admin/orders">
             <Button variant="outline">View All Orders</Button>
           </Link>
@@ -143,15 +228,53 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="w-5 h-5" />
+              <p className="font-medium">{error}</p>
+            </div>
+            <p className="text-sm text-red-600 mt-2">
+              If this persists, please check:
+              <br />• Your admin role is correctly assigned
+              <br />• RLS policies allow admin access to orders
+              <br />• Database connection is working
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Orders */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Orders</CardTitle>
-          <CardDescription>Latest orders from your store</CardDescription>
+          <CardDescription>
+            Latest orders from your store
+            {recentOrders.length > 0 && ` • Showing ${recentOrders.length} of ${stats.totalOrders} total`}
+            {!isLoading && recentOrders.length === 0 && stats.totalOrders > 0 && ' • Check console for details'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {recentOrders.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No orders yet</p>
+          {(() => {
+            console.log('🔍 Dashboard Render: recentOrders.length =', recentOrders.length, 'isLoading =', isLoading, 'stats.totalOrders =', stats.totalOrders);
+            return null;
+          })()}
+          {recentOrders.length === 0 && !isLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-2">No orders found</p>
+              {error ? (
+                <p className="text-sm text-muted-foreground">Please check the error message above</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Orders will appear here once customers place them</p>
+              )}
+            </div>
+          ) : recentOrders.length === 0 && isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading orders...</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>

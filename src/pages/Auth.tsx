@@ -70,13 +70,31 @@ const Auth = () => {
         const userId = data.user.id;
         let finalRedirect = redirectTo;
 
-        // Check user role for admin redirect
+        // Wait a moment for the trigger to create the profile and role
+        // The handle_new_user trigger should create these, but there might be a small delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Check user role for admin redirect (with retry if not found)
         if (userId) {
-          const { data: userRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', userId)
-            .maybeSingle();
+          let userRole = null;
+          let retries = 3;
+          
+          while (retries > 0 && !userRole) {
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', userId)
+              .maybeSingle();
+            
+            if (roleData) {
+              userRole = roleData;
+              break;
+            }
+            
+            // Wait a bit longer and retry
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries--;
+          }
 
           if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
             finalRedirect = '/admin/dashboard';
@@ -90,10 +108,11 @@ const Auth = () => {
 
         navigate(finalRedirect, { replace: true });
       } else {
-        // Email confirmation required
+        // Email confirmation required - but still allow login attempt
+        // Some Supabase configurations might not return a session even if email confirmation is disabled
         toast({
-          title: 'Check your email',
-          description: 'We sent you a confirmation email. Please verify your email to continue.',
+          title: 'Account Created',
+          description: 'Your account has been created. You can now sign in.',
         });
         setMode('signin');
       }

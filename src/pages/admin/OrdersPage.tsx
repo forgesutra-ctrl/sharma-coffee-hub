@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Eye, Package } from 'lucide-react';
+import { Search, Eye, Package, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -33,20 +34,27 @@ export default function OrdersPage() {
 
   useEffect(() => {
     filterOrders();
-  }, [orders, searchQuery, statusFilter]);
+  }, [orders, searchQuery, statusFilter, orderTypeFilter]);
 
   const fetchOrders = async () => {
     try {
+      setIsLoading(true);
+      // Fetch all orders including subscription orders
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Fetched ${data?.length || 0} orders from database`);
       setOrders(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
+      toast.error(`Failed to load orders: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -68,22 +76,47 @@ export default function OrdersPage() {
       filtered = filtered.filter((order) => order.status === statusFilter);
     }
 
+    if (orderTypeFilter !== 'all') {
+      filtered = filtered.filter((order) => {
+        const isSubscription = order.order_number?.startsWith('SUB-');
+        return orderTypeFilter === 'subscription' ? isSubscription : !isSubscription;
+      });
+    }
+
     setFilteredOrders(filtered);
   };
 
   const viewOrderDetails = async (order: Order) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
+    setOrderItems([]); // Reset items when opening new order
 
     try {
-      const { data } = await supabase
+      console.log('🔍 OrdersPage: Fetching items for order:', order.id, order.order_number);
+      const { data, error } = await supabase
         .from('order_items')
         .select('*')
         .eq('order_id', order.id);
 
-      setOrderItems(data || []);
-    } catch (error) {
-      console.error('Error fetching order items:', error);
+      if (error) {
+        console.error('❌ OrdersPage: Error fetching order items:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        toast.error(`Failed to load order items: ${error.message}`);
+        setOrderItems([]);
+      } else {
+        console.log(`✅ OrdersPage: Fetched ${data?.length || 0} items for order ${order.order_number}`);
+        console.log('📦 OrdersPage: Order items:', data);
+        setOrderItems(data || []);
+      }
+    } catch (error: any) {
+      console.error('❌ OrdersPage: Exception fetching order items:', error);
+      toast.error('Failed to load order items');
+      setOrderItems([]);
     }
   };
 
@@ -130,8 +163,22 @@ export default function OrdersPage() {
     <SuperAdminOnly>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-3xl font-bold">Orders</h1>
-      </div>
+          <div>
+            <h1 className="font-display text-3xl font-bold">Orders</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              All one-time orders and subscription orders
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchOrders}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -157,13 +204,31 @@ export default function OrdersPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="one-time">One-time Orders</SelectItem>
+            <SelectItem value="subscription">Subscription Orders</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Orders Table */}
       <Card>
         <CardHeader>
           <CardTitle>All Orders</CardTitle>
-          <CardDescription>{filteredOrders.length} orders found</CardDescription>
+          <CardDescription>
+            {filteredOrders.length} orders found
+            {orders.length > 0 && (
+              <span className="ml-2">
+                ({orders.filter(o => o.order_number?.startsWith('SUB-')).length} subscription,{' '}
+                {orders.filter(o => !o.order_number?.startsWith('SUB-')).length} one-time)
+              </span>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredOrders.length === 0 ? (
@@ -173,6 +238,7 @@ export default function OrdersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -182,9 +248,16 @@ export default function OrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
+                {filteredOrders.map((order) => {
+                  const isSubscription = order.order_number?.startsWith('SUB-');
+                  return (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>
+                      <Badge variant={isSubscription ? 'default' : 'secondary'}>
+                        {isSubscription ? 'Subscription' : 'One-time'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {(order.shipping_address as any)?.full_name || 'N/A'}
                     </TableCell>
@@ -214,7 +287,8 @@ export default function OrdersPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -275,19 +349,30 @@ export default function OrdersPage() {
               {/* Order Items */}
               <div>
                 <h4 className="font-semibold mb-2">Items</h4>
-                <div className="space-y-2">
-                  {orderItems.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{item.product_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.weight}g | Qty: {item.quantity}
-                        </p>
+                {orderItems.length === 0 ? (
+                  <div className="p-4 bg-muted/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No items found for this order.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This may indicate the order items were not created or there's an access issue.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {orderItems.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{item.product_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.weight}g | Qty: {item.quantity}
+                          </p>
+                        </div>
+                        <p className="font-semibold">₹{Number(item.total_price).toLocaleString()}</p>
                       </div>
-                      <p className="font-semibold">₹{Number(item.total_price).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Order Summary */}

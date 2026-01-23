@@ -115,6 +115,21 @@ Deno.serve(async (req: Request) => {
 
     const checkout: CheckoutData = JSON.parse(checkoutData);
 
+    // Validate user_id is present
+    if (!checkout.user_id || checkout.user_id.trim() === '') {
+      console.error("❌ Missing or empty user_id in checkout data");
+      return new Response(
+        JSON.stringify({
+          error: "User ID is required to create an order",
+          verified: false,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Determine expected amount (in paise) for verification
     // For COD: Customer pays ₹150 upfront (₹100 advance + ₹50 handling fee)
     const expectedAmountRupees =

@@ -108,6 +108,34 @@ interface RazorpayInstance {
   open: () => void;
 }
 
+interface CheckoutData {
+  user_id: string;
+  subtotal: number;
+  total_amount: number;
+  shipping_address: ShippingForm;
+  pincode: string;
+  shipping_region: string;
+  shipping_charge: number;
+  payment_type: PaymentType;
+  cod_advance_paid: number;
+  cod_handling_fee: number;
+  cod_balance: number;
+  cod_upfront_amount: number;
+  promotion_id: string | null;
+  discount_amount: number;
+  items: Array<{
+    product_name: string;
+    product_id: string;
+    weight: number;
+    grind_type: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    variant_id: string | null;
+    is_subscription: boolean;
+  }>;
+}
+
 declare global {
   interface Window {
     Razorpay?: new (options: RazorpayOptions) => RazorpayInstance;
@@ -508,9 +536,17 @@ const Checkout = () => {
     });
   };
 
-  const prepareCheckoutData = () => {
+  const prepareCheckoutData = async () => {
+    // Ensure we have a valid user_id from the session
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id || user?.id;
+    
+    if (!userId) {
+      throw new Error("You must be logged in to place an order. Please log in and try again.");
+    }
+    
     return {
-      user_id: user?.id,
+      user_id: userId,
       subtotal,
       total_amount: grandTotal,
       shipping_address: shippingForm,
@@ -548,8 +584,13 @@ const Checkout = () => {
         throw new Error("Payment gateway failed to load. Please refresh and try again.");
       }
 
-      const checkoutData = prepareCheckoutData();
+      const checkoutData = await prepareCheckoutData();
       console.log("Checkout data prepared:", checkoutData);
+      
+      // Validate user_id is present
+      if (!checkoutData.user_id) {
+        throw new Error("User ID is missing. Please log in and try again.");
+      }
 
       if (allItemsAreSubscription) {
         await handleSubscriptionOrder(checkoutData);
@@ -573,7 +614,7 @@ const Checkout = () => {
   // NOTE: If you see 400 errors from "lumberjack.razorpay.com" in the console,
   // these are Razorpay's analytics tracking errors and are non-critical.
   // The subscription creation will still work if you see "Subscription created successfully" log.
-  const handleSubscriptionOrder = async (checkoutData: ReturnType<typeof prepareCheckoutData>) => {
+  const handleSubscriptionOrder = async (checkoutData: CheckoutData) => {
     try {
       console.log("🚀 Starting subscription order...");
       
@@ -959,7 +1000,7 @@ const Checkout = () => {
     }
   };
 
-  const handleRegularOrder = async (checkoutData: ReturnType<typeof prepareCheckoutData>) => {
+  const handleRegularOrder = async (checkoutData: CheckoutData) => {
     // ONE-TIME PAYMENTS (NON-SUBSCRIPTION)
     // ------------------------------------
     // For regular orders we MUST use the backend-created Razorpay order_id
@@ -1140,7 +1181,7 @@ const Checkout = () => {
 
   const verifyPaymentAndCreateOrder = async (
     razorpayResponse: RazorpayResponse,
-    checkoutData: ReturnType<typeof prepareCheckoutData>
+    checkoutData: CheckoutData
   ) => {
     try {
       console.log("Verifying payment with backend...");
