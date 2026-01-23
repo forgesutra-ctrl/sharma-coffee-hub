@@ -59,12 +59,12 @@ SELECT
   jsonb_build_object(
     'fullName', 'Preethi Sudhar',
     'email', 'preethisudhar@gmail.com',
-    'phone', '+919940010785',
+    'phone', '9940010785',
     'addressLine1', 'Address to be confirmed',
     'addressLine2', '',
     'city', 'City to be confirmed',
     'state', 'State to be confirmed',
-    'pincode', 'Pincode to be confirmed',
+    'pincode', '000000',
     'landmark', ''
   ) as shipping_address,
   'razorpay' as payment_method,
@@ -115,12 +115,12 @@ SELECT
   jsonb_build_object(
     'fullName', 'Sourav Ghosh',
     'email', 'sourav.ghosh2006@gmail.com',
-    'phone', '+917718033203',
+    'phone', '7718033203',
     'addressLine1', 'Address to be confirmed',
     'addressLine2', '',
     'city', 'City to be confirmed',
     'state', 'State to be confirmed',
-    'pincode', 'Pincode to be confirmed',
+    'pincode', '000000',
     'landmark', ''
   ) as shipping_address,
   'razorpay' as payment_method,
@@ -171,12 +171,12 @@ SELECT
   jsonb_build_object(
     'fullName', 'Anna George',
     'email', 'annageorge@baselius.ac.in',
-    'phone', '+919495109102',
+    'phone', '9495109102',
     'addressLine1', 'Address to be confirmed',
     'addressLine2', '',
     'city', 'City to be confirmed',
     'state', 'State to be confirmed',
-    'pincode', 'Pincode to be confirmed',
+    'pincode', '000000',
     'landmark', ''
   ) as shipping_address,
   'razorpay' as payment_method,
