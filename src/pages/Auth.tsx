@@ -97,7 +97,8 @@ const Auth = () => {
           }
 
           if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
-            finalRedirect = '/admin/dashboard';
+            // Admins should land on the main admin dashboard route (index of /admin)
+            finalRedirect = '/admin';
           }
         }
 
@@ -173,7 +174,8 @@ const Auth = () => {
           .maybeSingle();
 
         if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
-          finalRedirect = '/admin/dashboard';
+          // Admins should be redirected to /admin (index route shows dashboard)
+          finalRedirect = '/admin';
         }
       }
 
