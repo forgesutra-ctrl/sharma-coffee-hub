@@ -133,6 +133,21 @@ async function processWebhookEvent(
           return { success: true }; // Idempotent - already processed
         }
 
+        // Normalize phone number in shipping_address (remove +91, spaces, etc.)
+        const normalizedShippingAddress = pendingOrder.shipping_address ? { ...pendingOrder.shipping_address } : null;
+        if (normalizedShippingAddress && normalizedShippingAddress.phone) {
+          // Remove all non-digit characters
+          const phoneDigits = String(normalizedShippingAddress.phone).replace(/\D/g, '');
+          // If it starts with 91 and is 12 digits, remove the 91 prefix
+          if (phoneDigits.length === 12 && phoneDigits.startsWith('91')) {
+            normalizedShippingAddress.phone = phoneDigits.substring(2);
+          } else if (phoneDigits.length === 10) {
+            normalizedShippingAddress.phone = phoneDigits;
+          } else {
+            console.warn("⚠️ Phone number format unexpected in webhook:", normalizedShippingAddress.phone);
+          }
+        }
+
         // Create order in orders table
         const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const orderData = {
@@ -141,7 +156,7 @@ async function processWebhookEvent(
           status: "confirmed",
           total_amount: pendingOrder.total_amount,
           subtotal: pendingOrder.total_amount - pendingOrder.shipping_charge,
-          shipping_address: pendingOrder.shipping_address,
+          shipping_address: normalizedShippingAddress,
           payment_method: "razorpay",
           payment_status: "paid",
           payment_type: pendingOrder.payment_type,
@@ -168,6 +183,8 @@ async function processWebhookEvent(
           price: number;
         }>;
 
+        // Create order items - this must succeed or rollback the order
+        const orderItemsErrors: any[] = [];
         for (const item of cartItems) {
           // Get product and variant details
           const { data: product } = await supabaseAdmin
@@ -183,7 +200,7 @@ async function processWebhookEvent(
             .single();
 
           if (product) {
-            await supabaseAdmin.from("order_items").insert({
+            const { error: itemError } = await supabaseAdmin.from("order_items").insert({
               order_id: order.id,
               product_id: item.product_id,
               variant_id: item.variant_id,
@@ -192,10 +209,29 @@ async function processWebhookEvent(
               quantity: item.quantity,
               unit_price: item.price,
               total_price: item.price * item.quantity,
-              is_subscription: false,
             });
+
+            if (itemError) {
+              console.error("❌ Failed to create order item:", itemError);
+              orderItemsErrors.push(itemError);
+            }
+          } else {
+            console.error("❌ Product not found for order item:", item.product_id);
+            orderItemsErrors.push(new Error(`Product not found: ${item.product_id}`));
           }
         }
+
+        // If any order items failed, rollback the order
+        if (orderItemsErrors.length > 0) {
+          console.error("❌ CRITICAL: Failed to create order items, rolling back order");
+          await supabaseAdmin.from("orders").delete().eq("id", order.id);
+          return { 
+            success: false, 
+            error: `Failed to create order items: ${orderItemsErrors.map(e => e.message).join(', ')}. Order was rolled back.` 
+          };
+        }
+
+        console.log(`✅ Created ${cartItems.length} order items successfully`);
 
         // Delete pending order
         await supabaseAdmin.from("pending_orders").delete().eq("id", pendingOrder.id);

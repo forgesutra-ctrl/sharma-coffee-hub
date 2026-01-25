@@ -12,7 +12,8 @@ import {
   LogOut,
   FolderTree,
   FileText,
-  Tag
+  Tag,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -23,11 +24,12 @@ import { useNavigate } from 'react-router-dom';
 // staffAllowed: Staff can access these pages
 const allSidebarLinks = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, superAdminOnly: true, staffAllowed: false },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: false },
+  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: true },
   { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
   { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },
-  { name: 'Customers', href: '/admin/customers', icon: Users, superAdminOnly: true, staffAllowed: false },
+  { name: 'Customers', href: '/admin/customers', icon: Users, superAdminOnly: true, staffAllowed: true },
   { name: 'Promotions', href: '/admin/promotions', icon: Tag, superAdminOnly: true, staffAllowed: false },
+  { name: 'Blogs', href: '/admin/blogs', icon: BookOpen, superAdminOnly: true, staffAllowed: false },
   { name: 'Shipping', href: '/admin/shipping', icon: Truck, superAdminOnly: false, staffAllowed: true },
   { name: 'Operations', href: '/admin/operations', icon: Wrench, superAdminOnly: false, staffAllowed: true },
   { name: 'Reports', href: '/admin/reports', icon: FileText, superAdminOnly: true, staffAllowed: false },
@@ -89,7 +91,7 @@ export default function AdminLayout() {
   const isRouteAccessible = (path: string) => {
     if (isSuperAdmin) return true;
     if (isStaff) {
-      const allowedPaths = ['/admin/operations', '/admin/shipping'];
+      const allowedPaths = ['/admin/operations', '/admin/shipping', '/admin/orders', '/admin/customers'];
       return allowedPaths.some(p => path.startsWith(p));
     }
     return false;

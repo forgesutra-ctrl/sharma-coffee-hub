@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Calendar, Package, Truck, Tag } from 'lucide-react';
 import type { ProductV2, ProductVariant } from '@/types';
+import { isSubscriptionEligible } from '@/lib/subscription-eligibility';
 
 interface SubscriptionCardProps {
   product: ProductV2;
@@ -28,10 +29,23 @@ export function SubscriptionCard({
   // NEW: delivery day (1–28)
   const [deliveryDay, setDeliveryDay] = useState<number>(1);
 
+  // Check if product is subscription eligible (category + weight + plan)
+  // ProductV2 might not have categories relation, so we check subscription_eligible flag
+  // The ProductDetail page already validates category before showing this card
+  const isEligible = selectedVariant 
+    ? isSubscriptionEligible(product as any, selectedVariant)
+    : product.subscription_eligible && !!product.razorpay_plan_id;
+
   // Check if product has razorpay_plan_id directly (single source of truth)
   const isPlanConfigured = !!product.razorpay_plan_id;
 
-  if (!product.subscription_eligible) {
+  // Only show subscription card if product is eligible AND variant is 1000g
+  if (!product.subscription_eligible || !isEligible) {
+    return null;
+  }
+
+  // Additional check: variant must be 1000g
+  if (selectedVariant && selectedVariant.weight !== 1000) {
     return null;
   }
 

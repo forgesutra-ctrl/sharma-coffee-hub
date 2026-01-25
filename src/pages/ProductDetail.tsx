@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package, AlertCircle } from 'lucide-react';
@@ -11,6 +11,7 @@ import { useProductBySlug, useProducts, isPurchasableProduct, DatabaseProduct } 
 import { PincodeDialog } from '@/components/PincodeDialog';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { validateSubscriptionPlan } from '@/lib/subscription-validation';
+import { isSubscriptionEligible, getSubscriptionEligibilityError, isCoffeePowderProduct } from '@/lib/subscription-eligibility';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -49,11 +50,17 @@ const ProductDetail = () => {
   // Set default selected weight when active product changes
   useEffect(() => {
     if (activeProduct && variants.length > 0) {
-      // Default to 500g if available, otherwise first variant
-      const defaultVariant = variants.find(v => v.weight === 500) || variants[0];
-      setSelectedWeight(defaultVariant.weight);
+      // For subscriptions, default to 1000g if available, otherwise first variant
+      // For one-time purchases, default to 500g if available, otherwise first variant
+      if (purchaseType === 'subscription' && activeProduct.subscription_eligible) {
+        const subscriptionVariant = variants.find(v => v.weight === 1000) || variants[0];
+        setSelectedWeight(subscriptionVariant.weight);
+      } else {
+        const defaultVariant = variants.find(v => v.weight === 500) || variants[0];
+        setSelectedWeight(defaultVariant.weight);
+      }
     }
-  }, [activeProduct?.id, variants]);
+  }, [activeProduct?.id, variants, purchaseType]);
 
   // Reset weight when child product changes
   const handleChildProductChange = (child: DatabaseProduct) => {
@@ -61,7 +68,63 @@ const ProductDetail = () => {
     setSelectedWeight(null); // Reset weight selection
   };
 
-  // Validate subscription plan when active product or selected variant changes
+  // Check if product is subscription eligible (category + weight + plan)
+  // Check if product has ANY 1000g variant that is eligible (not just the currently selected one)
+  const has1000gVariant = variants.some(v => v.weight === 1000);
+  const kgVariant = variants.find(v => v.weight === 1000);
+  
+  // Debug logging
+  useEffect(() => {
+    if (activeProduct) {
+      const eligibilityCheck = activeProduct && has1000gVariant && kgVariant
+        ? isSubscriptionEligible(activeProduct, kgVariant)
+        : false;
+      
+      const eligibilityError = activeProduct && kgVariant
+        ? getSubscriptionEligibilityError(activeProduct, kgVariant)
+        : null;
+      
+      console.log("🔍 Subscription Eligibility Debug:", {
+        productName: activeProduct.name,
+        productId: activeProduct.id,
+        subscription_eligible: activeProduct.subscription_eligible,
+        category_slug: activeProduct.categories?.slug,
+        category_name: activeProduct.categories?.name,
+        category_id: activeProduct.category_id,
+        product_razorpay_plan_id: activeProduct.razorpay_plan_id,
+        allVariants: variants.map(v => ({ weight: v.weight, id: v.id, plan_id: v.razorpay_plan_id })),
+        has1000gVariant,
+        kgVariant: kgVariant ? {
+          id: kgVariant.id,
+          weight: kgVariant.weight,
+          price: kgVariant.price,
+          razorpay_plan_id: kgVariant.razorpay_plan_id
+        } : null,
+        isProductSubscriptionEligible: eligibilityCheck,
+        eligibilityError: eligibilityError,
+        willShowSubscriptionOption: activeProduct?.subscription_eligible && eligibilityCheck,
+      });
+    }
+  }, [activeProduct?.id, activeProduct?.subscription_eligible, activeProduct?.categories?.slug, has1000gVariant, kgVariant, variants]);
+  
+  // Calculate subscription eligibility
+  // Must check: product has subscription_eligible, is Coffee Powder, has 1000g variant, has plan ID
+  const isProductSubscriptionEligible = (() => {
+    if (!activeProduct) return false;
+    if (!activeProduct.subscription_eligible) return false;
+    if (!has1000gVariant || !kgVariant) return false;
+    return isSubscriptionEligible(activeProduct, kgVariant);
+  })();
+
+  // Filter variants based on purchase type
+  // For subscriptions, only show 1000g variants AND only if product is in coffee powder category
+  // For one-time purchases, show all variants
+  const availableVariants = purchaseType === 'subscription' && isProductSubscriptionEligible
+    ? variants.filter(v => v.weight === 1000)
+    : variants;
+
+  // Validate subscription eligibility when active product or variants change
+  // Check eligibility using the 1000g variant (subscription requirement)
   useEffect(() => {
     if (!activeProduct) {
       setSubscriptionPlanValid(false);
@@ -69,34 +132,27 @@ const ProductDetail = () => {
       return;
     }
 
-    // Get selected variant
-    const currentVariant = variants.find(v => v.weight === selectedWeight) || variants[0];
+    // Check eligibility using the 1000g variant (subscriptions require 1000g)
+    const kgVariant = variants.find(v => v.weight === 1000);
+    
+    if (!kgVariant) {
+      // No 1000g variant available
+      setSubscriptionPlanValid(false);
+      setSubscriptionPlanError("Subscriptions are only available for 1000g (1kg) variants");
+      return;
+    }
 
-    // Check plan ID: variant first, then product (same priority as checkout)
-    const planId = currentVariant?.razorpay_plan_id || activeProduct.razorpay_plan_id;
+    // Check full subscription eligibility (category + weight + plan) using 1000g variant
+    const eligible = isSubscriptionEligible(activeProduct, kgVariant);
+    const error = getSubscriptionEligibilityError(activeProduct, kgVariant);
 
-    // Debug log to verify razorpay_plan_id is present
-    console.log("Fetched product:", {
-      id: activeProduct.id,
-      name: activeProduct.name,
-      subscription_eligible: activeProduct.subscription_eligible,
-      product_razorpay_plan_id: activeProduct.razorpay_plan_id,
-      variant_razorpay_plan_id: currentVariant?.razorpay_plan_id,
-      final_plan_id: planId,
-    });
-
-    // Validate using a product-like object with the final plan ID
-    const validation = validateSubscriptionPlan({
-      subscription_eligible: activeProduct.subscription_eligible,
-      razorpay_plan_id: planId,
-    });
-    setSubscriptionPlanValid(validation.isValid);
-    setSubscriptionPlanError(validation.error || null);
+    setSubscriptionPlanValid(eligible);
+    setSubscriptionPlanError(error || null);
   }, [
     activeProduct?.id,
     activeProduct?.subscription_eligible,
     activeProduct?.razorpay_plan_id,
-    selectedWeight,
+    activeProduct?.categories?.slug,
     variants,
   ]);
 
@@ -137,12 +193,13 @@ const ProductDetail = () => {
     );
   }
 
-  // Get selected variant
-  const selectedVariant = variants.find(v => v.weight === selectedWeight) || variants[0];
+  // Get selected variant from available variants
+  const selectedVariant = availableVariants.find(v => v.weight === selectedWeight) || availableVariants[0];
   const currentPrice = selectedVariant?.price || 0;
   
   // No discount for subscription - same price as one-time
-  const isSubscriptionSelected = purchaseType === 'subscription' && activeProduct?.subscription_eligible;
+  // Only allow subscription if product is fully eligible (category + weight + plan)
+  const isSubscriptionSelected = purchaseType === 'subscription' && isProductSubscriptionEligible;
   const totalPrice = currentPrice * quantity;
 
   // Get related products from same category
@@ -154,13 +211,32 @@ const ProductDetail = () => {
     if (!selectedVariant || !activeProduct) return;
 
     // Same price for both subscription and one-time (no discount)
-    const isSubscription = purchaseType === 'subscription' && activeProduct.subscription_eligible;
+    const isSubscription = purchaseType === 'subscription' && isProductSubscriptionEligible;
 
-    // Fail-fast validation: If subscription is selected but plan is not valid, prevent adding to cart
-    if (isSubscription && !subscriptionPlanValid) {
-      const errorMsg = subscriptionPlanError || "Subscription plan not configured for this product";
-      toast.error(errorMsg);
-      return;
+    // Fail-fast validation: Check full subscription eligibility (category + weight + plan)
+    if (isSubscription) {
+      // For subscriptions, must use 1000g variant
+      const kgVariant = variants.find(v => v.weight === 1000);
+      if (!kgVariant) {
+        toast.error("Subscriptions are only available for 1000g (1kg) variants. Please select the 1kg option.");
+        return;
+      }
+      
+      const eligibilityError = getSubscriptionEligibilityError(activeProduct, kgVariant);
+      if (eligibilityError) {
+        toast.error(eligibilityError);
+        return;
+      }
+      
+      if (!isSubscriptionEligible(activeProduct, kgVariant)) {
+        toast.error("This product is not eligible for subscription. Subscriptions are only available for Coffee Powder products in 1000g (1kg) size.");
+        return;
+      }
+      
+      // Auto-select 1000g variant if subscription is selected
+      if (selectedWeight !== 1000) {
+        setSelectedWeight(1000);
+      }
     }
 
     const cartProduct: Product = {
@@ -196,13 +272,19 @@ const ProductDetail = () => {
       razorpay_plan_id: cartProduct.razorpay_plan_id,
     });
 
+    // For subscriptions, ensure we're using the 1000g variant
+    const finalWeight = isSubscription ? 1000 : (selectedWeight || 250);
+    const finalVariant = isSubscription 
+      ? variants.find(v => v.weight === 1000) || selectedVariant
+      : selectedVariant;
+    
     addToCart({
       product: cartProduct,
-      weight: selectedWeight || 250,
+      weight: finalWeight,
       quantity,
-      variant_id: selectedVariant.id,
+      variant_id: finalVariant.id,
       is_subscription: isSubscription,
-      original_price: currentPrice,
+      original_price: finalVariant.price,
     });
     
     toast.success(
@@ -404,7 +486,25 @@ const ProductDetail = () => {
               )}
 
               {/* Purchase Type Toggle - Subscription Option */}
-              {activeProduct?.subscription_eligible && (
+              {/* Only show subscription option for Coffee Powder products */}
+              {/* Debug: Show why subscription option is hidden */}
+              {activeProduct?.subscription_eligible && !isProductSubscriptionEligible && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  <p className="font-semibold text-yellow-800">Debug: Subscription option hidden</p>
+                  <ul className="mt-1 space-y-1 text-yellow-700">
+                    <li>• subscription_eligible: {activeProduct.subscription_eligible ? '✅' : '❌'}</li>
+                    <li>• Has 1000g variant: {has1000gVariant ? '✅' : '❌'}</li>
+                    <li>• Category slug: {activeProduct.categories?.slug || 'N/A'}</li>
+                    <li>• Category name: {activeProduct.categories?.name || 'N/A'}</li>
+                    <li>• Is Coffee Powder: {activeProduct.categories?.slug === 'coffee-powders' || (activeProduct.categories?.name || '').toLowerCase().includes('coffee powder') ? '✅' : '❌'}</li>
+                    <li>• Product plan ID: {activeProduct.razorpay_plan_id ? '✅' : '❌'}</li>
+                    <li>• Variant plan ID: {kgVariant?.razorpay_plan_id ? '✅' : '❌'}</li>
+                    <li>• Overall eligible: {isProductSubscriptionEligible ? '✅' : '❌'}</li>
+                  </ul>
+                </div>
+              )}
+              {/* Show subscription option if product is eligible */}
+              {activeProduct?.subscription_eligible && isProductSubscriptionEligible && (
                 <div className="mb-6 p-4 border-2 border-primary/20 rounded-lg bg-gradient-to-br from-primary/5 to-transparent">
                   <p className="text-sm font-medium text-foreground mb-3">Choose Your Purchase Option</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -432,16 +532,27 @@ const ProductDetail = () => {
                           toast.error(message);
                           return;
                         }
+                        // Check if 1000g variant exists for subscription
+                        const has1000gVariant = variants.some(v => v.weight === 1000);
+                        if (!has1000gVariant) {
+                          toast.error("Subscription is only available for 1000g (1kg) variants");
+                          return;
+                        }
                         setPurchaseType('subscription');
+                        // Auto-select 1000g variant when switching to subscription
+                        const kgVariant = variants.find(v => v.weight === 1000);
+                        if (kgVariant) {
+                          setSelectedWeight(1000);
+                        }
                       }}
                       className={cn(
                         "p-4 border-2 rounded-lg text-left transition-all relative overflow-hidden",
                         purchaseType === 'subscription'
                           ? "border-primary bg-primary/10"
                           : "border-primary/50 hover:border-primary",
-                        !subscriptionPlanValid && "opacity-60 cursor-not-allowed"
+                        (!subscriptionPlanValid || !variants.some(v => v.weight === 1000)) && "opacity-60 cursor-not-allowed"
                       )}
-                      disabled={!subscriptionPlanValid}
+                      disabled={!subscriptionPlanValid || !variants.some(v => v.weight === 1000)}
                     >
                       <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl">
                         FREE SHIPPING
@@ -457,18 +568,25 @@ const ProductDetail = () => {
                   {activeProduct.subscription_eligible && !subscriptionPlanValid && (
                     <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
                       <AlertCircle className="w-4 h-4 mt-0.5" />
-                      <span>Subscription temporarily unavailable for this product.</span>
+                      <span>
+                        {subscriptionPlanError || "Subscription temporarily unavailable for this product."}
+                      </span>
                     </div>
                   )}
                 </div>
               )}
 
               {/* Size/Weight Selection */}
-              {variants.length > 0 && (
+              {availableVariants.length > 0 && (
                 <div className="mb-6">
                   <p className="text-sm font-medium text-foreground mb-3">Size</p>
+                  {purchaseType === 'subscription' && isProductSubscriptionEligible && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Only 1000g (1kg) variants are available for subscriptions
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-3">
-                    {variants
+                    {availableVariants
                       .sort((a, b) => a.weight - b.weight)
                       .map((variant) => (
                         <button
@@ -488,6 +606,11 @@ const ProductDetail = () => {
                         </button>
                       ))}
                   </div>
+                  {purchaseType === 'subscription' && availableVariants.length === 0 && (
+                    <p className="text-sm text-amber-600 mt-2">
+                      No 1000g variant available for subscription. Please select one-time purchase.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -527,7 +650,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Subscription Details - Show when subscription is selected */}
-              {activeProduct?.subscription_eligible && purchaseType === 'subscription' && selectedVariant && (
+              {isProductSubscriptionEligible && purchaseType === 'subscription' && selectedVariant && (
                 <div className="mb-6 p-4 border border-primary/30 rounded-lg bg-primary/5">
                   <div className="flex items-center gap-2 mb-3">
                     <Package className="w-5 h-5 text-primary" />

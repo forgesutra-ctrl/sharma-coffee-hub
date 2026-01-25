@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { Mail, Lock, ArrowLeft, Loader2, Coffee } from 'lucide-react';
 
 type AuthMode = 'signin' | 'signup';
@@ -18,8 +19,25 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user, userRole, isLoading: authLoading } = useAuth();
   
   const redirectTo = (location.state as any)?.from || '/account';
+
+  // Watch for auth state changes and redirect admin/staff users immediately
+  useEffect(() => {
+    // Only redirect if:
+    // 1. Auth is not loading
+    // 2. User is logged in
+    // 3. User has admin/staff role
+    // 4. We're still on the auth page (haven't navigated away yet)
+    if (!authLoading && user && userRole && ['super_admin', 'admin', 'staff'].includes(userRole)) {
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        navigate('/admin', { replace: true });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [user, userRole, authLoading, navigate]);
 
   const handleSignUp = async () => {
     if (!email || !email.includes('@')) {
@@ -128,6 +146,22 @@ const Auth = () => {
     }
   };
 
+  // Watch for auth state changes and redirect admin/staff users
+  useEffect(() => {
+    const checkAndRedirect = async () => {
+      // Only redirect if we're on the auth page and user is logged in
+      if (user && userRole && ['super_admin', 'admin', 'staff'].includes(userRole)) {
+        // Small delay to ensure everything is ready
+        const timer = setTimeout(() => {
+          navigate('/admin', { replace: true });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    };
+
+    checkAndRedirect();
+  }, [user, userRole, navigate]);
+
   const handleSignIn = async () => {
     if (!email || !email.includes('@')) {
       toast({
@@ -167,11 +201,25 @@ const Auth = () => {
 
       // Check user role for admin redirect
       if (userId) {
-        const { data: userRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
+        let userRole = null;
+        let retries = 10; // Try up to 10 times with delays
+        
+        while (retries > 0 && !userRole) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (roleData?.role) {
+            userRole = roleData;
+            break;
+          }
+          
+          // Wait a bit and retry (allows AuthContext to update)
+          await new Promise(resolve => setTimeout(resolve, 150));
+          retries--;
+        }
 
         if (userRole?.role && ['super_admin', 'admin', 'staff'].includes(userRole.role)) {
           // Admins should be redirected to /admin (index route shows dashboard)
@@ -184,7 +232,12 @@ const Auth = () => {
         description: 'You have been successfully logged in',
       });
 
-      navigate(finalRedirect, { replace: true });
+      // If admin/staff, the useEffect will handle redirect
+      // Otherwise, navigate to the intended destination
+      if (finalRedirect !== '/admin') {
+        navigate(finalRedirect, { replace: true });
+      }
+      // For admin/staff, let the useEffect handle the redirect after AuthContext updates
     } catch (error: any) {
       let errorMessage = 'Failed to sign in. Please check your credentials and try again.';
       

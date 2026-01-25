@@ -13,7 +13,7 @@ const announcements: Announcement[] = [
   {
     id: '1',
     icon: Truck,
-    message: 'Free Shipping —',
+    message: 'Free Shipping',
     highlight: 'Subscription Members Only',
   },
   {
@@ -64,7 +64,7 @@ export default function AnnouncementBar() {
   return (
     <div className="bg-primary text-primary-foreground relative z-50">
       <div className="container mx-auto px-4 py-2.5">
-        <div className="flex items-center justify-center gap-2 text-sm">
+        <div className="flex items-center justify-center gap-2 text-xs sm:text-sm">
           <AnimatePresence mode="wait">
             <motion.div
               key={current.id}
@@ -75,11 +75,27 @@ export default function AnnouncementBar() {
               className="flex items-center gap-2"
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              <span>
-                {current.message}{' '}
-                {current.highlight && (
-                  <span className="font-semibold">{current.highlight}</span>
-                )}
+              <span className="text-center">
+                {/* Desktop: "Free Shipping — Subscription Members Only" */}
+                <span className="hidden sm:inline">
+                  {current.message} — {current.highlight && (
+                    <span className="font-semibold">{current.highlight}</span>
+                  )}
+                </span>
+                {/* Mobile: "Free Shipping for Subscription Members" */}
+                <span className="sm:hidden">
+                  {current.id === '1' ? (
+                    // Special handling for free shipping announcement on mobile
+                    <>Free Shipping for <span className="font-semibold">Subscription Members</span></>
+                  ) : (
+                    // Other announcements as normal
+                    <>
+                      {current.message} {current.highlight && (
+                        <span className="font-semibold">{current.highlight}</span>
+                      )}
+                    </>
+                  )}
+                </span>
               </span>
             </motion.div>
           </AnimatePresence>

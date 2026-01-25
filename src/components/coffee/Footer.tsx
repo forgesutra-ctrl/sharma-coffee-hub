@@ -4,19 +4,45 @@ import { Instagram, Facebook, Twitter, Youtube, Mail, MapPin, Phone, ArrowRight,
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import sharmaCoffeeLogo from '@/assets/whatsapp_image_2026-01-13_at_9.28.59_am.jpeg';
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     setIsLoading(true);
-    // Simulate subscription
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast.success('Welcome to our coffee family!');
-    setEmail('');
-    setIsLoading(false);
+    
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .insert({
+          email: email.trim().toLowerCase(),
+          is_active: true,
+          source: 'website',
+        });
+
+      if (error) {
+        // If email already exists, that's okay
+        if (error.code === '23505') {
+          toast.success('You are already subscribed!');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Welcome to our coffee family! You will receive updates about new blogs and offers.');
+      }
+      setEmail('');
+    } catch (error: any) {
+      console.error('Newsletter subscription error:', error);
+      toast.error(error.message || 'Failed to subscribe. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
   const currentYear = new Date().getFullYear();
   return <footer className="bg-coffee-dark text-white relative overflow-hidden">

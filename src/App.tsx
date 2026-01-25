@@ -28,6 +28,8 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import FAQ from "./pages/FAQ";
 import Subscriptions from "./pages/Subscriptions";
+import Blogs from "./pages/Blogs";
+import BlogDetail from "./pages/BlogDetail";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AccountLayout from "./components/account/AccountLayout";
 import AccountDashboard from "./pages/account/AccountDashboard";
@@ -44,6 +46,7 @@ import ProductsPage from "./pages/admin/ProductsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import PromotionsPage from "./pages/admin/PromotionsPage";
+import BlogsPage from "./pages/admin/BlogsPage";
 import ShippingPage from "./pages/admin/ShippingPage";
 import OperationsPage from "./pages/admin/OperationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
@@ -78,6 +81,8 @@ const App = () => {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />
                 <Route path="/shop/:categorySlug" element={<Layout><Shop /></Layout>} />
+                <Route path="/blogs" element={<Layout><Blogs /></Layout>} />
+                <Route path="/blog/:slug" element={<Layout><BlogDetail /></Layout>} />
                 <Route path="/product/:slug" element={<Layout><ProductDetail /></Layout>} />
                 <Route path="/cart" element={<Layout><Cart /></Layout>} />
                 <Route path="/about" element={<Layout><About /></Layout>} />
@@ -140,6 +145,7 @@ const App = () => {
                   <Route path="categories" element={<CategoriesPage />} />
                   <Route path="customers" element={<CustomersPage />} />
                   <Route path="promotions" element={<PromotionsPage />} />
+                  <Route path="blogs" element={<BlogsPage />} />
                   <Route path="shipping" element={<ShippingPage />} />
                   <Route path="operations" element={<OperationsPage />} />
                   <Route path="reports" element={<ReportsPage />} />

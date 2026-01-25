@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem } from '../types';
 import { getShippingCharge, getShippingRegion, getShippingRegionLabel, SHIPPING_CHARGES, COD_ADVANCE_AMOUNT, COD_HANDLING_FEE } from '@/lib/shipping';
+import { toast } from 'sonner';
 
 interface ShippingInfo {
   pincode: string;
@@ -85,11 +86,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [getCartWeight]);
 
   const addToCart = (newItem: CartItem) => {
+    // Validate subscription items: Must be Coffee Powder category + 1000g variant
+    if (newItem.is_subscription) {
+      if (newItem.weight !== 1000) {
+        console.error("Subscription items must be 1000g variants");
+        toast.error("Subscriptions are only available for 1000g (1kg) variants");
+        return;
+      }
+      
+      // Check if product is in Coffee Powder category
+      // Note: CartItem.product might not have categories relation, so we check subscription_eligible flag
+      // The ProductDetail page already validates this before adding to cart
+      if (!newItem.product.subscription_eligible) {
+        console.error("Subscription items must be subscription-eligible products");
+        toast.error("This product is not eligible for subscription");
+        return;
+      }
+    }
+
     setCartItems((prev) => {
       const existingItemIndex = prev.findIndex(
         (item) =>
           item.product.id === newItem.product.id &&
-          item.weight === newItem.weight
+          item.weight === newItem.weight &&
+          item.is_subscription === (newItem.is_subscription || false)
       );
 
       if (existingItemIndex > -1) {

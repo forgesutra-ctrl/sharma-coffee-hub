@@ -52,6 +52,10 @@ export default function Navigation() {
       })) || []
     },
     {
+      name: 'Blog',
+      href: '/blogs'
+    },
+    {
       name: 'Our Story',
       href: '/about'
     },

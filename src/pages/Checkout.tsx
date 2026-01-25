@@ -593,6 +593,34 @@ const Checkout = () => {
       }
 
       if (allItemsAreSubscription) {
+        // Validate that all subscription items are 1000g variants AND subscription-eligible products
+        const invalidWeightItems = cartItems.filter(
+          item => item.is_subscription && item.weight !== 1000
+        );
+        const invalidEligibleItems = cartItems.filter(
+          item => item.is_subscription && !item.product.subscription_eligible
+        );
+        
+        if (invalidWeightItems.length > 0) {
+          toast({
+            title: "Invalid Subscription Items",
+            description: "Subscriptions are only available for 1000g (1kg) variants. Please remove non-1000g items from your subscription cart.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        if (invalidEligibleItems.length > 0) {
+          toast({
+            title: "Invalid Subscription Items",
+            description: "Subscriptions are only available for Coffee Powder products. Please remove non-eligible items from your subscription cart.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
         await handleSubscriptionOrder(checkoutData);
         return;
       }

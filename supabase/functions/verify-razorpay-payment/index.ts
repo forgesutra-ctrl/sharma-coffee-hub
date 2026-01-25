@@ -319,14 +319,33 @@ Deno.serve(async (req: Request) => {
 
     const paymentStatus = checkout.payment_type === "cod" ? "advance_paid" : "paid";
 
+    // Normalize phone number in shipping_address (remove +91, spaces, etc.)
+    const normalizedShippingAddress = { ...checkout.shipping_address };
+    if (normalizedShippingAddress.phone) {
+      // Remove all non-digit characters
+      const phoneDigits = normalizedShippingAddress.phone.replace(/\D/g, '');
+      // If it starts with 91 and is 12 digits, remove the 91 prefix
+      if (phoneDigits.length === 12 && phoneDigits.startsWith('91')) {
+        normalizedShippingAddress.phone = phoneDigits.substring(2);
+      } else if (phoneDigits.length === 10) {
+        normalizedShippingAddress.phone = phoneDigits;
+      } else {
+        // Keep original if it doesn't match expected patterns
+        console.warn("⚠️ Phone number format unexpected:", normalizedShippingAddress.phone);
+      }
+    }
+
+    // Generate order number explicitly (don't rely on trigger)
+    const orderNumber = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         user_id: checkout.user_id,
-        order_number: "",
+        order_number: orderNumber,
         subtotal: checkout.subtotal,
         total_amount: checkout.total_amount,
-        shipping_address: checkout.shipping_address,
+        shipping_address: normalizedShippingAddress,
         pincode: checkout.pincode,
         shipping_region: checkout.shipping_region,
         shipping_amount: checkout.shipping_charge,
@@ -350,34 +369,77 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (orderError) {
-      console.error("Order creation error:", orderError);
+      console.error("❌ Order creation error:", orderError);
+      console.error("❌ Order creation error details:", {
+        message: orderError.message,
+        details: orderError.details,
+        hint: orderError.hint,
+        code: orderError.code,
+      });
       throw new Error(`Failed to create order: ${orderError.message}`);
     }
 
-    console.log("Order created:", order.id);
+    if (!order) {
+      console.error("❌ Order creation returned no data");
+      throw new Error("Failed to create order: No order data returned");
+    }
 
+    console.log("✅ Order created successfully:", {
+      order_id: order.id,
+      order_number: order.order_number,
+      razorpay_payment_id: razorpayPaymentId,
+    });
+
+    // CRITICAL: Create order items - this must succeed or rollback the order
     if (checkout.items && checkout.items.length > 0) {
       const orderItems = checkout.items.map((item) => ({
         order_id: order.id,
         product_name: item.product_name,
         product_id: item.product_id || null,
         weight: item.weight,
-        // grind_type column doesn't exist in order_items table, removed
         quantity: item.quantity,
         unit_price: item.unit_price,
         total_price: item.total_price,
         variant_id: item.variant_id || null,
       }));
 
-      const { error: itemsError } = await supabase
+      const { error: itemsError, data: insertedItems } = await supabase
         .from("order_items")
-        .insert(orderItems);
+        .insert(orderItems)
+        .select();
 
       if (itemsError) {
-        console.error("Order items creation error:", itemsError);
-      } else {
-        console.log(`Created ${orderItems.length} order items`);
+        console.error("❌ CRITICAL: Order items creation failed:", itemsError);
+        console.error("❌ Order items error details:", {
+          message: itemsError.message,
+          details: itemsError.details,
+          hint: itemsError.hint,
+          code: itemsError.code,
+        });
+        
+        // Delete the order if items cannot be created
+        await supabase
+          .from("orders")
+          .delete()
+          .eq("id", order.id);
+        
+        throw new Error(`Failed to create order items: ${itemsError.message}. Order was rolled back.`);
       }
+
+      if (!insertedItems || insertedItems.length === 0) {
+        console.error("❌ CRITICAL: Order items creation returned no data");
+        // Delete the order if items were not created
+        await supabase
+          .from("orders")
+          .delete()
+          .eq("id", order.id);
+        
+        throw new Error("Failed to create order items: No items were inserted. Order was rolled back.");
+      }
+
+      console.log(`✅ Created ${insertedItems.length} order items successfully`);
+    } else {
+      console.warn("⚠️ No items in checkout data - order created without items");
     }
 
     if (checkout.promotion_id) {

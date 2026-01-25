@@ -10,7 +10,7 @@ import { Search, Eye, Package, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
-import SuperAdminOnly from '@/components/admin/SuperAdminOnly';
+import AdminOrStaffOnly from '@/components/admin/AdminOrStaffOnly';
 
 type Order = Tables<'orders'>;
 type OrderItem = Tables<'order_items'>;
@@ -165,7 +165,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <SuperAdminOnly>
+    <AdminOrStaffOnly>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -424,6 +424,6 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
       </div>
-    </SuperAdminOnly>
+    </AdminOrStaffOnly>
   );
 }

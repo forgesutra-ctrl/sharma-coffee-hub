@@ -661,7 +661,11 @@ export default function OperationsPage() {
                     {filteredOrders.map(order => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium font-mono text-sm">{order.order_number}</TableCell>
-                        <TableCell>{(order.shipping_address as any)?.full_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          {(order.shipping_address as any)?.full_name || 
+                           (order.shipping_address as any)?.fullName || 
+                           'N/A'}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={order.user_id ? 'default' : 'secondary'}>
                             {order.user_id ? 'Registered' : 'Guest'}
@@ -905,16 +909,33 @@ export default function OperationsPage() {
               <div>
                 <h4 className="font-semibold mb-2">Shipping Address</h4>
                 {selectedOrder.shipping_address ? (
-                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                    <p className="font-medium text-foreground">{(selectedOrder.shipping_address as any).full_name}</p>
-                    <p>{(selectedOrder.shipping_address as any).address_line1}</p>
-                    {(selectedOrder.shipping_address as any).address_line2 && (
-                      <p>{(selectedOrder.shipping_address as any).address_line2}</p>
-                    )}
-                    <p>
-                      {(selectedOrder.shipping_address as any).city}, {(selectedOrder.shipping_address as any).state} - {(selectedOrder.shipping_address as any).pincode}
+                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg space-y-1">
+                    <p className="font-medium text-foreground">
+                      {(selectedOrder.shipping_address as any).full_name || 
+                       (selectedOrder.shipping_address as any).fullName || 
+                       'N/A'}
                     </p>
-                    <p>Phone: {(selectedOrder.shipping_address as any).phone}</p>
+                    {(selectedOrder.shipping_address as any).address_line1 || (selectedOrder.shipping_address as any).addressLine1 ? (
+                      <p>{(selectedOrder.shipping_address as any).address_line1 || (selectedOrder.shipping_address as any).addressLine1}</p>
+                    ) : null}
+                    {((selectedOrder.shipping_address as any).address_line2 || (selectedOrder.shipping_address as any).addressLine2) && (
+                      <p>{(selectedOrder.shipping_address as any).address_line2 || (selectedOrder.shipping_address as any).addressLine2}</p>
+                    )}
+                    {((selectedOrder.shipping_address as any).city || (selectedOrder.shipping_address as any).state || (selectedOrder.shipping_address as any).pincode) && (
+                      <p>
+                        {(selectedOrder.shipping_address as any).city || ''}
+                        {(selectedOrder.shipping_address as any).city && (selectedOrder.shipping_address as any).state ? ', ' : ''}
+                        {(selectedOrder.shipping_address as any).state || ''}
+                        {((selectedOrder.shipping_address as any).city || (selectedOrder.shipping_address as any).state) && (selectedOrder.shipping_address as any).pincode ? ' - ' : ''}
+                        {(selectedOrder.shipping_address as any).pincode || ''}
+                      </p>
+                    )}
+                    {(selectedOrder.shipping_address as any).phone && (
+                      <p>Phone: {(selectedOrder.shipping_address as any).phone}</p>
+                    )}
+                    {(selectedOrder.shipping_address as any).email && (
+                      <p>Email: {(selectedOrder.shipping_address as any).email}</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No address available</p>

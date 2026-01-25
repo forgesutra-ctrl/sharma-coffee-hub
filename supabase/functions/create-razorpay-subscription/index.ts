@@ -113,10 +113,20 @@ Deno.serve(async (req: Request) => {
       plan_id: variant.razorpay_plan_id,
     });
 
-    // Verify product exists
+    // Verify product exists and check category
     const { data: product, error: productError } = await supabaseAdmin
       .from("products")
-      .select("id, name")
+      .select(`
+        id, 
+        name,
+        subscription_eligible,
+        category_id,
+        categories (
+          id,
+          name,
+          slug
+        )
+      `)
       .eq("id", product_id)
       .single();
 
@@ -125,6 +135,70 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: "Product not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ✅ CRITICAL: Validate subscription eligibility
+    // 1. Product must be subscription_eligible
+    if (!product.subscription_eligible) {
+      console.error("❌ Product not subscription eligible:", product_id);
+      return new Response(
+        JSON.stringify({ 
+          error: "Subscription unavailable",
+          details: "This product is not eligible for subscription.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2. Product must be in Coffee Powders category
+    const categorySlug = (product.categories as any)?.slug;
+    const categoryName = (product.categories as any)?.name || product.category;
+    const isCoffeePowder = categorySlug === 'coffee-powders' || 
+                          categoryName?.toLowerCase().includes('coffee powder') ||
+                          categoryName?.toLowerCase() === 'coffee powders';
+    
+    if (!isCoffeePowder) {
+      console.error("❌ Product not in Coffee Powders category:", {
+        product_id: product.id,
+        category_slug: categorySlug,
+        category_name: categoryName,
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: "Subscription unavailable",
+          details: "Subscriptions are only available for Coffee Powder products.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3. Variant must be 1000g
+    const { data: variantForWeight, error: weightError } = await supabaseAdmin
+      .from("product_variants")
+      .select("weight")
+      .eq("id", variant_id)
+      .single();
+
+    if (weightError || !variantForWeight) {
+      console.error("❌ Failed to fetch variant weight:", variant_id);
+      return new Response(
+        JSON.stringify({ error: "Variant not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (variantForWeight.weight !== 1000) {
+      console.error("❌ Variant is not 1000g:", {
+        variant_id: variant_id,
+        weight: variantForWeight.weight,
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: "Subscription unavailable",
+          details: "Subscriptions are only available for 1000g (1kg) variants.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
