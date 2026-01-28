@@ -20,12 +20,18 @@ const DeliveryDatePicker = ({
     const minDay = minDate.getDate();
     const currentMonth = today.getMonth();
     const minMonth = minDate.getMonth();
+    const shouldApplyCutoff = minDay <= 28;
 
     for (let day = 1; day <= 28; day++) {
       let disabled = false;
       let label = `${day}${getOrdinalSuffix(day)} of every month`;
 
-      if (currentMonth === minMonth && day < minDay) {
+      // Only apply the "not available this month" cutoff when the minimum
+      // available day is within 1–28. When we're at the very end of a month
+      // (e.g. today is 28th and minDate is 31st), minDay will be > 28 and we
+      // should allow all dates so that customers can still choose any
+      // preferred monthly delivery day for future months.
+      if (shouldApplyCutoff && currentMonth === minMonth && day < minDay) {
         disabled = true;
         label += " (Not available this month)";
       }

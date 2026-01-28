@@ -57,6 +57,11 @@ const SubscriptionConfirmation = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Helper: check if a string is a valid UUID (for internal subscription IDs)
+  const isUuid = (value: string) => {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  };
+
   useEffect(() => {
     if (subscriptionId && user) {
       fetchSubscription();
@@ -97,26 +102,29 @@ const SubscriptionConfirmation = () => {
         setLoading(false);
         return;
       }
-      
-      // If not found by Razorpay ID, try by internal ID (in case UUID was passed)
-      const { data: byId, error: idError } = await supabase
-        .from("user_subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("id", subscriptionId)
-        .maybeSingle();
-      
-      if (idError) {
-        console.error("Error querying by id:", idError);
-        throw idError;
-      }
-      
-      if (byId) {
-        // Found by internal ID - fetch related data
-        const subscriptionData = await fetchSubscriptionDetails(byId);
-        setSubscription(subscriptionData);
-        setLoading(false);
-        return;
+
+      // If not found by Razorpay ID, try by internal UUID ID (only if the value looks like a UUID).
+      // This avoids Postgres errors like "invalid input syntax for type uuid: 'sub_xxx'".
+      if (isUuid(subscriptionId)) {
+        const { data: byId, error: idError } = await supabase
+          .from("user_subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("id", subscriptionId)
+          .maybeSingle();
+        
+        if (idError) {
+          console.error("Error querying by id:", idError);
+          throw idError;
+        }
+        
+        if (byId) {
+          // Found by internal ID - fetch related data
+          const subscriptionData = await fetchSubscriptionDetails(byId);
+          setSubscription(subscriptionData);
+          setLoading(false);
+          return;
+        }
       }
       
       // Not found by either ID - subscription might not be created yet (webhook delay)

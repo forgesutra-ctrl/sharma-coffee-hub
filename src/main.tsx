@@ -13,7 +13,9 @@ const shouldSuppressError = (message: unknown): boolean => {
     messageStr.includes('localtesting.com') ||
     messageStr.includes('ERR_NAME_NOT_RESOLVED') ||
     messageStr.includes('SociableKIT_Widgets') ||
-    (messageStr.includes('Failed to load') && messageStr.includes('widget.js'))
+    (messageStr.includes('Failed to load') && messageStr.includes('widget.js')) ||
+    (messageStr.includes('Cannot set properties of undefined') && messageStr.includes('className')) ||
+    (messageStr.includes('widget.js') && messageStr.includes('className'))
   );
 };
 
@@ -36,7 +38,9 @@ const handleError = (event: ErrorEvent) => {
   if (
     message.includes('localtesting.com') ||
     filename.includes('localtesting.com') ||
-    (filename.includes('widget.js') && message.includes('ERR_NAME_NOT_RESOLVED'))
+    (filename.includes('widget.js') && message.includes('ERR_NAME_NOT_RESOLVED')) ||
+    (filename.includes('widget.js') && message.includes('Cannot set properties of undefined')) ||
+    (filename.includes('widget.js') && message.includes('className'))
   ) {
     event.preventDefault();
     return false;
