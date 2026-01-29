@@ -1214,35 +1214,26 @@ const Checkout = () => {
     try {
       console.log("Verifying payment with backend...");
 
-      // Ensure we have a valid session before calling the function
+      // Ensure we have a valid session and fresh token before calling the function (so order is tied to correct user in My Orders)
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        // Try to refresh the session
-        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshedSession) {
+      if (sessionError || !session?.access_token) {
+        const { data: { session: refreshed }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshed?.access_token) {
           throw new Error("Session expired. Please log in again.");
         }
       }
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-      // Use direct fetch to avoid CORS issues with supabase.functions.invoke()
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const currentSession = session || (await supabase.auth.getSession()).data.session;
-      
-      // Use direct fetch with proper Supabase Edge Function headers
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "apikey": SUPABASE_ANON_KEY,
       };
-      
-      // Add Authorization header if user is logged in
       if (currentSession?.access_token) {
         headers["Authorization"] = `Bearer ${currentSession.access_token}`;
       }
-      
-      console.log("Calling verify-razorpay-payment via direct fetch...");
+      console.log("Calling verify-razorpay-payment via direct fetch...", currentSession?.user?.id ? "with user" : "no session user");
       
       const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-razorpay-payment`, {
         method: "POST",
@@ -1255,17 +1246,18 @@ const Checkout = () => {
         }),
       });
 
+      const responseText = await response.text();
+      let verifyData: { verified?: boolean; orderId?: string; error?: string } = {};
+      try { verifyData = JSON.parse(responseText); } catch (_) {}
+
       if (!response.ok) {
-        const errorText = await response.text();
         console.error("Payment verification failed:", {
           status: response.status,
           statusText: response.statusText,
-          error: errorText,
+          error: responseText,
         });
         throw new Error(`Payment verification failed: ${response.status} ${response.statusText}`);
       }
-
-      const verifyData = await response.json();
 
       if (!verifyData?.verified) {
         console.error("Payment not verified:", verifyData);

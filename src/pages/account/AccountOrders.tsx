@@ -53,16 +53,59 @@ export default function OrdersPage() {
   const [trackingLoading, setTrackingLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
+    if (!user) {
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
+    setIsLoading(true);
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id ?? user?.id;
+      if (!userId || cancelled) {
+        if (!cancelled) setIsLoading(false);
+        return;
+      }
+      try {
+        const { data: orderData, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (cancelled) return;
+        if (error) throw error;
+        console.log("[My Orders] query user_id:", userId, "orders returned:", orderData?.length ?? 0, "order_numbers:", orderData?.map((o) => o.order_number) ?? []);
+        if (!orderData) {
+          setOrders([]);
+          return;
+        }
+        const ordersWithDetails = await Promise.all(
+          orderData.map(async (order) => {
+            const itemsPromise = supabase.from('order_items').select('*').eq('order_id', order.id);
+            const shipmentPromise = supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle();
+            const [itemsResult, shipmentResult] = await Promise.all([
+              itemsPromise,
+              Promise.resolve(shipmentPromise).catch(() => ({ data: null, error: null })),
+            ]);
+            let shipmentData = null;
+            if (shipmentResult && !shipmentResult.error && shipmentResult.data) shipmentData = shipmentResult.data;
+            return { ...order, items: itemsResult.data || [], shipment: shipmentData };
+          })
+        );
+        setOrders(ordersWithDetails);
+      } catch (e) {
+        if (!cancelled) console.error('Error fetching orders:', e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const fetchOrders = async () => {
     if (!user) return;
 
     try {
-      // Fetch orders
       const { data: orderData, error } = await supabase
         .from('orders')
         .select('*')
@@ -75,22 +118,14 @@ export default function OrdersPage() {
       // Fetch items and shipments for each order
       const ordersWithDetails = await Promise.all(
         orderData.map(async (order) => {
+          const itemsPromise = supabase.from('order_items').select('*').eq('order_id', order.id);
+          const shipmentPromise = supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle();
           const [itemsResult, shipmentResult] = await Promise.all([
-            supabase
-              .from('order_items')
-              .select('*')
-              .eq('order_id', order.id),
-            supabase
-              .from('shipments')
-              .select('*')
-              .eq('order_id', order.id)
-              .maybeSingle()
-              .catch((err) => {
-                // Silently handle 406 or other API errors for shipments
-                // These can occur if the shipments table structure changed or RLS policies reject the request
-                console.debug(`Shipment fetch skipped for order ${order.id}:`, err);
-                return { data: null, error: null };
-              }),
+            itemsPromise,
+            Promise.resolve(shipmentPromise).catch((err) => {
+              console.debug(`Shipment fetch skipped for order ${order.id}:`, err);
+              return { data: null, error: null };
+            }),
           ]);
 
           if (itemsResult.error) {

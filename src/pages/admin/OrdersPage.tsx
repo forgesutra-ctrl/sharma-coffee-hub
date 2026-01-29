@@ -32,6 +32,23 @@ export default function OrdersPage() {
     fetchOrders();
   }, []);
 
+  // Real-time: refetch when new orders are created or updated so admin sees orders without manual refresh
+  useEffect(() => {
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     filterOrders();
   }, [orders, searchQuery, statusFilter, orderTypeFilter]);
@@ -50,8 +67,9 @@ export default function OrdersPage() {
         throw error;
       }
       
-      console.log(`✅ Fetched ${data?.length || 0} orders from database`);
-      setOrders(data || []);
+      const orderList = data || [];
+      console.log(`✅ Fetched ${orderList.length} orders from database`);
+      setOrders(orderList);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast.error(`Failed to load orders: ${error.message || 'Unknown error'}`);

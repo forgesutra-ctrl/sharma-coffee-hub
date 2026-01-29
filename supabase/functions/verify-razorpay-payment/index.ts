@@ -284,6 +284,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Supabase configuration missing");
@@ -291,8 +292,44 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // checkout is already parsed above, reuse it
-    // const checkout: CheckoutData = JSON.parse(checkoutData);
+    // Use the authenticated user from the JWT as order owner so the order always appears in "My Orders" for the payer
+    let orderUserId = checkout.user_id;
+    const authHeader = req.headers.get("Authorization");
+    const hasBearer = authHeader?.startsWith("Bearer ");
+    if (hasBearer) {
+      const token = authHeader!.replace("Bearer ", "").trim();
+      // Try getUser() when anon key is available (verifies JWT)
+      if (supabaseAnonKey) {
+        try {
+          const authClient = createClient(supabaseUrl, supabaseAnonKey);
+          const { data: { user }, error } = await authClient.auth.getUser(token);
+          if (!error && user?.id) {
+            orderUserId = user.id;
+            console.log("[verify-payment] order owner from JWT getUser:", orderUserId, "checkout.user_id:", checkout.user_id);
+          }
+        } catch (e) {
+          console.warn("[verify-payment] JWT getUser failed, trying payload decode:", e);
+        }
+      }
+      // Fallback: decode JWT payload for "sub" (works without SUPABASE_ANON_KEY in env)
+      if (orderUserId === checkout.user_id) {
+        try {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+            const sub = payload?.sub as string | undefined;
+            if (sub && /^[0-9a-f-]{36}$/i.test(sub)) {
+              orderUserId = sub;
+              console.log("[verify-payment] order owner from JWT payload sub:", orderUserId, "checkout.user_id:", checkout.user_id);
+            }
+          }
+        } catch (e) {
+          console.warn("[verify-payment] JWT payload decode failed:", e);
+        }
+      }
+    } else {
+      console.log("[verify-payment] no Bearer header, using checkout.user_id:", orderUserId);
+    }
 
     const { data: existingOrder } = await supabase
       .from("orders")
@@ -341,7 +378,7 @@ Deno.serve(async (req: Request) => {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        user_id: checkout.user_id,
+        user_id: orderUserId,
         order_number: orderNumber,
         subtotal: checkout.subtotal,
         total_amount: checkout.total_amount,
