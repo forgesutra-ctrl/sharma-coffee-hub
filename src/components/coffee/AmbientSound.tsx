@@ -36,7 +36,6 @@ const AmbientSound = ({
   const [userMuted, setUserMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const triedFallbackRef = useRef(false);
-  const didLogButtonRef = useRef(false);
 
   useEffect(() => {
     setCurrentSrc(effectiveSrc);
@@ -53,14 +52,7 @@ const AmbientSound = ({
     setIsLoaded(true);
     setHasError(false);
     if (autoPlay && !userMuted && audioRef.current) {
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-          if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Autoplay started');
-        })
-        .catch((e) => {
-          if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Autoplay blocked (click the sound button to play)', e?.message || e);
-        });
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }
   };
 
@@ -93,21 +85,11 @@ const AmbientSound = ({
       el.muted = false;
       el.currentTime = 0;
       const p = el.play();
-      p.then(() => {
-        setIsPlaying(true);
-        if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Play started (user clicked)');
-      }).catch((e) => {
-        if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Play failed', e?.message || e);
-        setHasError(true);
-      });
+      p.then(() => setIsPlaying(true)).catch(() => setHasError(true));
     }
   };
 
   const showAsPlaying = isPlaying;
-  if (isLoaded && !didLogButtonRef.current && typeof console !== 'undefined' && console.warn) {
-    didLogButtonRef.current = true;
-    console.warn('[AmbientSound] Button visible – click the speaker (bottom-right) to play sound');
-  }
 
   return (
     <>
@@ -126,7 +108,7 @@ const AmbientSound = ({
       <button
         type="button"
         onClick={toggleMute}
-        className="fixed bottom-6 right-6 z-[100] p-3 bg-card/80 backdrop-blur-sm border border-border rounded-full shadow-lg hover:bg-card transition-colors"
+        className="fixed bottom-6 left-6 z-[100] p-3 bg-card/80 backdrop-blur-sm border border-border rounded-full shadow-lg hover:bg-card transition-colors"
         aria-label={showAsPlaying ? `Turn off ${label}` : `Play ${label}`}
         title={showAsPlaying ? `Turn off ${label}` : `Click to play ${label}`}
       >
