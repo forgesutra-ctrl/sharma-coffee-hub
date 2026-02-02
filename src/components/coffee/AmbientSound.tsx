@@ -36,6 +36,7 @@ const AmbientSound = ({
   const [userMuted, setUserMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const triedFallbackRef = useRef(false);
+  const triedPlayOnInteractionRef = useRef(false);
 
   useEffect(() => {
     setCurrentSrc(effectiveSrc);
@@ -47,6 +48,34 @@ const AmbientSound = ({
     if (!el) return;
     el.volume = volume;
   }, [volume]);
+
+  // Try to start playback on first user interaction (scroll, touch, key) when autoplay was blocked
+  useEffect(() => {
+    if (!autoPlay || !isLoaded || isPlaying || userMuted) return;
+
+    const tryPlay = () => {
+      if (triedPlayOnInteractionRef.current) return;
+      const el = audioRef.current;
+      if (!el) return;
+      triedPlayOnInteractionRef.current = true;
+      el.muted = false;
+      el.currentTime = 0;
+      el.play().then(() => setIsPlaying(true)).catch(() => {});
+    };
+
+    const opts = { passive: true, once: true } as AddEventListenerOptions;
+    document.addEventListener('scroll', tryPlay, opts);
+    document.addEventListener('wheel', tryPlay, opts);
+    document.addEventListener('touchstart', tryPlay, opts);
+    document.addEventListener('keydown', tryPlay, opts);
+
+    return () => {
+      document.removeEventListener('scroll', tryPlay);
+      document.removeEventListener('wheel', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+      document.removeEventListener('keydown', tryPlay);
+    };
+  }, [autoPlay, isLoaded, isPlaying, userMuted]);
 
   const onCanPlayThrough = () => {
     setIsLoaded(true);
