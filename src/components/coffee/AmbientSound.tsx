@@ -47,9 +47,6 @@ const AmbientSound = ({
     const audio = new Audio();
 
     audio.addEventListener('canplaythrough', () => {
-      // #region agent log (production-safe: console only)
-      console.warn('[AmbientSound] Loaded', { url: audio.src });
-      // #endregion
       setIsLoaded(true);
       setHasError(false);
       if (autoPlay && !userMuted) {
@@ -64,9 +61,6 @@ const AmbientSound = ({
     });
 
     audio.addEventListener('error', () => {
-      // #region agent log (production-safe: console only)
-      console.warn('[AmbientSound] Load failed', { url: audio.src, currentSrc });
-      // #endregion
       if (fallbackSrc && !triedFallbackRef.current) {
         triedFallbackRef.current = true;
         setCurrentSrc(normalizeAudioSrc(fallbackSrc));
@@ -77,9 +71,6 @@ const AmbientSound = ({
     });
 
     audio.src = currentSrc;
-    // #region agent log (production-safe: console only)
-    console.warn('[AmbientSound] Loading', { currentSrc, resolved: audio.src });
-    // #endregion
     audio.loop = false; // Play once only
     audio.volume = volume;
     audioRef.current = audio;
