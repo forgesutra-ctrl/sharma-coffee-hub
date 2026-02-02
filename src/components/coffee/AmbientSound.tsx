@@ -36,6 +36,7 @@ const AmbientSound = ({
   const [userMuted, setUserMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const triedFallbackRef = useRef(false);
+  const didLogButtonRef = useRef(false);
 
   useEffect(() => {
     setCurrentSrc(effectiveSrc);
@@ -43,83 +44,100 @@ const AmbientSound = ({
   }, [effectiveSrc]);
 
   useEffect(() => {
-    if (currentSrc === effectiveSrc) triedFallbackRef.current = false;
-    const audio = new Audio();
+    const el = audioRef.current;
+    if (!el) return;
+    el.volume = volume;
+  }, [volume]);
 
-    audio.addEventListener('canplaythrough', () => {
-      setIsLoaded(true);
-      setHasError(false);
-      if (autoPlay && !userMuted) {
-        audio.play().then(() => setIsPlaying(true)).catch(() => {
-          // Autoplay blocked by browser (common on production). Keep component visible so user can click to play.
+  const onCanPlayThrough = () => {
+    setIsLoaded(true);
+    setHasError(false);
+    if (autoPlay && !userMuted && audioRef.current) {
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+          if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Autoplay started');
+        })
+        .catch((e) => {
+          if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Autoplay blocked (click the sound button to play)', e?.message || e);
         });
-      }
-    });
+    }
+  };
 
-    audio.addEventListener('ended', () => {
-      setIsPlaying(false);
-    });
+  const onEnded = () => setIsPlaying(false);
 
-    audio.addEventListener('error', () => {
-      if (fallbackSrc && !triedFallbackRef.current) {
-        triedFallbackRef.current = true;
-        setCurrentSrc(normalizeAudioSrc(fallbackSrc));
-        return;
-      }
-      setHasError(true);
-      setIsLoaded(false);
-    });
-
-    audio.src = currentSrc;
-    audio.loop = false; // Play once only
-    audio.volume = volume;
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
-  }, [effectiveSrc, currentSrc, volume, autoPlay, fallbackSrc]);
+  const onError = () => {
+    if (fallbackSrc && !triedFallbackRef.current) {
+      triedFallbackRef.current = true;
+      setCurrentSrc(normalizeAudioSrc(fallbackSrc));
+      return;
+    }
+    setHasError(true);
+    setIsLoaded(false);
+  };
 
   if (hasError) {
     return null;
   }
 
   const toggleMute = () => {
-    if (!audioRef.current || !isLoaded) return;
+    const el = audioRef.current;
+    if (!el || !isLoaded) return;
 
-    if (userMuted) {
+    if (isPlaying) {
+      setUserMuted(true);
+      el.pause();
+      setIsPlaying(false);
+    } else {
       setUserMuted(false);
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+      el.muted = false;
+      el.currentTime = 0;
+      const p = el.play();
+      p.then(() => {
+        setIsPlaying(true);
+        if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Play started (user clicked)');
+      }).catch((e) => {
+        if (typeof console !== 'undefined' && console.warn) console.warn('[AmbientSound] Play failed', e?.message || e);
         setHasError(true);
       });
-    } else {
-      setUserMuted(true);
-      audioRef.current.pause();
-      setIsPlaying(false);
     }
   };
 
-  if (!isLoaded) {
-    return null;
+  const showAsPlaying = isPlaying;
+  if (isLoaded && !didLogButtonRef.current && typeof console !== 'undefined' && console.warn) {
+    didLogButtonRef.current = true;
+    console.warn('[AmbientSound] Button visible – click the speaker (bottom-right) to play sound');
   }
 
-  const soundOn = !userMuted;
-
   return (
-    <button
-      onClick={toggleMute}
-      className="fixed bottom-6 right-6 z-40 p-3 bg-card/80 backdrop-blur-sm border border-border rounded-full shadow-lg hover:bg-card transition-colors"
-      aria-label={soundOn ? `Turn off ${label}` : `Turn on ${label}`}
-      title={soundOn ? `Turn off ${label}` : `Turn on ${label}`}
-    >
-      {soundOn ? (
-        <Volume2 className="w-5 h-5 text-primary" />
-      ) : (
-        <VolumeX className="w-5 h-5 text-muted-foreground" />
+    <>
+      <audio
+        ref={audioRef}
+        src={currentSrc}
+        preload="auto"
+        loop={false}
+        onCanPlayThrough={onCanPlayThrough}
+        onEnded={onEnded}
+        onError={onError}
+        style={{ display: 'none' }}
+        aria-hidden
+      />
+      {isLoaded && (
+      <button
+        type="button"
+        onClick={toggleMute}
+        className="fixed bottom-6 right-6 z-[100] p-3 bg-card/80 backdrop-blur-sm border border-border rounded-full shadow-lg hover:bg-card transition-colors"
+        aria-label={showAsPlaying ? `Turn off ${label}` : `Play ${label}`}
+        title={showAsPlaying ? `Turn off ${label}` : `Click to play ${label}`}
+      >
+        {showAsPlaying ? (
+          <Volume2 className="w-5 h-5 text-primary" />
+        ) : (
+          <VolumeX className="w-5 h-5 text-muted-foreground" aria-hidden />
+        )}
+      </button>
       )}
-    </button>
+    </>
   );
 };
 
