@@ -29,7 +29,7 @@ const AmbientSound = ({
       setHasError(false);
       if (autoPlay && !userMuted) {
         audio.play().then(() => setIsPlaying(true)).catch(() => {
-          setHasError(true);
+          // Autoplay blocked by browser (common on production). Keep component visible so user can click to play.
         });
       }
     });
