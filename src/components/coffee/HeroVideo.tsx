@@ -45,6 +45,13 @@ export default function HeroVideo({
     }
   }, []);
 
+  // #region agent log
+  useEffect(() => {
+    const v = videoRef.current;
+    fetch('http://127.0.0.1:7245/ingest/9c776071-f176-4c53-b56c-aac3f8aa7b57', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HeroVideo.tsx:useEffect(isMuted)', message: 'isMuted state changed', data: { isMuted, domMuted: v?.muted, domVolume: v?.volume }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H2' }) }).catch(() => {});
+  }, [isMuted]);
+  // #endregion
+
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -57,9 +64,28 @@ export default function HeroVideo({
   };
 
   const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    // #region agent log
+    const v = videoRef.current;
+    fetch('http://127.0.0.1:7245/ingest/9c776071-f176-4c53-b56c-aac3f8aa7b57', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HeroVideo.tsx:toggleMute', message: 'mute button clicked', data: { isMutedBefore: isMuted, videoMuted: v?.muted, videoVolume: v?.volume, videoRefNull: !v }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1' }) }).catch(() => {});
+    // #endregion
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    // Unmute + play() in same user gesture so the browser allows unmuted audio (autoplay policy).
+    if (videoRef.current && !nextMuted) {
+      const el = videoRef.current;
+      el.muted = false;
+      el.volume = 1;
+      el.play()
+        .then(() => {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/9c776071-f176-4c53-b56c-aac3f8aa7b57', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HeroVideo.tsx:unmutePlay', message: 'play() resolved after unmute', data: { muted: el.muted, volume: el.volume }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H6' }) }).catch(() => {});
+          // #endregion
+        })
+        .catch((err: unknown) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/9c776071-f176-4c53-b56c-aac3f8aa7b57', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HeroVideo.tsx:unmutePlay', message: 'play() rejected after unmute', data: { error: String(err), name: err instanceof Error ? err.name : '' }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H6' }) }).catch(() => {});
+          // #endregion
+        });
     }
   };
 
@@ -88,10 +114,16 @@ export default function HeroVideo({
           )}
           src={videoSrc}
           autoPlay
-          muted
+          muted={isMuted}
           loop
           playsInline
-          onLoadedData={() => setIsLoaded(true)}
+          onLoadedData={() => {
+            setIsLoaded(true);
+            // #region agent log
+            const v = videoRef.current;
+            if (v) fetch('http://127.0.0.1:7245/ingest/9c776071-f176-4c53-b56c-aac3f8aa7b57', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'HeroVideo.tsx:onLoadedData', message: 'video loaded', data: { muted: v.muted, volume: v.volume, readyState: v.readyState }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H3' }) }).catch(() => {});
+            // #endregion
+          }}
         />
       )}
 

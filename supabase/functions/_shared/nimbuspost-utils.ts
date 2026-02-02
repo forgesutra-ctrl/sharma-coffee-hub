@@ -8,7 +8,7 @@ export const corsHeaders = {
 
 export const NIMBUSPOST_CONFIG = {
   baseURL: "https://api.nimbuspost.com/v1",
-  email: Deno.env.get("NIMBUSPOST_EMAIL") || "18762988145+3184@automatic321signup.com",
+  email: Deno.env.get("NIMBUSPOST_EMAIL") || "8762988145+3184@automatic321signup.com",
   password: Deno.env.get("NIMBUSPOST_PASSWORD") || "AfGcEkjpbm",
   trackingDomain: "sharmacoffeeworks.odrtrk.live",
   warehouse: {
@@ -50,7 +50,8 @@ export async function getNimbuspostToken(): Promise<string> {
     return authToken;
   }
 
-  throw new Error(data.message || "Nimbuspost authentication failed");
+  const msg = data.message || "Nimbuspost authentication failed";
+  throw new Error(`${msg}. Check NIMBUSPOST_EMAIL and NIMBUSPOST_PASSWORD in Supabase Edge Function secrets.`);
 }
 
 export async function nimbuspostRequest<T>(

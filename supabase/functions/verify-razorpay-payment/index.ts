@@ -508,7 +508,7 @@ Deno.serve(async (req: Request) => {
     const createShipment = async () => {
       try {
         console.log(`[Payment] Creating Nimbuspost shipment for order: ${order.id}`);
-        
+
         const shipmentPayload = {
           orderId: order.id,
           customerName: checkout.shipping_address.fullName || "Customer",

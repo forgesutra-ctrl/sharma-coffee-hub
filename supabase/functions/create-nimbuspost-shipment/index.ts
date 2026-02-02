@@ -143,6 +143,10 @@ Deno.serve(async (req: Request) => {
           ? { length: 20, breadth: 15, height: 10 }
           : { length: 25, breadth: 20, height: 15 };
 
+    // Nimbuspost: package_weight must be integer (kg). Coerce so JSON never sends a float.
+    const packageWeightKg = Math.max(1, Math.min(50, Math.ceil(weightKg)));
+    const package_weight = packageWeightKg | 0; // force 32-bit integer
+
     const payload = {
       order_number: existingOrder.order_number || shipmentData.orderId.substring(0, 30),
       shipping_charges: Number(shipmentData.shippingCharges ?? 0),
@@ -150,7 +154,7 @@ Deno.serve(async (req: Request) => {
       cod_charges: shipmentData.paymentType === "cod" ? Number(shipmentData.codAmount ?? 0) : 0,
       payment_type: shipmentData.paymentType,
       order_amount: Number(shipmentData.orderAmount),
-      package_weight: weightKg,
+      package_weight,
       package_length: dimensions.length,
       package_breadth: dimensions.breadth,
       package_height: dimensions.height,
@@ -178,7 +182,6 @@ Deno.serve(async (req: Request) => {
     };
 
     console.log(`[Nimbuspost] Creating shipment for order: ${shipmentData.orderId}`);
-
     const data = await nimbuspostRequest<{
       awb_number?: string;
       courier_id?: number;

@@ -17,6 +17,8 @@ const AmbientSound = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  /** When true, user has turned sound off; otherwise sound is on (plays once by default). */
+  const [userMuted, setUserMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -25,6 +27,15 @@ const AmbientSound = ({
     audio.addEventListener('canplaythrough', () => {
       setIsLoaded(true);
       setHasError(false);
+      if (autoPlay && !userMuted) {
+        audio.play().then(() => setIsPlaying(true)).catch(() => {
+          setHasError(true);
+        });
+      }
+    });
+
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
     });
 
     audio.addEventListener('error', () => {
@@ -34,7 +45,7 @@ const AmbientSound = ({
     });
 
     audio.src = audioSrc;
-    audio.loop = true;
+    audio.loop = false; // Play once only
     audio.volume = volume;
     audioRef.current = audio;
 
@@ -42,37 +53,42 @@ const AmbientSound = ({
       audio.pause();
       audio.src = '';
     };
-  }, [audioSrc, volume]);
+  }, [audioSrc, volume, autoPlay]);
 
   if (hasError) {
     return null;
   }
 
-  const togglePlay = () => {
+  const toggleMute = () => {
     if (!audioRef.current || !isLoaded) return;
 
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {
+    if (userMuted) {
+      setUserMuted(false);
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {
         setHasError(true);
       });
+    } else {
+      setUserMuted(true);
+      audioRef.current.pause();
+      setIsPlaying(false);
     }
-    setIsPlaying(!isPlaying);
   };
 
   if (!isLoaded) {
     return null;
   }
 
+  const soundOn = !userMuted;
+
   return (
     <button
-      onClick={togglePlay}
+      onClick={toggleMute}
       className="fixed bottom-6 right-6 z-40 p-3 bg-card/80 backdrop-blur-sm border border-border rounded-full shadow-lg hover:bg-card transition-colors"
-      aria-label={isPlaying ? `Pause ${label}` : `Play ${label}`}
-      title={label}
+      aria-label={soundOn ? `Turn off ${label}` : `Turn on ${label}`}
+      title={soundOn ? `Turn off ${label}` : `Turn on ${label}`}
     >
-      {isPlaying ? (
+      {soundOn ? (
         <Volume2 className="w-5 h-5 text-primary" />
       ) : (
         <VolumeX className="w-5 h-5 text-muted-foreground" />

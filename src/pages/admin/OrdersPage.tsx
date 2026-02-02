@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Eye, Package, RefreshCw } from 'lucide-react';
+import { Search, Eye, Package, RefreshCw, Truck, ExternalLink, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [creatingShipment, setCreatingShipment] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -159,6 +160,61 @@ export default function OrdersPage() {
       toast.success('Order status updated');
     } catch (error) {
       toast.error('Failed to update status');
+    }
+  };
+
+  const createNimbuspostShipment = async (order: Order) => {
+    setCreatingShipment(true);
+    try {
+      const addr = order.shipping_address as Record<string, string> | null;
+      const payload = {
+        orderId: order.id,
+        customerName: addr?.fullName || addr?.full_name || 'Customer',
+        customerPhone: addr?.phone || '',
+        customerEmail: addr?.email || '',
+        shippingAddress: {
+          fullName: addr?.fullName || addr?.full_name || 'Customer',
+          addressLine1: addr?.addressLine1 || addr?.address_line1 || '',
+          addressLine2: addr?.addressLine2 || addr?.address_line2 || '',
+          city: addr?.city || '',
+          state: addr?.state || '',
+          pincode: addr?.pincode || '',
+          phone: addr?.phone || '',
+        },
+        orderItems: orderItems.map((item) => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          weight: item.weight ?? 0,
+        })),
+        totalWeight: 0.5,
+        orderAmount: Number(order.total_amount),
+        paymentType: (order.payment_type as 'prepaid' | 'cod') || 'prepaid',
+        codAmount: order.payment_type === 'cod' ? Number(order.cod_balance || 0) : undefined,
+      };
+      const { data: { session } } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success && data.awbNumber) {
+        toast.success(`Shipment created. AWB: ${data.awbNumber}`);
+        await fetchOrders();
+        setSelectedOrder((prev) => prev ? { ...prev, nimbuspost_awb_number: data.awbNumber, nimbuspost_courier_name: data.courierName ?? null, nimbuspost_tracking_url: data.trackingUrl ?? null } : null);
+      } else {
+        toast.error(data.error || 'Failed to create shipment');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to create shipment');
+    } finally {
+      setCreatingShipment(false);
     }
   };
 
@@ -322,7 +378,7 @@ export default function OrdersPage() {
 
       {/* Order Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Order {selectedOrder?.order_number}</DialogTitle>
             <DialogDescription>
@@ -436,6 +492,40 @@ export default function OrdersPage() {
                   <span>Total</span>
                   <span>₹{Number(selectedOrder.total_amount).toLocaleString()}</span>
                 </div>
+              </div>
+
+              {/* Nimbuspost Shipment - scroll down if you don't see it */}
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Shipment (Nimbuspost)
+                </h4>
+                {selectedOrder.nimbuspost_awb_number ? (
+                  <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
+                    <p><span className="font-medium">AWB:</span> <span className="font-mono">{selectedOrder.nimbuspost_awb_number}</span></p>
+                    {selectedOrder.nimbuspost_courier_name && (
+                      <p><span className="font-medium">Courier:</span> {selectedOrder.nimbuspost_courier_name}</p>
+                    )}
+                    {selectedOrder.nimbuspost_tracking_url && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={selectedOrder.nimbuspost_tracking_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+                          Track shipment <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">No shipment created yet.</p>
+                    <Button
+                      size="sm"
+                      disabled={creatingShipment || orderItems.length === 0}
+                      onClick={() => createNimbuspostShipment(selectedOrder)}
+                    >
+                      {creatingShipment ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

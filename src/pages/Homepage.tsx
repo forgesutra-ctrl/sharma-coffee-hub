@@ -324,7 +324,7 @@ export default function Homepage() {
 
       {/* AMBIENT SOUND */}
       <AmbientSound
-        audioSrc="/coffee-pour.mp3.mp3"
+        audioSrc="/audio/coffee-pour.mp3"
         label="Coffee Pouring"
         volume={0.4}
         autoPlay
