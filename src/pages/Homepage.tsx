@@ -322,7 +322,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* AMBIENT SOUND */}
+      {/* AMBIENT SOUND - use public path so it works in both dev and production */}
       <AmbientSound
         audioSrc="/audio/coffee-pour.mp3"
         label="Coffee Pouring"

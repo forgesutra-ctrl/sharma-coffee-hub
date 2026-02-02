@@ -3,25 +3,47 @@ import { Volume2, VolumeX } from 'lucide-react';
 
 interface AmbientSoundProps {
   audioSrc: string;
+  /** Fallback URL if primary fails (e.g. production serves from public path). */
+  fallbackSrc?: string;
   label?: string;
   volume?: number;
   autoPlay?: boolean;
 }
 
+const DEFAULT_AUDIO_PATH = '/audio/coffee-pour.mp3';
+
+/** Returns a URL that looks like an actual audio path (not base URL or empty). */
+function normalizeAudioSrc(src: string | undefined): string {
+  if (typeof src !== 'string' || !src.trim()) return DEFAULT_AUDIO_PATH;
+  const s = src.trim();
+  if (s.endsWith('/') || s === window.location?.origin || s === '') return DEFAULT_AUDIO_PATH;
+  return s;
+}
+
 const AmbientSound = ({
   audioSrc,
+  fallbackSrc,
   label = 'Ambient Sound',
   volume = 0.3,
   autoPlay = false
 }: AmbientSoundProps) => {
+  const effectiveSrc = normalizeAudioSrc(audioSrc);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(effectiveSrc);
   /** When true, user has turned sound off; otherwise sound is on (plays once by default). */
   const [userMuted, setUserMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const triedFallbackRef = useRef(false);
 
   useEffect(() => {
+    setCurrentSrc(effectiveSrc);
+    triedFallbackRef.current = false;
+  }, [effectiveSrc]);
+
+  useEffect(() => {
+    if (currentSrc === effectiveSrc) triedFallbackRef.current = false;
     const audio = new Audio();
 
     audio.addEventListener('canplaythrough', () => {
@@ -39,12 +61,16 @@ const AmbientSound = ({
     });
 
     audio.addEventListener('error', () => {
-      console.log('Audio file not available - ambient sound disabled');
+      if (fallbackSrc && !triedFallbackRef.current) {
+        triedFallbackRef.current = true;
+        setCurrentSrc(normalizeAudioSrc(fallbackSrc));
+        return;
+      }
       setHasError(true);
       setIsLoaded(false);
     });
 
-    audio.src = audioSrc;
+    audio.src = currentSrc;
     audio.loop = false; // Play once only
     audio.volume = volume;
     audioRef.current = audio;
@@ -53,7 +79,7 @@ const AmbientSound = ({
       audio.pause();
       audio.src = '';
     };
-  }, [audioSrc, volume, autoPlay]);
+  }, [effectiveSrc, currentSrc, volume, autoPlay, fallbackSrc]);
 
   if (hasError) {
     return null;
