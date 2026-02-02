@@ -159,7 +159,7 @@ export default function OrdersPage() {
     setTrackingOpen(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('dtdc-track', {
+      const { data, error } = await supabase.functions.invoke('nimbuspost-track', {
         body: { awb },
       });
 
@@ -289,14 +289,16 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  {/* Shipment Tracking */}
-                  {order.shipment && order.shipment.awb && (
+                  {/* Shipment Tracking (Nimbuspost AWB on order or legacy shipments table) */}
+                  {(order.nimbuspost_awb_number || (order.shipment && order.shipment.awb)) && (
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <Truck className="w-5 h-5 text-primary" />
                         <div>
-                          <p className="text-sm font-medium">AWB: {order.shipment.awb}</p>
-                          {order.shipment.tracking_status && (
+                          <p className="text-sm font-medium">
+                            AWB: {order.nimbuspost_awb_number || order.shipment!.awb}
+                          </p>
+                          {order.shipment?.tracking_status && (
                             <p className="text-xs text-muted-foreground">
                               {order.shipment.tracking_status}
                             </p>
@@ -306,7 +308,7 @@ export default function OrdersPage() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleTrackShipment(order.shipment!.awb)}
+                        onClick={() => handleTrackShipment(order.nimbuspost_awb_number || order.shipment!.awb)}
                       >
                         Track
                         <ChevronRight className="w-4 h-4 ml-1" />

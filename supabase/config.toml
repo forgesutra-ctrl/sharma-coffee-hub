@@ -1,15 +1,18 @@
 project_id = "amwqwtnplsxppmstxjkb"
 
-[functions.dtdc-create-consignment]
+[functions.nimbuspost-check-serviceability]
 verify_jwt = false
 
-[functions.dtdc-shipping-label]
+[functions.create-nimbuspost-shipment]
 verify_jwt = false
 
-[functions.dtdc-track]
+[functions.nimbuspost-shipping-label]
 verify_jwt = false
 
-[functions.dtdc-cancel]
+[functions.nimbuspost-track]
+verify_jwt = false
+
+[functions.nimbuspost-cancel]
 verify_jwt = false
 
 [functions.send-otp]
@@ -25,9 +28,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-order-notification]
-verify_jwt = false
-
-[functions.create-dtdc-shipment]
 verify_jwt = false
 
 [functions.create-razorpay-subscription]

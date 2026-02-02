@@ -276,17 +276,24 @@ export type Database = {
           guest_session_id: string | null
           id: string
           notes: string | null
+          nimbuspost_awb_number: string | null
+          nimbuspost_courier_name: string | null
+          nimbuspost_tracking_url: string | null
           order_number: string
           payment_method: string | null
           payment_status: string | null
           payment_type: string | null
+          payment_verified: boolean | null
+          payment_verified_at: string | null
           pincode: string | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
+          shipment_created_at: string | null
           shipping_address: Json | null
           shipping_amount: number | null
           shipping_charge: number | null
           shipping_region: string | null
+          shipping_status: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           subtotal: number
           total_amount: number
@@ -302,17 +309,24 @@ export type Database = {
           guest_session_id?: string | null
           id?: string
           notes?: string | null
+          nimbuspost_awb_number?: string | null
+          nimbuspost_courier_name?: string | null
+          nimbuspost_tracking_url?: string | null
           order_number: string
           payment_method?: string | null
           payment_status?: string | null
           payment_type?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
           pincode?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          shipment_created_at?: string | null
           shipping_address?: Json | null
           shipping_amount?: number | null
           shipping_charge?: number | null
           shipping_region?: string | null
+          shipping_status?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
           total_amount: number
@@ -328,17 +342,24 @@ export type Database = {
           guest_session_id?: string | null
           id?: string
           notes?: string | null
+          nimbuspost_awb_number?: string | null
+          nimbuspost_courier_name?: string | null
+          nimbuspost_tracking_url?: string | null
           order_number?: string
           payment_method?: string | null
           payment_status?: string | null
           payment_type?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
           pincode?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          shipment_created_at?: string | null
           shipping_address?: Json | null
           shipping_amount?: number | null
           shipping_charge?: number | null
           shipping_region?: string | null
+          shipping_status?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           subtotal?: number
           total_amount?: number

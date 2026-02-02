@@ -811,7 +811,7 @@ const Checkout = () => {
 
       console.log("Calling Edge Function...");
       
-      // Get fresh session (matches pattern used by dtdc-create-consignment)
+      // Get fresh session (matches pattern used by create-nimbuspost-shipment)
       const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !freshSession?.access_token) {
@@ -2091,7 +2091,7 @@ const Checkout = () => {
                 </Card>
 
                 {/* Tracking Information */}
-                {confirmedOrder.dtdc_awb_number ? (
+                {confirmedOrder.nimbuspost_awb_number ? (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
@@ -2104,12 +2104,12 @@ const Checkout = () => {
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">Tracking Number (AWB)</p>
                           <p className="text-lg font-mono font-semibold text-primary">
-                            {confirmedOrder.dtdc_awb_number}
+                            {confirmedOrder.nimbuspost_awb_number}
                           </p>
                         </div>
                         <Button asChild className="w-full sm:w-auto">
                           <a
-                            href={`https://www.dtdc.in/tracking/tracking_results.asp?strCnno=${confirmedOrder.dtdc_awb_number}`}
+                            href={`https://sharmacoffeeworks.odrtrk.live/${confirmedOrder.nimbuspost_awb_number}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2"

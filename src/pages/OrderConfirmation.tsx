@@ -40,7 +40,7 @@ interface Order {
   cod_balance?: number | null;
   created_at: string;
   order_items: OrderItem[];
-  dtdc_awb_number?: string | null;
+  nimbuspost_awb_number?: string | null;
   shipment_created_at?: string | null;
 }
 
@@ -105,7 +105,7 @@ const OrderConfirmation = () => {
       try {
         console.log("Fetching order from Supabase:", orderId);
 
-        // Query order with items - dtdc_awb_number and shipment_created_at may not exist in all schemas
+        // Query order with items - nimbuspost_awb_number and shipment_created_at may not exist in all schemas
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select(`

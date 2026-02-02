@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useDTDC } from '@/hooks/useDTDC';
+import { useNimbuspost } from '@/hooks/useNimbuspost';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +54,7 @@ interface TrackingEvent {
 
 export default function ShippingPage() {
   const { user, isAdmin, isStaff } = useAuth();
-  const { loading: dtdcLoading, createConsignment, downloadShippingLabel, trackShipment, cancelShipment } = useDTDC();
+  const { loading: nimbuspostLoading, createConsignment, downloadShippingLabel, trackShipment, cancelShipment } = useNimbuspost();
 
   // Create Shipment Form State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -300,7 +300,7 @@ export default function ShippingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create New Shipment</CardTitle>
-              <CardDescription>Select an order and create a DTDC consignment</CardDescription>
+              <CardDescription>Select an order and create a Nimbuspost shipment</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -367,8 +367,8 @@ export default function ShippingPage() {
               </div>
 
               <div className="flex gap-4">
-                <Button onClick={handleCreateShipment} disabled={!selectedOrder || dtdcLoading}>
-                  {dtdcLoading ? 'Creating...' : 'Create Shipment'}
+                <Button onClick={handleCreateShipment} disabled={!selectedOrder || nimbuspostLoading}>
+                  {nimbuspostLoading ? 'Creating...' : 'Create Shipment'}
                 </Button>
 
                 {createdAwb && (
@@ -513,7 +513,7 @@ export default function ShippingPage() {
                   onChange={e => setQuickTrackAwb(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleQuickTrack()}
                 />
-                <Button onClick={handleQuickTrack} disabled={dtdcLoading}>
+                <Button onClick={handleQuickTrack} disabled={nimbuspostLoading}>
                   <Search className="h-4 w-4 mr-2" />
                   Track
                 </Button>
@@ -578,7 +578,7 @@ export default function ShippingPage() {
             <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
               Keep Shipment
             </Button>
-            <Button variant="destructive" onClick={handleCancelConfirm} disabled={dtdcLoading}>
+            <Button variant="destructive" onClick={handleCancelConfirm} disabled={nimbuspostLoading}>
               Cancel Shipment
             </Button>
           </DialogFooter>

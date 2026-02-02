@@ -84,9 +84,8 @@ In Supabase Dashboard > Edge Functions > Manage Secrets, add:
 
 **Optional (for specific features):**
 - AI Chatbot API key (optional) - AI chatbot functionality
-- `DTDC_API_KEY` - Shipping integration
-- `DTDC_CUSTOMER_CODE` - DTDC customer ID
-- `DTDC_ORIGIN_PINCODE` - Your warehouse pincode
+- `NIMBUSPOST_EMAIL` - Nimbuspost account email (shipping)
+- `NIMBUSPOST_PASSWORD` - Nimbuspost account password (shipping)
 
 ### 3. Deploy Edge Functions
 
@@ -98,10 +97,11 @@ supabase functions deploy verify-razorpay-payment
 supabase functions deploy send-otp
 supabase functions deploy verify-otp
 supabase functions deploy create-admin-user
-supabase functions deploy dtdc-create-consignment
-supabase functions deploy dtdc-track
-supabase functions deploy dtdc-cancel
-supabase functions deploy dtdc-shipping-label
+supabase functions deploy create-nimbuspost-shipment
+supabase functions deploy nimbuspost-track
+supabase functions deploy nimbuspost-cancel
+supabase functions deploy nimbuspost-shipping-label
+supabase functions deploy nimbuspost-check-serviceability
 supabase functions deploy generate-sales-report
 ```
 

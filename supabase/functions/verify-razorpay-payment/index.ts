@@ -504,10 +504,10 @@ Deno.serve(async (req: Request) => {
       return Math.min(weightKg, 50); // Max 50kg
     };
 
-    // Create DTDC shipment (fire and forget - don't block response)
+    // Create Nimbuspost shipment (fire and forget - don't block response)
     const createShipment = async () => {
       try {
-        console.log(`[Payment] Creating DTDC shipment for order: ${order.id}`);
+        console.log(`[Payment] Creating Nimbuspost shipment for order: ${order.id}`);
         
         const shipmentPayload = {
           orderId: order.id,
@@ -529,7 +529,7 @@ Deno.serve(async (req: Request) => {
         };
 
         // Call shipment creation function via HTTP
-        const functionUrl = `${supabaseUrl}/functions/v1/create-dtdc-shipment`;
+        const functionUrl = `${supabaseUrl}/functions/v1/create-nimbuspost-shipment`;
         const response = await fetch(functionUrl, {
           method: "POST",
           headers: {

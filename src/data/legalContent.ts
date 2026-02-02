@@ -36,7 +36,7 @@ export const privacyPolicyContent = {
       heading: "Information Sharing",
       content: `We share your information only with:`,
       list: [
-        "Shipping partners (DTDC, Blue Dart) to deliver your orders",
+        "Shipping partners (Nimbuspost and partner couriers) to deliver your orders",
         "Payment processors to complete transactions securely",
         "Service providers who assist in our operations"
       ],
@@ -213,7 +213,7 @@ export const shippingPolicyContent = {
   sections: [
     {
       heading: "Shipping Coverage",
-      content: `We deliver across India through our trusted logistics partners DTDC and Blue Dart. Currently, we do not ship internationally.`
+      content: `We deliver across India through our shipping partner Nimbuspost and their network of couriers. Currently, we do not ship internationally.`
     },
     {
       heading: "Processing Time",

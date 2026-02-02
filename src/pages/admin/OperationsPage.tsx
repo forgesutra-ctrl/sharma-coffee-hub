@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { useDTDC } from '@/hooks/useDTDC';
+import { useNimbuspost } from '@/hooks/useNimbuspost';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import BulkInventoryUpload from '@/components/admin/BulkInventoryUpload';
@@ -96,7 +96,7 @@ const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
 
 export default function OperationsPage() {
   const { user } = useAuth();
-  const { trackShipment, cancelShipment, loading: dtdcLoading } = useDTDC();
+  const { trackShipment, cancelShipment, loading: nimbuspostLoading } = useNimbuspost();
   const [activeTab, setActiveTab] = useState('inventory');
 
   // ========== INVENTORY STATE ==========
@@ -774,7 +774,7 @@ export default function OperationsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleTrackShipment(shipment.awb)}
-                              disabled={dtdcLoading}
+                              disabled={nimbuspostLoading}
                             >
                               <MapPin className="h-4 w-4" />
                             </Button>
@@ -789,7 +789,7 @@ export default function OperationsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleCancelShipment(shipment)}
-                              disabled={dtdcLoading}
+                              disabled={nimbuspostLoading}
                               className="text-destructive hover:text-destructive"
                             >
                               <XCircle className="h-4 w-4" />

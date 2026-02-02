@@ -93,32 +93,33 @@ The AI customer support chatbot can be configured with your preferred AI service
 
 **Fallback:** If not configured, the chatbot button will still appear but users will see an error message when trying to use it.
 
-### Shipping Integration - DTDC (OPTIONAL)
+### Shipping Integration - Nimbuspost
 
-Required for automated shipping label generation and tracking.
+Required for automated shipment creation, label generation, and tracking.
 
 | Variable | Description | Required | Default | Where to Get |
 |----------|-------------|----------|---------|--------------|
-| `DTDC_API_KEY` | DTDC API key | 🔶 Optional | - | DTDC Account Manager |
-| `DTDC_CUSTOMER_CODE` | DTDC customer code | 🔶 Optional | `GL017` | DTDC Account Manager |
-| `DTDC_TRACKING_TOKEN` | DTDC tracking token | 🔶 Optional | - | DTDC Account Manager |
-| `DTDC_BASE_URL` | DTDC API base URL | 🔶 Optional | `https://alphademodashboardapi.shipsy.io` | DTDC Documentation |
-| `DTDC_ENV` | DTDC environment (staging/production) | 🔶 Optional | `staging` | - |
+| `NIMBUSPOST_EMAIL` | Nimbuspost account email | ✅ Required | (see .env) | Nimbuspost Dashboard |
+| `NIMBUSPOST_PASSWORD` | Nimbuspost account password | ✅ Required | (see .env) | Nimbuspost Dashboard |
+| `NIMBUSPOST_TRACKING_DOMAIN` | Tracking page domain | 🔶 Optional | `sharmacoffeeworks.odrtrk.live` | Nimbuspost |
 
-**Status:** ⚠️ **NOT CONFIGURED** - Manual shipping workflow required
+**Status:** Configure in Supabase Edge Function secrets for shipment creation after payment.
 
 **Affected Features:**
-- Automated shipping label generation
-- Real-time shipment tracking
-- Shipment cancellation
+- Automatic shipment creation after payment (create-nimbuspost-shipment)
+- Pincode serviceability check (nimbuspost-check-serviceability; optional for checkout)
+- Shipping label download (nimbuspost-shipping-label)
+- Real-time tracking (nimbuspost-track)
+- Shipment cancellation (nimbuspost-cancel)
 
 **Edge Functions Using These:**
-- `dtdc-create-consignment`
-- `dtdc-shipping-label`
-- `dtdc-track`
-- `dtdc-cancel`
+- `create-nimbuspost-shipment`
+- `nimbuspost-check-serviceability`
+- `nimbuspost-shipping-label`
+- `nimbuspost-track`
+- `nimbuspost-cancel`
 
-**Fallback:** If not configured, admin users must handle shipping manually and cannot use the automated DTDC integration features.
+**Fallback:** If not configured, shipment creation after payment will fail; admin can create shipments manually via Nimbuspost dashboard.
 
 ---
 
@@ -132,7 +133,7 @@ Required for automated shipping label generation and tracking.
 | **Razorpay** | ❌ Not Configured | **HIGH** - No payments | Configure immediately |
 | **Resend** | ❌ Not Configured | **HIGH** - No auth | Configure immediately |
 | **AI Chatbot** | ❌ Not Configured | **MEDIUM** - Chatbot down | Configure for better UX |
-| **DTDC** | ❌ Not Configured | **LOW** - Manual shipping | Optional enhancement |
+| **Nimbuspost** | Configure in Supabase | **MEDIUM** - Auto shipments | Set NIMBUSPOST_EMAIL, NIMBUSPOST_PASSWORD |
 
 ### Build Status
 
@@ -143,7 +144,7 @@ The application compiles and runs without errors. However, the following feature
 1. **Payment Processing** - Requires Razorpay
 2. **User Authentication** - Requires Resend
 3. **AI Chatbot** - Optional feature
-4. **Automated Shipping** - Requires DTDC
+4. **Automated Shipping** - Requires Nimbuspost (NIMBUSPOST_EMAIL, NIMBUSPOST_PASSWORD)
 
 ---
 
@@ -188,20 +189,17 @@ The application compiles and runs without errors. However, the following feature
 
 The AI chatbot can be configured with your preferred AI service provider. Contact the development team for configuration details.
 
-### Step 4: Configure DTDC (OPTIONAL)
+### Step 4: Configure Nimbuspost (Shipping)
 
-1. Contact DTDC or your account manager
-2. Request API credentials
-3. Get your customer code and API key
-4. Add to Supabase:
+1. Log in to [Nimbuspost](https://ship.nimbuspost.com/) and obtain your account email/password.
+2. Add to Supabase Edge Function secrets:
    ```bash
    # In Supabase Dashboard > Settings > Edge Functions > Secrets
-   DTDC_API_KEY=xxxxxxxxxxxxx
-   DTDC_CUSTOMER_CODE=GL017
-   DTDC_TRACKING_TOKEN=xxxxxxxxxxxxx
-   DTDC_BASE_URL=https://alphademodashboardapi.shipsy.io
-   DTDC_ENV=staging
+   NIMBUSPOST_EMAIL=your-nimbuspost-email@example.com
+   NIMBUSPOST_PASSWORD=your-nimbuspost-password
+   NIMBUSPOST_TRACKING_DOMAIN=sharmacoffeeworks.odrtrk.live
    ```
+3. Deploy Edge Functions: `create-nimbuspost-shipment`, `nimbuspost-track`, `nimbuspost-shipping-label`, `nimbuspost-cancel`, `nimbuspost-check-serviceability`.
 
 ### Step 5: Verify Configuration
 
@@ -265,9 +263,8 @@ Common issues:
 - Check browser console for specific error messages
 
 **Shipping errors:**
-- Check DTDC credentials are correct
-- Verify DTDC environment is set correctly
-- Contact DTDC support if integration fails
+- Check Nimbuspost credentials (email/password) in Edge Function secrets
+- Verify Nimbuspost API is accessible; contact Nimbuspost support if integration fails
 
 ---
 
@@ -292,7 +289,7 @@ For issues with:
 - **Razorpay:** [Razorpay Support](https://razorpay.com/support/)
 - **Resend:** [Resend Support](https://resend.com/support)
 - **AI Chatbot:** Contact development team
-- **DTDC:** Contact your DTDC account manager
+- **Nimbuspost:** Contact Nimbuspost support or check dashboard for API status
 
 ---
 

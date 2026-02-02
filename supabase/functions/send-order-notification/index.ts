@@ -64,10 +64,13 @@ async function sendEmailNotification(data: NotificationRequest): Promise<{ succe
       </p>
     ` : '';
 
+    const trackingUrl = data.trackingNumber
+      ? `https://sharmacoffeeworks.odrtrk.live/${data.trackingNumber}`
+      : "";
     const trackingInfo = data.trackingNumber ? `
       <p style="margin: 16px 0; padding: 12px; background-color: #d1ecf1; border-left: 4px solid #0dcaf0; border-radius: 4px;">
         <strong>Tracking Number:</strong> ${data.trackingNumber}<br>
-        Track your order: <a href="https://www.dtdc.in/tracking/tracking_results.asp?strCnno=${data.trackingNumber}" style="color: #0dcaf0;">Click here to track</a>
+        Track your order: <a href="${trackingUrl}" style="color: #0dcaf0;">Click here to track</a>
       </p>
     ` : '';
 
@@ -234,7 +237,7 @@ async function sendWhatsAppNotification(data: NotificationRequest): Promise<{ su
       `\n💰 *Cash on Delivery*\nAdvance Paid: ₹${(data.orderTotal * 0.1).toFixed(2)}\nBalance on Delivery: ₹${(data.orderTotal * 0.9).toFixed(2)}` : '';
 
     const trackingInfo = data.trackingNumber ? 
-      `\n📦 *Tracking Number:* ${data.trackingNumber}\nTrack: https://www.dtdc.in/tracking/tracking_results.asp?strCnno=${data.trackingNumber}` : '';
+      `\n📦 *Tracking Number:* ${data.trackingNumber}\nTrack: https://sharmacoffeeworks.odrtrk.live/${data.trackingNumber}` : '';
 
     const deliveryInfo = data.deliveryDate ? 
       `\n📅 *Expected Delivery:* ${new Date(data.deliveryDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}` : '';
