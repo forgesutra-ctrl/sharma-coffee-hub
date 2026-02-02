@@ -8,7 +8,6 @@ import CategoryGrid from "@/components/coffee/CategoryGrid";
 import StorySection from "@/components/coffee/StorySection";
 import AmbientSound from "@/components/coffee/AmbientSound";
 
-import heroVideo from "@/assets/videos/hero-coffee-brewing.mp4";
 import coffeePlantImg from "@/assets/chatgpt_image_jan_12,_2026,_10_25_34_am copy.jpeg";
 
 import { useFeaturedProducts, useProducts } from "@/hooks/useProducts";
@@ -78,7 +77,7 @@ export default function Homepage() {
       {/* HERO */}
       <section className="w-full">
         <HeroVideo
-          videoSrc={heroVideo}
+          videoSrc="/videos/hero-coffee-brewing.mp4"
           posterImage="https://images.pexels.com/photos/2074122/pexels-photo-2074122.jpeg"
           title="A SIP OF HOME"
           subtitle="Crafted with Tradition Since 1987"
