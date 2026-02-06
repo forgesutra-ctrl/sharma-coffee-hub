@@ -28,6 +28,8 @@ export default function OrdersPage() {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [creatingShipment, setCreatingShipment] = useState(false);
+  const [nimbusCreateLoading, setNimbusCreateLoading] = useState(false);
+  const [nimbusCreateError, setNimbusCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -110,10 +112,79 @@ export default function OrdersPage() {
     setFilteredOrders(filtered);
   };
 
+  const createNimbusShipment = async () => {
+    if (!selectedOrder) return;
+    setNimbusCreateLoading(true);
+    setNimbusCreateError(null);
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:createNimbusShipment', message: 'Create shipment called', data: { order_id: selectedOrder.id, order_number: selectedOrder.order_number }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1' }) }).catch(() => {});
+    // #endregion
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token && { Authorization: `Bearer ${session.access_token}` }),
+        },
+        body: JSON.stringify({
+          order_id: selectedOrder.id,
+          order_number: selectedOrder.order_number,
+        }),
+      });
+      const text = await res.text();
+      let data: { success?: boolean; error?: string; details?: string } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        console.error('[Nimbus] Response not JSON:', text?.slice(0, 200));
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:afterFetch', message: 'Response received', data: { status: res.status, ok: res.ok, textLen: text?.length, success: data?.success, error: data?.error, details: data?.details }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H2' }) }).catch(() => {});
+      // #endregion
+      console.log('[Nimbus] Create shipment response:', res.status, data);
+      const nimbusBody = (data as { data?: unknown }).data;
+      console.log('[Nimbus] What Nimbus API returned:', nimbusBody ?? '(empty or null – check Supabase Edge Function logs for push-order-to-nimbus to see raw response)');
+      if (!res.ok || !data?.success) {
+        const msg = data?.error || data?.details || (res.ok ? 'Unknown error' : `Request failed: ${res.status}`);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:errorBranch', message: 'Showing error to user', data: { msg }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H3' }) }).catch(() => {});
+        // #endregion
+        setNimbusCreateError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (data?.skipped) {
+        const msg = data?.message || 'Nimbus Post is not configured. Orders are not being sent to Nimbus.';
+        setNimbusCreateError(msg);
+        toast.warning(msg);
+      } else if ((data as { nimbus_response_empty?: boolean }).nimbus_response_empty) {
+        const msg = 'Order data was sent to Nimbus but we got no confirmation. If the order does not appear in Nimbus Post, the API endpoint or payload may be wrong. Get the correct "create order" API from Nimbus Post → Settings → API (or support) and set NIMBUS_API_ORDERS_PATH if needed.';
+        setNimbusCreateError(msg);
+        toast.warning(msg);
+      } else {
+        setNimbusCreateError(null);
+        toast.success(`Shipment created for ${selectedOrder.order_number}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create shipment';
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:catch', message: 'Create shipment threw', data: { msg }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H4' }) }).catch(() => {});
+      // #endregion
+      console.error('[Nimbus] Create shipment error:', err);
+      setNimbusCreateError(msg);
+      toast.error(msg);
+    } finally {
+      setNimbusCreateLoading(false);
+    }
+  };
+
   const viewOrderDetails = async (order: Order) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
-    setOrderItems([]); // Reset items when opening new order
+    setOrderItems([]);
+    setNimbusCreateError(null);
 
     try {
       console.log('🔍 OrdersPage: Fetching items for order:', order.id, order.order_number);
@@ -468,12 +539,18 @@ export default function OrdersPage() {
                         <div>
                           <p className="font-medium">{item.product_name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {item.weight}g | Qty: {item.quantity}
+                            {(item.weight && item.weight > 0 ? item.weight : 250)}g | Qty: {item.quantity}
                           </p>
                         </div>
                         <p className="font-semibold">₹{Number(item.total_price).toLocaleString()}</p>
                       </div>
                     ))}
+                    {orderItems.length > 0 && (
+                      <p className="text-sm font-medium pt-2 border-t">
+                        Total weight: {(orderItems.reduce((sum, item) => sum + (item.weight && item.weight > 0 ? item.weight : 250) * (item.quantity || 1), 0) / 1000).toFixed(2)} kg
+                        <span className="text-muted-foreground font-normal ml-1">(use this in Nimbus/shipping)</span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -494,7 +571,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Nimbuspost Shipment - scroll down if you don't see it */}
+              {/* Shipment (Nimbuspost) */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Truck className="w-4 h-4" />
@@ -515,16 +592,22 @@ export default function OrdersPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between gap-3">
-                    <p className="text-sm text-muted-foreground">No shipment created yet.</p>
+                  <>
+                    <p className="text-sm text-muted-foreground mb-2">No shipment created yet.</p>
                     <Button
                       size="sm"
-                      disabled={creatingShipment || orderItems.length === 0}
-                      onClick={() => createNimbuspostShipment(selectedOrder)}
+                      variant="default"
+                      onClick={createNimbusShipment}
+                      disabled={nimbusCreateLoading || orderItems.length === 0}
                     >
-                      {creatingShipment ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
+                      {nimbusCreateLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
                     </Button>
-                  </div>
+                    {nimbusCreateError && (
+                      <p className="text-sm text-destructive mt-2 flex items-center gap-1">
+                        {nimbusCreateError}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

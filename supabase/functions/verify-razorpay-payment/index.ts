@@ -429,16 +429,19 @@ Deno.serve(async (req: Request) => {
 
     // CRITICAL: Create order items - this must succeed or rollback the order
     if (checkout.items && checkout.items.length > 0) {
-      const orderItems = checkout.items.map((item) => ({
-        order_id: order.id,
-        product_name: item.product_name,
-        product_id: item.product_id || null,
-        weight: item.weight,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        variant_id: item.variant_id || null,
-      }));
+      const orderItems = checkout.items.map((item) => {
+        const weightGrams = typeof item.weight === "number" && item.weight > 0 ? item.weight : 250;
+        return {
+          order_id: order.id,
+          product_name: item.product_name,
+          product_id: item.product_id || null,
+          weight: weightGrams,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          variant_id: item.variant_id || null,
+        };
+      });
 
       const { error: itemsError, data: insertedItems } = await supabase
         .from("order_items")
@@ -496,11 +499,14 @@ Deno.serve(async (req: Request) => {
       .select("*")
       .eq("order_id", order.id);
 
-    // Calculate total weight for shipment (250g per item, minimum 0.5kg)
+    // Calculate total weight for shipment from actual item weights (grams → kg), minimum 0.5kg
     const calculateTotalWeight = () => {
       if (!orderItemsData || orderItemsData.length === 0) return 0.5;
-      const totalItems = orderItemsData.reduce((sum, item) => sum + (item.quantity || 1), 0);
-      const weightKg = Math.max(0.5, (totalItems * 0.25)); // 250g per item, min 0.5kg
+      const totalGrams = orderItemsData.reduce((sum, item) => {
+        const w = item.weight && item.weight > 0 ? item.weight : 250;
+        return sum + w * (item.quantity || 1);
+      }, 0);
+      const weightKg = Math.max(0.5, totalGrams / 1000);
       return Math.min(weightKg, 50); // Max 50kg
     };
 
@@ -511,7 +517,8 @@ Deno.serve(async (req: Request) => {
 
         const shipmentPayload = {
           orderId: order.id,
-          customerName: checkout.shipping_address.fullName || "Customer",
+          orderNumber: order.order_number,
+          customerName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
           customerPhone: checkout.shipping_address.phone || "",
           customerEmail: checkout.shipping_address.email || "",
           shippingAddress: checkout.shipping_address,
@@ -520,7 +527,7 @@ Deno.serve(async (req: Request) => {
             quantity: item.quantity || 0,
             unit_price: item.unit_price || 0,
             total_price: item.total_price || 0,
-            weight: item.weight || null,
+            weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
           })),
           totalWeight: calculateTotalWeight(),
           orderAmount: checkout.total_amount,
@@ -536,27 +543,21 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${supabaseServiceKey}`,
           },
-          body: JSON.stringify(shipmentPayload),
+          body: JSON.stringify(nimbusPayload),
         });
-
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("[Payment] Failed to create shipment:", errorText);
-          return null;
-        }
-
-        const shipmentResult = await response.json();
-        if (shipmentResult.success && shipmentResult.awbNumber) {
-          console.log(`[Payment] Shipment created successfully. AWB: ${shipmentResult.awbNumber}`);
-          return shipmentResult.awbNumber;
+          const errText = await response.text();
+          console.warn("[Payment] Nimbus push failed:", response.status, errText.slice(0, 200));
         } else {
-          console.warn("[Payment] Shipment creation returned no AWB:", shipmentResult);
-          return null;
+          const result = await response.json();
+          if (result.skipped) {
+            console.log("[Payment] Nimbus not configured, skip push");
+          } else {
+            console.log("[Payment] Order pushed to Nimbus:", order.order_number, "weight_kg:", nimbusPayload.totalWeight);
+          }
         }
       } catch (error) {
-        console.error("[Payment] Error creating shipment:", error);
-        // Don't throw - shipment creation is non-critical for order completion
-        return null;
+        console.warn("[Payment] Nimbus push error:", error);
       }
     };
 
@@ -575,7 +576,7 @@ Deno.serve(async (req: Request) => {
             quantity: item.quantity || 0,
             unit_price: item.unit_price || 0,
             total_price: item.total_price || 0,
-            weight: item.weight || null,
+            weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
             grind_type: item.grind_type || null,
           })),
           shippingAddress: checkout.shipping_address,
@@ -606,21 +607,10 @@ Deno.serve(async (req: Request) => {
       }
     };
 
-    // Create shipment first, then send notifications with AWB
-    createShipment()
-      .then((awbNumber) => {
-        // Send notifications with AWB number
-        sendNotifications(awbNumber).catch((err) => {
-          console.error("Notification error:", err);
-        });
-      })
-      .catch((err) => {
-        console.error("Shipment creation error:", err);
-        // Still send notifications without AWB
-        sendNotifications(null).catch((notifyErr) => {
-          console.error("Notification error:", notifyErr);
-        });
-      });
+    // Push order to Nimbus Post (with weight), then send notifications
+    pushToNimbus()
+      .then(() => sendNotifications(null).catch((err) => console.error("Notification error:", err)))
+      .catch(() => sendNotifications(null).catch(() => {}));
 
     return new Response(
       JSON.stringify({

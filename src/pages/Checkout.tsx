@@ -560,17 +560,20 @@ const Checkout = () => {
       cod_upfront_amount: paymentType === "cod" ? (COD_ADVANCE_AMOUNT + COD_HANDLING_FEE) : 0, // ₹150 total upfront
       promotion_id: appliedCoupon?.promotionId || null,
       discount_amount: discount,
-      items: cartItems.map((item) => ({
-        product_name: item.product.name,
-        product_id: item.product.id,
-        weight: item.weight,
-        grind_type: item.variant?.grind_type || "Whole Bean",
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        total_price: item.product.price * item.quantity,
-        variant_id: item.variant?.id || null,
-        is_subscription: item.is_subscription || false,
-      })),
+      items: cartItems.map((item) => {
+        const weightGrams = typeof item.weight === 'number' && item.weight > 0 ? item.weight : (item.variant as { weight?: number } | undefined)?.weight ?? 250;
+        return {
+          product_name: item.product.name,
+          product_id: item.product.id,
+          weight: weightGrams,
+          grind_type: item.variant?.grind_type || "Whole Bean",
+          quantity: item.quantity,
+          unit_price: item.product.price,
+          total_price: item.product.price * item.quantity,
+          variant_id: item.variant?.id || item.variant_id || null,
+          is_subscription: item.is_subscription || false,
+        };
+      }),
     };
   };
 
