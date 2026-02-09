@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "clean": "node -e \"try{require('fs').rmSync('node_modules/.vite',{recursive:true});console.log('Vite cache cleared');}catch(e){if(e.code!=='ENOENT')throw e}\"",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

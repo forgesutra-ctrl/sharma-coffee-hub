@@ -187,11 +187,13 @@ Deno.serve(async (req: Request) => {
         }
       }
       console.error("[NimbusPost] Nimbus API error:", message, details);
+      const hint = result?.hint as string | undefined;
       return new Response(
         JSON.stringify({
           success: false,
           error: message,
           details: details,
+          ...(hint && { hint }),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -205,7 +207,7 @@ Deno.serve(async (req: Request) => {
     } else if (nimbusResponseEmpty) {
       console.warn("[NimbusPost] Nimbus returned 200 but empty body – order may not have been created in Nimbus. Check Nimbus API path and payload.");
     } else {
-      console.log("[NimbusPost] Shipment created for order:", order.order_number, "weight_kg:", totalWeightKg);
+      console.log("[NimbusPost] Order pushed to Nimbuspost (appears in Orders list; use 'Ship' in Nimbuspost to book AWB):", order.order_number, "weight_kg:", totalWeightKg);
     }
     return new Response(
       JSON.stringify({

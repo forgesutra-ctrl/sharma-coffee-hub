@@ -1,4 +1,5 @@
-project_id = "amwqwtnplsxppmstxjkb"
+# Must match .env VITE_SUPABASE_URL (e.g. https://cfuwclyvoemrutrcgxeq.supabase.co)
+project_id = "cfuwclyvoemrutrcgxeq"
 
 [functions.nimbuspost-check-serviceability]
 verify_jwt = false
@@ -28,9 +29,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.push-order-to-nimbus]
-verify_jwt = false
-
-[functions.create-nimbuspost-shipment]
 verify_jwt = false
 
 [functions.send-order-notification]

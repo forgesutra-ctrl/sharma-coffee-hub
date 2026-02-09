@@ -75,6 +75,9 @@ export function useNimbuspost() {
         }),
       });
       const data = await response.json();
+      if (data.skipped) {
+        throw new Error(data.message || 'Nimbuspost is not configured. Add NIMBUS_API_KEY in Supabase Dashboard → Edge Functions → Secrets.');
+      }
       if (!data.success) {
         throw new Error(data.error || 'Failed to create shipment');
       }

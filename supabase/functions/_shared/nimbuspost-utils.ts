@@ -1,4 +1,5 @@
 // Shared Nimbuspost utility functions for Edge Functions
+// Authentication: NIMBUS_API_KEY (header NP-API-KEY)
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,9 +8,7 @@ export const corsHeaders = {
 };
 
 export const NIMBUSPOST_CONFIG = {
-  baseURL: "https://api.nimbuspost.com/v1",
-  email: Deno.env.get("NIMBUSPOST_EMAIL") || "8762988145+3184@automatic321signup.com",
-  password: Deno.env.get("NIMBUSPOST_PASSWORD") || "AfGcEkjpbm",
+  baseURL: "https://ship.nimbuspost.com/api",
   trackingDomain: "sharmacoffeeworks.odrtrk.live",
   warehouse: {
     warehouse_name: "Sharma Coffee works",
@@ -25,33 +24,12 @@ export const NIMBUSPOST_CONFIG = {
   gstNumber: "29ASCPV6730G1ZE",
 };
 
-let authToken: string | null = null;
-let tokenExpiry: number | null = null;
-
-export async function getNimbuspostToken(): Promise<string> {
-  if (authToken && tokenExpiry && Date.now() < tokenExpiry) {
-    return authToken;
+function getApiKey(): string {
+  const apiKey = (Deno.env.get("NIMBUS_API_KEY") || "").trim().split(/\r?\n/)[0].trim();
+  if (!apiKey) {
+    throw new Error("NIMBUS_API_KEY is not set. Add it in Supabase Dashboard → Project Settings → Edge Functions → Secrets.");
   }
-
-  const response = await fetch(`${NIMBUSPOST_CONFIG.baseURL}/users/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: NIMBUSPOST_CONFIG.email,
-      password: NIMBUSPOST_CONFIG.password,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (data.status && data.data) {
-    authToken = data.data;
-    tokenExpiry = Date.now() + 23 * 60 * 60 * 1000;
-    return authToken;
-  }
-
-  const msg = data.message || "Nimbuspost authentication failed";
-  throw new Error(`${msg}. Check NIMBUSPOST_EMAIL and NIMBUSPOST_PASSWORD in Supabase Edge Function secrets.`);
+  return apiKey;
 }
 
 export async function nimbuspostRequest<T>(
@@ -62,10 +40,10 @@ export async function nimbuspostRequest<T>(
     queryParams?: Record<string, string>;
   } = {}
 ): Promise<{ status?: boolean; data?: T; message?: string }> {
-  const token = await getNimbuspostToken();
+  const apiKey = getApiKey();
   const { method = "GET", body, queryParams } = options;
 
-  let url = `${NIMBUSPOST_CONFIG.baseURL}${endpoint}`;
+  let url = `${NIMBUSPOST_CONFIG.baseURL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
   if (queryParams) {
     const params = new URLSearchParams(queryParams);
     url += `?${params.toString()}`;
@@ -74,7 +52,7 @@ export async function nimbuspostRequest<T>(
   const response = await fetch(url, {
     method,
     headers: {
-      Authorization: `Bearer ${token}`,
+      "NP-API-KEY": apiKey,
       "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -87,6 +65,11 @@ export async function nimbuspostRequest<T>(
   }
 
   return data;
+}
+
+/** Returns NIMBUS_API_KEY for use in raw fetch (e.g. when response is not JSON, e.g. PDF). */
+export function getNimbusApiKey(): string {
+  return getApiKey();
 }
 
 export const SHIPPING_STATUS_MAP: Record<string, string> = {

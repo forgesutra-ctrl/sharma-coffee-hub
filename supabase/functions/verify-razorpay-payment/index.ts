@@ -543,7 +543,7 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${supabaseServiceKey}`,
           },
-          body: JSON.stringify(nimbusPayload),
+          body: JSON.stringify(shipmentPayload),
         });
         if (!response.ok) {
           const errText = await response.text();
@@ -553,7 +553,7 @@ Deno.serve(async (req: Request) => {
           if (result.skipped) {
             console.log("[Payment] Nimbus not configured, skip push");
           } else {
-            console.log("[Payment] Order pushed to Nimbus:", order.order_number, "weight_kg:", nimbusPayload.totalWeight);
+            console.log("[Payment] Order pushed to Nimbus:", order.order_number, "weight_kg:", shipmentPayload.totalWeight);
           }
         }
       } catch (error) {
@@ -608,7 +608,7 @@ Deno.serve(async (req: Request) => {
     };
 
     // Push order to Nimbus Post (with weight), then send notifications
-    pushToNimbus()
+    createShipment()
       .then(() => sendNotifications(null).catch((err) => console.error("Notification error:", err)))
       .catch(() => sendNotifications(null).catch(() => {}));
 

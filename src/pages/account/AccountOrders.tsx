@@ -79,14 +79,19 @@ export default function OrdersPage() {
           setOrders([]);
           return;
         }
+        // Probe shipments table once; if missing (406) or error, skip per-order shipment fetches to avoid N 406s
+        const { error: probeError } = await supabase.from('shipments').select('id').limit(1).maybeSingle();
+        const shipmentsAvailable = !probeError;
+        // #region agent log
+        fetch('http://127.0.0.1:7247/ingest/8cc46726-3f6d-46a3-8278-7056d35ca027',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountOrders.tsx:useEffect:probe',message:'Shipments probe',data:{shipmentsAvailable,probe_code:(probeError as any)?.code,probe_message:(probeError as any)?.message},timestamp:Date.now(),hypothesisId:'H4',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
         const ordersWithDetails = await Promise.all(
           orderData.map(async (order) => {
             const itemsPromise = supabase.from('order_items').select('*').eq('order_id', order.id);
-            const shipmentPromise = supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle();
-            const [itemsResult, shipmentResult] = await Promise.all([
-              itemsPromise,
-              Promise.resolve(shipmentPromise).catch(() => ({ data: null, error: null })),
-            ]);
+            const shipmentPromise = shipmentsAvailable
+              ? supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle()
+              : Promise.resolve({ data: null, error: null });
+            const [itemsResult, shipmentResult] = await Promise.all([itemsPromise, shipmentPromise]);
             let shipmentData = null;
             if (shipmentResult && !shipmentResult.error && shipmentResult.data) shipmentData = shipmentResult.data;
             return { ...order, items: itemsResult.data || [], shipment: shipmentData };
@@ -115,18 +120,20 @@ export default function OrdersPage() {
       if (error) throw error;
       if (!orderData) return;
 
-      // Fetch items and shipments for each order
+      // Probe shipments table once; if missing (406) or error, skip per-order shipment fetches
+      const { error: probeError } = await supabase.from('shipments').select('id').limit(1).maybeSingle();
+      const shipmentsAvailable = !probeError;
+      // #region agent log
+      fetch('http://127.0.0.1:7247/ingest/8cc46726-3f6d-46a3-8278-7056d35ca027',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountOrders.tsx:fetchOrders:probe',message:'Shipments probe',data:{shipmentsAvailable,probe_code:(probeError as any)?.code,probe_message:(probeError as any)?.message},timestamp:Date.now(),hypothesisId:'H4',runId:'post-fix'})}).catch(()=>{});
+      // #endregion
+
       const ordersWithDetails = await Promise.all(
         orderData.map(async (order) => {
           const itemsPromise = supabase.from('order_items').select('*').eq('order_id', order.id);
-          const shipmentPromise = supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle();
-          const [itemsResult, shipmentResult] = await Promise.all([
-            itemsPromise,
-            Promise.resolve(shipmentPromise).catch((err) => {
-              console.debug(`Shipment fetch skipped for order ${order.id}:`, err);
-              return { data: null, error: null };
-            }),
-          ]);
+          const shipmentPromise = shipmentsAvailable
+            ? supabase.from('shipments').select('*').eq('order_id', order.id).maybeSingle()
+            : Promise.resolve({ data: null, error: null });
+          const [itemsResult, shipmentResult] = await Promise.all([itemsPromise, shipmentPromise]);
 
           if (itemsResult.error) {
             console.error(`Error fetching items for order ${order.id}:`, itemsResult.error);

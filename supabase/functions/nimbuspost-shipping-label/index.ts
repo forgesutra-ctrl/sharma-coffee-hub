@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getNimbuspostToken, NIMBUSPOST_CONFIG, corsHeaders } from "../_shared/nimbuspost-utils.ts";
+import { getNimbusApiKey, NIMBUSPOST_CONFIG, corsHeaders } from "../_shared/nimbuspost-utils.ts";
 
 const corsHeadersLocal = {
   "Access-Control-Allow-Origin": "*",
@@ -22,12 +22,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const token = await getNimbuspostToken();
+    const apiKey = getNimbusApiKey();
     const response = await fetch(
       `${NIMBUSPOST_CONFIG.baseURL}/shipments/label?awb_number=${encodeURIComponent(awb)}`,
       {
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          "NP-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
       }
     );
 

@@ -117,9 +117,6 @@ export default function OrdersPage() {
     setNimbusCreateLoading(true);
     setNimbusCreateError(null);
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:createNimbusShipment', message: 'Create shipment called', data: { order_id: selectedOrder.id, order_number: selectedOrder.order_number }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1' }) }).catch(() => {});
-    // #endregion
     try {
       const session = (await supabase.auth.getSession()).data.session;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`, {
@@ -134,23 +131,26 @@ export default function OrdersPage() {
         }),
       });
       const text = await res.text();
-      let data: { success?: boolean; error?: string; details?: string } = {};
+      let data: { success?: boolean; error?: string; details?: string; hint?: string } = {};
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
         console.error('[Nimbus] Response not JSON:', text?.slice(0, 200));
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:afterFetch', message: 'Response received', data: { status: res.status, ok: res.ok, textLen: text?.length, success: data?.success, error: data?.error, details: data?.details }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H2' }) }).catch(() => {});
-      // #endregion
-      console.log('[Nimbus] Create shipment response:', res.status, data);
+      if (import.meta.env.DEV) {
+        console.log('[Nimbus] Create shipment response:', res.status, data);
+      }
       const nimbusBody = (data as { data?: unknown }).data;
-      console.log('[Nimbus] What Nimbus API returned:', nimbusBody ?? '(empty or null – check Supabase Edge Function logs for push-order-to-nimbus to see raw response)');
+      if (import.meta.env.DEV && nimbusBody != null) {
+        console.log('[Nimbus] Nimbus API response (expand to inspect):', nimbusBody);
+      }
       if (!res.ok || !data?.success) {
-        const msg = data?.error || data?.details || (res.ok ? 'Unknown error' : `Request failed: ${res.status}`);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:errorBranch', message: 'Showing error to user', data: { msg }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H3' }) }).catch(() => {});
-        // #endregion
+        let msg = data?.error || data?.details || (res.ok ? 'Unknown error' : `Request failed: ${res.status}`);
+        if (data?.hint) {
+          msg += '\n\n' + data.hint;
+        } else if (typeof msg === 'string' && (msg.includes('Token') || msg.includes('token') || msg.includes('invalid Token'))) {
+          msg += ' Use the Old API key from Nimbuspost (Settings → API → “Your API Key” under Old API), set as NIMBUS_API_KEY in Supabase → Edge Functions → Secrets.';
+        }
         setNimbusCreateError(msg);
         toast.error(msg);
         return;
@@ -169,9 +169,6 @@ export default function OrdersPage() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create shipment';
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/b383587d-bc0d-403c-919a-f9574da97cbb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'OrdersPage.tsx:catch', message: 'Create shipment threw', data: { msg }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H4' }) }).catch(() => {});
-      // #endregion
       console.error('[Nimbus] Create shipment error:', err);
       setNimbusCreateError(msg);
       toast.error(msg);
@@ -279,6 +276,9 @@ export default function OrdersPage() {
         toast.success(`Shipment created. AWB: ${data.awbNumber}`);
         await fetchOrders();
         setSelectedOrder((prev) => prev ? { ...prev, nimbuspost_awb_number: data.awbNumber, nimbuspost_courier_name: data.courierName ?? null, nimbuspost_tracking_url: data.trackingUrl ?? null } : null);
+      } else if (data.skipped) {
+        const msg = data.message || 'Nimbuspost is not configured. Add NIMBUS_API_KEY in Supabase Dashboard → Project Settings → Edge Functions → Secrets (for this project).';
+        toast.warning(msg);
       } else {
         toast.error(data.error || 'Failed to create shipment');
       }

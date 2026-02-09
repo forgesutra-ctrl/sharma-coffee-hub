@@ -60,14 +60,16 @@ export default function AccountDashboard() {
         setLatestOrder(orderData[0]);
         setOrderCount(count || 0);
 
-        // Fetch shipment for latest order
-        const { data: shipmentData } = await supabase
-          .from('shipments')
-          .select('*')
-          .eq('order_id', orderData[0].id)
-          .single();
-
-        if (shipmentData) setLatestShipment(shipmentData);
+        // Only fetch shipment if shipments table is available (probe once to avoid 406s when table missing)
+        const { error: probeError } = await supabase.from('shipments').select('id').limit(1).maybeSingle();
+        if (!probeError) {
+          const { data: shipmentData } = await supabase
+            .from('shipments')
+            .select('*')
+            .eq('order_id', orderData[0].id)
+            .maybeSingle();
+          if (shipmentData) setLatestShipment(shipmentData);
+        }
       }
 
       // Fetch address count

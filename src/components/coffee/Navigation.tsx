@@ -1,12 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Menu, X, User, ChevronDown, Search, Instagram, Phone, Heart, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ShoppingBag, Menu, X, User, ChevronDown, Search, Instagram, Phone, Heart, MessageCircle, Home, Store, BookOpen, Coffee, FileText, Mail, HelpCircle, Layers } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
+import { useProducts, getUniqueProducts } from '@/hooks/useProducts';
 import { cn } from '@/lib/utils';
 import { setInertSafely } from '@/lib/accessibility';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
 const announcements = [{
   text: 'FREE SHIPPING',
   highlight: 'Subscription Members Only'
@@ -18,8 +27,20 @@ const announcements = [{
   highlight: 'Premium South Indian coffee'
 }];
 
+const searchPages = [
+  { name: 'Home', href: '/', icon: Home },
+  { name: 'Shop', href: '/shop', icon: Store },
+  { name: 'Blog', href: '/blogs', icon: BookOpen },
+  { name: 'Our Story', href: '/about', icon: Coffee },
+  { name: 'Brewing Guide', href: '/brewing-guide', icon: FileText },
+  { name: 'Processing', href: '/processing', icon: Coffee },
+  { name: 'Contact', href: '/contact', icon: Mail },
+  { name: 'FAQ', href: '/faq', icon: HelpCircle },
+];
+
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [currentAnnouncement, setCurrentAnnouncement] = useState(0);
@@ -31,10 +52,14 @@ export default function Navigation() {
     user
   } = useAuth();
   const { data: categories } = useCategories();
+  const { data: productsData } = useProducts();
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHomePage = location.pathname === '/';
+
+  const products = useMemo(() => (productsData ? getUniqueProducts(productsData) : []), [productsData]);
 
   // Build navigation links dynamically
   const navLinks = [
@@ -150,8 +175,68 @@ export default function Navigation() {
     }, 150);
   };
   const cartCount = getCartCount();
+
+  const handleSearchSelect = (href: string) => {
+    setSearchOpen(false);
+    navigate(href);
+  };
+
   return (
     <>
+      {/* Search dialog — type what you need, go to product or section */}
+      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <CommandInput
+          placeholder="Type what you're looking for — product, category, or page"
+          className="placeholder:text-muted-foreground"
+        />
+        <CommandList>
+          <CommandEmpty>
+            <span className="text-muted-foreground">No matches. Try a product name, category (e.g. coffee, tea), or page name.</span>
+          </CommandEmpty>
+          <CommandGroup heading="Products">
+            {products.map((product) => (
+              <CommandItem
+                key={product.productId}
+                value={`${product.name} ${product.category ?? ''}`}
+                onSelect={() => handleSearchSelect(`/product/${product.slug}`)}
+              >
+                <Store className="mr-2 h-4 w-4 shrink-0" />
+                <span>{product.name}</span>
+                {product.category && (
+                  <span className="ml-2 text-xs text-muted-foreground truncate">{product.category}</span>
+                )}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          {categories && categories.length > 0 && (
+            <CommandGroup heading="Categories">
+              {categories.map((cat) => (
+                <CommandItem
+                  key={cat.id}
+                  value={cat.name}
+                  onSelect={() => handleSearchSelect(`/shop/${cat.slug}`)}
+                >
+                  <Layers className="mr-2 h-4 w-4 shrink-0" />
+                  {cat.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          <CommandGroup heading="Pages">
+            {searchPages.map((page) => (
+              <CommandItem
+                key={page.href}
+                value={page.name}
+                onSelect={() => handleSearchSelect(page.href)}
+              >
+                <page.icon className="mr-2 h-4 w-4 shrink-0" />
+                {page.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+
       {/* Announcement Bar */}
       <div className="bg-coffee-dark text-white py-2 relative overflow-hidden z-[200001]" style={{ pointerEvents: 'auto' }}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
@@ -208,7 +293,12 @@ export default function Navigation() {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Left Actions */}
             <div className="flex items-center gap-2 flex-1">
-              <button className="p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" aria-label="Search">
+              <button
+                type="button"
+                className="p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all"
+                aria-label="Search"
+                onClick={() => setSearchOpen(true)}
+              >
                 <Search className="w-5 h-5" />
               </button>
               

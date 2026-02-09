@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { supabase } from "@/integrations/supabase/client";
 
 // Suppress harmless third-party widget errors globally
 const originalError = console.error;
@@ -50,13 +51,22 @@ const handleError = (event: ErrorEvent) => {
 
 window.addEventListener('error', handleError, true);
 
-// Suppress unhandled promise rejections from widgets
+// Suppress unhandled promise rejections from widgets; clear session when refresh token is invalid
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  const reason = String(event.reason || '');
+  const reason = event.reason;
+  const msg = reason?.message ?? String(reason ?? '');
   if (
-    reason.includes('localtesting.com') ||
-    reason.includes('SociableKIT') ||
-    reason.includes('ERR_NAME_NOT_RESOLVED')
+    msg.includes('Invalid Refresh Token') ||
+    msg.includes('Refresh Token Not Found') ||
+    msg.includes('refresh_token')
+  ) {
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    event.preventDefault();
+  }
+  if (
+    msg.includes('localtesting.com') ||
+    msg.includes('SociableKIT') ||
+    msg.includes('ERR_NAME_NOT_RESOLVED')
   ) {
     event.preventDefault();
   }

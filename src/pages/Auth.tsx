@@ -310,6 +310,7 @@ const Auth = () => {
                 className="pl-10 h-12 bg-background"
                 disabled={isLoading}
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -324,6 +325,7 @@ const Auth = () => {
                 disabled={isLoading}
                 required
                 minLength={mode === 'signup' ? 6 : undefined}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               />
             </div>
 
@@ -339,6 +341,7 @@ const Auth = () => {
                   disabled={isLoading}
                   required
                   minLength={6}
+                  autoComplete="new-password"
                 />
               </div>
             )}

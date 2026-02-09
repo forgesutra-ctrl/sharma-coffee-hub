@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import ProductCard from '@/components/coffee/ProductCard';
@@ -31,6 +31,8 @@ import { Button } from "@/components/ui/button";
 
 const Shop = () => {
   const { categorySlug } = useParams<{ categorySlug?: string }>();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? '';
 
   const [sortBy, setSortBy] = useState<string>('featured');
   const [priceRange, setPriceRange] = useState<string>('all');
@@ -114,8 +116,19 @@ const Shop = () => {
 
   const activeCategoryName = currentCategory?.name || 'All Products';
 
+  // Filter by URL search query (?q=) so header search can send users to shop with a query
+  const searchFilteredProducts = useMemo(() => {
+    if (!searchQuery) return sortedProducts;
+    return sortedProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchQuery) ||
+        (p.category?.toLowerCase().includes(searchQuery) ?? false) ||
+        (p.description?.toLowerCase().includes(searchQuery) ?? false)
+    );
+  }, [sortedProducts, searchQuery]);
+
   // Transform products for ProductCard
-  const displayProducts = sortedProducts.map(product => ({
+  const displayProducts = searchFilteredProducts.map(product => ({
     id: product.productId,
     name: product.name,
     slug: product.slug,
@@ -160,8 +173,17 @@ const Shop = () => {
         {/* Page Title */}
         <div className="border-b border-border/50 py-12 text-center">
           <h1 className="font-serif text-4xl md:text-5xl font-semibold text-foreground">
-            {activeCategoryName}
+            {searchQuery ? `Search results for "${searchParams.get('q')?.trim() ?? ''}"` : activeCategoryName}
           </h1>
+          {searchQuery && (
+            <p className="mt-2 text-muted-foreground">
+              {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'} found
+              {' · '}
+              <Link to={categorySlug ? `/shop/${categorySlug}` : '/shop'} className="text-primary hover:underline">
+                Clear search
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* Main Content */}
