@@ -16,7 +16,9 @@ const shouldSuppressError = (message: unknown): boolean => {
     messageStr.includes('SociableKIT_Widgets') ||
     (messageStr.includes('Failed to load') && messageStr.includes('widget.js')) ||
     (messageStr.includes('Cannot set properties of undefined') && messageStr.includes('className')) ||
-    (messageStr.includes('widget.js') && messageStr.includes('className'))
+    (messageStr.includes('widget.js') && messageStr.includes('className')) ||
+    messageStr.includes('Invalid Refresh Token') ||
+    messageStr.includes('Refresh Token Not Found')
   );
 };
 

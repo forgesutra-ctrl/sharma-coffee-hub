@@ -49,6 +49,15 @@ const ForgotPassword = () => {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        toast({
+          title: 'Reset failed',
+          description: 'App is not configured for password reset. Please contact support.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
         method: "POST",
         headers: {
@@ -61,7 +70,7 @@ const ForgotPassword = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        let errorData;
+        let errorData: { error?: string };
         try {
           errorData = JSON.parse(errorText);
         } catch {
@@ -70,22 +79,25 @@ const ForgotPassword = () => {
         throw new Error(errorData.error || "Failed to reset password");
       }
 
-      const data = await response.json();
+      await response.json();
 
       toast({
         title: 'Password reset successful',
         description: 'Your password has been updated. Please sign in with your new password.',
       });
 
-      // Redirect to login after a short delay
       setTimeout(() => {
         navigate('/auth', { replace: true });
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password reset error:', error);
+      const message = error instanceof Error ? error.message : '';
+      const isNetworkError = /load failed|failed to fetch|network error|networkrequestfailed/i.test(message) || message === '';
       toast({
         title: 'Reset failed',
-        description: error.message || 'Unable to reset password. Please try again.',
+        description: isNetworkError
+          ? 'Unable to reach the server. Please check your internet connection and try again.'
+          : message || 'Unable to reset password. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -132,6 +144,7 @@ const ForgotPassword = () => {
                 disabled={isLoading}
                 required
                 autoFocus
+                autoComplete="email"
               />
             </div>
 
@@ -146,6 +159,7 @@ const ForgotPassword = () => {
                 disabled={isLoading}
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
 
@@ -160,6 +174,7 @@ const ForgotPassword = () => {
                 disabled={isLoading}
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
 

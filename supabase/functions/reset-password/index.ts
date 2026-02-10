@@ -57,18 +57,30 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Find user by email
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-    
-    if (listError) {
-      console.error("Error listing users:", listError);
-      return new Response(
-        JSON.stringify({ error: "Unable to process request. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Find user by email (paginate in case there are more than 50 users)
+    let user: { id: string; email?: string } | undefined;
+    let page = 1;
+    const perPage = 1000;
+    while (true) {
+      const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+      if (listError) {
+        console.error("Error listing users:", listError);
+        return new Response(
+          JSON.stringify({ error: "Unable to process request. Please try again." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const found = users?.find((u) => ((u.email ?? "").trim().toLowerCase()) === normalizedEmail);
+      if (found) {
+        user = found;
+        break;
+      }
+      if (!users?.length || users.length < perPage) break;
+      page++;
     }
-
-    const user = users?.find((u) => u.email?.toLowerCase() === normalizedEmail);
 
     if (!user) {
       // Generic error message (don't reveal if user exists)

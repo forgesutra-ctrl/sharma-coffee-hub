@@ -435,7 +435,7 @@ const OrderConfirmation = () => {
         </Card>
 
         {/* Tracking Information */}
-        {order.dtdc_awb_number ? (
+        {order.nimbuspost_awb_number ? (
           <Card className="mb-6 border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -448,12 +448,12 @@ const OrderConfirmation = () => {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Tracking Number (AWB)</p>
                   <p className="text-lg font-mono font-semibold text-primary">
-                    {order.dtdc_awb_number}
+                    {order.nimbuspost_awb_number}
                   </p>
                 </div>
                 <Button asChild className="w-full sm:w-auto">
                   <a
-                    href={`https://www.dtdc.in/tracking/tracking_results.asp?strCnno=${order.dtdc_awb_number}`}
+                    href={`https://sharmacoffeeworks.odrtrk.live/tracking?awb=${order.nimbuspost_awb_number}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
