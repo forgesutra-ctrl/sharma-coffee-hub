@@ -233,7 +233,10 @@ const SubscriptionConfirmation = () => {
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-12 h-12 text-green-600" />
         </div>
-        <h1 className="text-3xl font-bold mb-2">Subscription Activated! 🎉</h1>
+        <h1 className="text-3xl font-bold mb-2">Subscription Placed Successfully! 🎉</h1>
+        <p className="text-lg text-muted-foreground mb-2">
+          Thank you for your order, dear valued customer.
+        </p>
         <p className="text-muted-foreground">
           Your subscription is now active. We've sent a confirmation email to{" "}
           <span className="font-medium">{subscription.shipping_address.email}</span>

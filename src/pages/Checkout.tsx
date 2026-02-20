@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CheckCircle,
   Loader2,
   Package,
   MapPin,
@@ -28,16 +27,9 @@ import {
 import { shippingAddressSchema } from "@/lib/validation";
 import { COD_ADVANCE_AMOUNT, COD_HANDLING_FEE, lookupPincodeDetails, getShippingRegion, getShippingRegionLabel, getShippingCharge } from "@/lib/shipping";
 import DeliveryDatePicker from "@/components/subscription/DeliveryDatePicker";
-import { addDays, format } from "date-fns";
+import { addDays } from "date-fns";
 import { PincodeDialog } from "@/components/PincodeDialog";
 import { Tables } from "@/integrations/supabase/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 // ============================================
 // TYPE DEFINITIONS
@@ -238,9 +230,6 @@ const Checkout = () => {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
   const [isLookingUpPincode, setIsLookingUpPincode] = useState(false);
-  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
-  const [confirmedOrder, setConfirmedOrder] = useState<any>(null);
-  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
 
   const [shippingForm, setShippingForm] = useState<ShippingForm>({
     fullName: "",
@@ -1271,134 +1260,13 @@ const Checkout = () => {
 
       clearCart();
       
-      // Fetch order details for the confirmation modal
-      setLoadingOrderDetails(true);
-      try {
-        // Add a small delay to ensure order is fully committed to database
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const { data: orderData, error: orderError } = await supabase
-          .from("orders")
-          .select(`
-            *,
-            order_items (*)
-          `)
-          .eq("id", verifyData.orderId)
-          .maybeSingle();
+      toast({
+        title: "Order Placed Successfully!",
+        description: "Redirecting to your order confirmation...",
+      });
 
-        if (orderError) {
-          console.error("Error fetching order details:", orderError);
-          // Retry once after a short delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const { data: retryData, error: retryError } = await supabase
-            .from("orders")
-            .select(`
-              *,
-              order_items (*)
-            `)
-            .eq("id", verifyData.orderId)
-            .maybeSingle();
-          
-          if (!retryError && retryData) {
-            setConfirmedOrder(retryData);
-            setShowOrderConfirmation(true);
-            toast({
-              title: "Order Placed Successfully!",
-              description: `Order #${retryData.order_number || verifyData.orderId} has been confirmed.`,
-            });
-          } else {
-            // If retry also fails, show modal with basic info
-            setConfirmedOrder({
-              id: verifyData.orderId,
-              order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
-              created_at: new Date().toISOString(),
-              shipping_address: checkoutData.shipping_address,
-              subtotal: checkoutData.subtotal,
-              total_amount: checkoutData.total_amount,
-              shipping_charge: checkoutData.shipping_charge,
-              payment_type: checkoutData.payment_type,
-              cod_advance_paid: checkoutData.cod_advance_paid,
-              cod_handling_fee: checkoutData.cod_handling_fee,
-              cod_balance: checkoutData.cod_balance,
-              order_items: [],
-            } as any);
-            setShowOrderConfirmation(true);
-            toast({
-              title: "Order Placed Successfully!",
-              description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
-            });
-          }
-        } else if (orderData) {
-          setConfirmedOrder(orderData);
-          setShowOrderConfirmation(true);
-          toast({
-            title: "Order Placed Successfully!",
-            description: `Order #${orderData.order_number || verifyData.orderId} has been confirmed.`,
-          });
-        } else {
-          // Order not found yet, show modal with basic info and retry in background
-          setConfirmedOrder({
-            id: verifyData.orderId,
-            order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
-            created_at: new Date().toISOString(),
-            shipping_address: checkoutData.shipping_address,
-            subtotal: checkoutData.subtotal,
-            total_amount: checkoutData.total_amount,
-            shipping_charge: checkoutData.shipping_charge,
-            payment_type: checkoutData.payment_type,
-            cod_advance_paid: checkoutData.cod_advance_paid,
-            cod_handling_fee: checkoutData.cod_handling_fee,
-            cod_balance: checkoutData.cod_balance,
-            order_items: [],
-          } as any);
-          setShowOrderConfirmation(true);
-          toast({
-            title: "Order Placed Successfully!",
-            description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
-          });
-          
-          // Try to fetch order details in background
-          setTimeout(async () => {
-            const { data: bgOrderData } = await supabase
-              .from("orders")
-              .select(`
-                *,
-                order_items (*)
-              `)
-              .eq("id", verifyData.orderId)
-              .maybeSingle();
-            if (bgOrderData) {
-              setConfirmedOrder(bgOrderData);
-            }
-          }, 2000);
-        }
-      } catch (fetchError) {
-        console.error("Error fetching order:", fetchError);
-        // Show modal with basic info even on error
-        setConfirmedOrder({
-          id: verifyData.orderId,
-          order_number: verifyData.orderNumber || `ORD-${verifyData.orderId.slice(0, 8).toUpperCase()}`,
-          created_at: new Date().toISOString(),
-          shipping_address: checkoutData.shipping_address,
-          subtotal: checkoutData.subtotal,
-          total_amount: checkoutData.total_amount,
-          shipping_charge: checkoutData.shipping_charge,
-          payment_type: checkoutData.payment_type,
-          cod_advance_paid: checkoutData.cod_advance_paid,
-          cod_handling_fee: checkoutData.cod_handling_fee,
-          cod_balance: checkoutData.cod_balance,
-          order_items: [],
-        } as any);
-        setShowOrderConfirmation(true);
-        toast({
-          title: "Order Placed Successfully!",
-          description: `Order #${verifyData.orderNumber || verifyData.orderId} has been confirmed.`,
-        });
-      } finally {
-        setLoadingOrderDetails(false);
-        setIsLoading(false);
-      }
-
+      // Navigate to dedicated order confirmation page with full details
+      navigate(`/order-confirmation/${verifyData.orderId}`, { replace: true });
     } catch (err) {
       console.error("Order creation failed:", err);
       toast({
@@ -1903,270 +1771,6 @@ const Checkout = () => {
         currentPincode={shippingInfo?.pincode}
       />
 
-      {/* Order Confirmation Modal */}
-      <Dialog open={showOrderConfirmation} onOpenChange={(open) => {
-        if (!open) {
-          setShowOrderConfirmation(false);
-          navigate("/shop");
-        }
-      }}>
-        <DialogContent 
-          className="max-w-3xl max-h-[90vh] overflow-y-auto z-[9999]"
-          style={{ zIndex: 9999 }}
-        >
-          {loadingOrderDetails ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="ml-3 text-muted-foreground">Loading order details...</p>
-            </div>
-          ) : confirmedOrder ? (
-            <>
-              <DialogHeader>
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle className="w-10 h-10 text-green-600" />
-                  </div>
-                  <DialogTitle className="text-2xl">Order Confirmed!</DialogTitle>
-                  <DialogDescription className="text-base">
-                    Thank you for your order. We've sent a confirmation email to{" "}
-                    <span className="font-medium">{confirmedOrder.shipping_address?.email || user?.email}</span>
-                  </DialogDescription>
-                </div>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                {/* Order Number */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-lg">
-                      <span>Order #{confirmedOrder.order_number}</span>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {format(new Date(confirmedOrder.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-
-                {/* Order Items */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Package className="w-5 h-5" />
-                      Order Items
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {confirmedOrder.order_items && confirmedOrder.order_items.length > 0 ? (
-                        confirmedOrder.order_items.map((item: any) => (
-                          <div
-                            key={item.id}
-                            className="flex justify-between items-center pb-3 border-b last:border-0 last:pb-0"
-                          >
-                            <div>
-                              <h4 className="font-medium">{item.product_name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Quantity: {item.quantity}
-                                {item.is_subscription && (
-                                  <span className="ml-2 text-primary font-medium">• Subscription</span>
-                                )}
-                              </p>
-                            </div>
-                            <span className="font-medium">
-                              ₹{(item.unit_price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No items found</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Shipping Address */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <MapPin className="w-5 h-5" />
-                      Shipping Address
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm space-y-1">
-                      <p className="font-medium">{confirmedOrder.shipping_address?.fullName}</p>
-                      <p>{confirmedOrder.shipping_address?.addressLine1}</p>
-                      {confirmedOrder.shipping_address?.addressLine2 && (
-                        <p>{confirmedOrder.shipping_address.addressLine2}</p>
-                      )}
-                      <p>
-                        {confirmedOrder.shipping_address?.city}, {confirmedOrder.shipping_address?.state} -{" "}
-                        {confirmedOrder.shipping_address?.pincode}
-                      </p>
-                      {confirmedOrder.shipping_address?.landmark && (
-                        <p className="text-muted-foreground">
-                          Landmark: {confirmedOrder.shipping_address.landmark}
-                        </p>
-                      )}
-                      <p className="pt-2">
-                        <span className="text-muted-foreground">Phone:</span>{" "}
-                        {confirmedOrder.shipping_address?.phone}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Payment Summary */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <CreditCard className="w-5 h-5" />
-                      Payment Summary
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>₹{confirmedOrder.subtotal?.toFixed(2) || "0.00"}</span>
-                      </div>
-                      {confirmedOrder.discount_amount > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Discount</span>
-                          <span>-₹{confirmedOrder.discount_amount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      {confirmedOrder.shipping_charge > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Shipping</span>
-                          <span>₹{confirmedOrder.shipping_charge?.toFixed(2) || "0.00"}</span>
-                        </div>
-                      )}
-                      {confirmedOrder.payment_type === "cod" && confirmedOrder.cod_handling_fee > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">COD Handling Fee</span>
-                          <span>₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "0.00"}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Payment Method</span>
-                        <span className="capitalize">
-                          {confirmedOrder.payment_type === "cod" ? "Cash on Delivery" : "Online Payment"}
-                        </span>
-                      </div>
-                      
-                      {/* COD Breakdown */}
-                      {confirmedOrder.payment_type === "cod" && (
-                        <>
-                          <div className="pt-2 border-t space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Upfront Payment</span>
-                              <span className="font-medium text-primary">₹{((confirmedOrder.cod_advance_paid || 0) + (confirmedOrder.cod_handling_fee || 0)).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-xs text-muted-foreground pl-2">
-                              <span>• Advance (from product): ₹{confirmedOrder.cod_advance_paid?.toFixed(2) || "100.00"}</span>
-                              <span>• COD Handling Fee: ₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "50.00"}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Balance on Delivery</span>
-                              <span className="font-medium">₹{confirmedOrder.cod_balance?.toFixed(2) || "0.00"}</span>
-                            </div>
-                            <div className="flex justify-between text-sm pt-1 border-t">
-                              <span className="text-muted-foreground">Total Order Value</span>
-                              <span className="font-semibold">₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground pt-1 italic">
-                              Total = Product (₹{confirmedOrder.subtotal?.toFixed(2) || "0.00"}) + Shipping (₹{confirmedOrder.shipping_charge?.toFixed(2) || "0.00"}) + COD Handling (₹{confirmedOrder.cod_handling_fee?.toFixed(2) || "0.00"})
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Prepaid Payment */}
-                      {confirmedOrder.payment_type !== "cod" && (
-                        <div className="pt-2 border-t flex justify-between font-semibold">
-                          <span>Total Paid</span>
-                          <span>₹{confirmedOrder.total_amount?.toFixed(2) || "0.00"}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Tracking Information */}
-                {confirmedOrder.nimbuspost_awb_number ? (
-                  <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Truck className="w-5 h-5 text-primary" />
-                        Track Your Order
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Tracking Number (AWB)</p>
-                          <p className="text-lg font-mono font-semibold text-primary">
-                            {confirmedOrder.nimbuspost_awb_number}
-                          </p>
-                        </div>
-                        <Button asChild className="w-full sm:w-auto">
-                          <a
-                            href={`https://sharmacoffeeworks.odrtrk.live/${confirmedOrder.nimbuspost_awb_number}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2"
-                          >
-                            Track Shipment
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card className="border-muted">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <Truck className="w-5 h-5" />
-                        <div>
-                          <p className="text-sm font-medium">Shipment being prepared</p>
-                          <p className="text-xs">Your tracking number will be available shortly.</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => {
-                      setShowOrderConfirmation(false);
-                      navigate("/account/orders");
-                    }}
-                  >
-                    <Package className="w-4 h-4 mr-2" />
-                    View All Orders
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => {
-                      setShowOrderConfirmation(false);
-                      navigate("/shop");
-                    }}
-                  >
-                    Continue Shopping
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

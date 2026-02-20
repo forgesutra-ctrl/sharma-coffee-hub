@@ -226,40 +226,22 @@ const OrderConfirmation = () => {
     );
   }
 
-  const hasSubscriptionItems = order.order_items.some(item => item.is_subscription);
+  const hasSubscriptionItems = order.order_items?.some(item => item.is_subscription) ?? false;
 
   return (
     <>
-      {/* Temporary test button to verify interactivity */}
-      <button
-        onClick={() => {
-          alert("Test button clicked - page is interactive!");
-          console.log("[OrderConfirmation] Test button clicked");
-        }}
-        style={{
-          position: "fixed",
-          top: "10px",
-          right: "10px",
-          zIndex: 99999,
-          padding: "8px 16px",
-          backgroundColor: "#C8A97E",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-        }}
-      >
-        Test Interactivity
-      </button>
       <div className="container mx-auto px-4 py-12 max-w-4xl" style={{ pointerEvents: "auto" }}>
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-12 h-12 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Order Confirmed!</h1>
+          <h1 className="text-3xl font-bold mb-2">Order Placed Successfully!</h1>
+          <p className="text-lg text-muted-foreground mb-2">
+            Thank you for your order, dear valued customer.
+          </p>
           <p className="text-muted-foreground">
-            Thank you for your order. We've sent a confirmation email to{" "}
+            We've sent a confirmation email to{" "}
             <span className="font-medium">{order.shipping_address.email}</span>
           </p>
         </div>
@@ -304,7 +286,7 @@ const OrderConfirmation = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {order.order_items.map((item) => (
+              {(order.order_items ?? []).map((item) => (
                 <div
                   key={item.id}
                   className="flex justify-between items-center pb-4 border-b last:border-0 last:pb-0"
