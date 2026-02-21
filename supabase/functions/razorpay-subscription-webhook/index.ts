@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Razorpay-Signature",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Razorpay-Signature, X-Internal-Queue-Retry",
 };
 
 interface WebhookPayload {
@@ -48,10 +48,14 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const signature = req.headers.get("X-Razorpay-Signature");
+    const rawBody = await req.text();
+    const internalRetrySecret = req.headers.get("X-Internal-Queue-Retry");
     const webhookSecret = Deno.env.get("RAZORPAY_WEBHOOK_SECRET");
+    const queueSecret = Deno.env.get("PROCESS_WEBHOOK_QUEUE_SECRET");
 
-    if (!webhookSecret) {
+    const isInternalRetry = queueSecret && internalRetrySecret === queueSecret;
+
+    if (!isInternalRetry && !webhookSecret) {
       console.error("Webhook secret not configured");
       return new Response(
         JSON.stringify({ error: "Webhook not configured" }),
@@ -62,9 +66,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const rawBody = await req.text();
-
-    if (signature && webhookSecret) {
+    if (!isInternalRetry && webhookSecret) {
+      const signature = req.headers.get("X-Razorpay-Signature");
       const expectedSignature = await crypto.subtle.digest(
         "SHA-256",
         new TextEncoder().encode(rawBody + webhookSecret)
@@ -83,6 +86,8 @@ Deno.serve(async (req: Request) => {
           }
         );
       }
+    } else if (isInternalRetry) {
+      console.log("📥 Subscription webhook received via internal queue retry (signature bypassed)");
     }
 
     const webhookData: WebhookPayload = JSON.parse(rawBody);

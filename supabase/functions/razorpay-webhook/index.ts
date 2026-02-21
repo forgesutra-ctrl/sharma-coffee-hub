@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Razorpay-Signature",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Razorpay-Signature, X-Internal-Queue-Retry",
 };
 
 interface WebhookPayload {
@@ -517,18 +517,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get signature
-    const signature = req.headers.get("X-Razorpay-Signature");
     const rawBody = await req.text();
+    const internalRetrySecret = req.headers.get("X-Internal-Queue-Retry");
+    const queueSecret = Deno.env.get("PROCESS_WEBHOOK_QUEUE_SECRET");
 
-    // Verify signature
-    const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
-    if (!isValid) {
-      console.error("❌ Invalid webhook signature");
-      return new Response(
-        JSON.stringify({ error: "Invalid signature" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Skip signature verification for internal retries from process-webhook-queue
+    const isInternalRetry = queueSecret && internalRetrySecret === queueSecret;
+
+    if (!isInternalRetry) {
+      const signature = req.headers.get("X-Razorpay-Signature");
+      const isValid = await verifyWebhookSignature(rawBody, signature, webhookSecret);
+      if (!isValid) {
+        console.error("❌ Invalid webhook signature");
+        return new Response(
+          JSON.stringify({ error: "Invalid signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      console.log("📥 Webhook received via internal queue retry (signature bypassed)");
     }
 
     // Parse webhook data

@@ -1,0 +1,272 @@
+{
+  "name": "Daily Payment Reconciliation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 2 * * *"
+            }
+          ]
+        },
+        "timezone": "Asia/Kolkata"
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute yesterday start and end (Unix timestamps for Razorpay)\nconst now = new Date();\nconst yesterday = new Date(now);\nyesterday.setDate(yesterday.getDate() - 1);\n\nconst startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);\nconst endOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);\n\nconst fromTs = Math.floor(startOfYesterday.getTime() / 1000);\nconst toTs = Math.floor(endOfYesterday.getTime() / 1000);\nconst dateStr = startOfYesterday.toISOString().split('T')[0];\n\nreturn [{ json: { fromTs, toTs, dateStr } }];"
+      },
+      "id": "compute-dates",
+      "name": "Compute Yesterday",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.razorpay.com/v1/payments?from={{ $json.fromTs }}&to={{ $json.toTs }}&count=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "razorpay-fetch",
+      "name": "Razorpay Fetch Payments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 200],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "razorpay-auth",
+          "name": "Razorpay API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Use RAZORPAY_KEY_ID:RAZORPAY_KEY_SECRET as user:password"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders?select=razorpay_payment_id,order_number,total_amount&created_at=gte.{{ $('Compute Yesterday').item.json.dateStr }}T00:00:00&created_at=lte.{{ $('Compute Yesterday').item.json.dateStr }}T23:59:59",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "supabase-fetch",
+      "name": "Supabase Fetch Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-auth",
+          "name": "Supabase"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Header: apikey + Authorization Bearer SUPABASE_SERVICE_ROLE_KEY"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge Razorpay payments and Supabase orders from both branches\nconst dateStr = $('Compute Yesterday').first().json.dateStr;\nconst razorpayItems = $('Razorpay Fetch Payments').first().json?.items || [];\nconst supabaseOrders = Array.isArray($('Supabase Fetch Orders').first().json) \n  ? $('Supabase Fetch Orders').first().json \n  : ($('Supabase Fetch Orders').first().json ? [$('Supabase Fetch Orders').first().json] : []);\n\nconst capturedPayments = razorpayItems.filter(p => p.status === 'captured');\nconst orderPaymentIds = new Set(\n  supabaseOrders\n    .map(o => o.razorpay_payment_id)\n    .filter(Boolean)\n);\n\nconst missedPayments = capturedPayments.filter(p => !orderPaymentIds.has(p.id));\n\nreturn [{\n  json: {\n    dateStr,\n    totalRazorpayPayments: capturedPayments.length,\n    totalOrders: supabaseOrders.length,\n    missedCount: missedPayments.length,\n    missedPayments: missedPayments.map(p => ({\n      payment_id: p.id,\n      amount: (p.amount / 100).toFixed(2),\n      email: p.email || 'N/A'\n    }))\n  }\n}];"
+      },
+      "id": "compare",
+      "name": "Compare & Find Mismatches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-mismatches",
+              "leftValue": "={{ $json.missedCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-mismatches",
+      "name": "Has Mismatches?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⚠️ *Daily Reconciliation Alert*\\n\\nDate: {{ $json.dateStr }}\\nMissed Orders: {{ $json.missedCount }}\\n\\n*Missed Payments:*\\n{{ $json.missedPayments.map(m => `• ${m.payment_id} | ₹${m.amount} | ${m.email}`).join('\\n') }}\\n\\nPlease check the admin panel.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Telegram Alert (Mismatches)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "✅ Daily reconciliation complete — all payments matched",
+        "additionalFields": {}
+      },
+      "id": "telegram-ok",
+      "name": "Telegram Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Compute Yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Yesterday": {
+      "main": [
+        [
+          {
+            "node": "Razorpay Fetch Payments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Supabase Fetch Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Razorpay Fetch Payments": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Fetch Orders": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Compare & Find Mismatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare & Find Mismatches": {
+      "main": [
+        [
+          {
+            "node": "Has Mismatches?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Mismatches?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert (Mismatches)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
