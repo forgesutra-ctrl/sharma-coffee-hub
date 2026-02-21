@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "lucide-react";
-import { format, addDays, startOfMonth, addMonths } from "date-fns";
+import { format, addDays } from "date-fns";
 
 interface DeliveryDatePickerProps {
   selectedDate: number;
@@ -16,32 +16,20 @@ const DeliveryDatePicker = ({
 }: DeliveryDatePickerProps) => {
   const generateDateOptions = () => {
     const options: { day: number; label: string; disabled: boolean }[] = [];
-    const today = new Date();
-    const minDay = minDate.getDate();
-    const currentMonth = today.getMonth();
-    const minMonth = minDate.getMonth();
-    const shouldApplyCutoff = minDay <= 28;
 
     for (let day = 1; day <= 28; day++) {
-      let disabled = false;
-      let label = `${day}${getOrdinalSuffix(day)} of every month`;
-
-      // Only apply the "not available this month" cutoff when the minimum
-      // available day is within 1–28. When we're at the very end of a month
-      // (e.g. today is 28th and minDate is 31st), minDay will be > 28 and we
-      // should allow all dates so that customers can still choose any
-      // preferred monthly delivery day for future months.
-      if (shouldApplyCutoff && currentMonth === minMonth && day < minDay) {
-        disabled = true;
-        label += " (Not available this month)";
-      }
-
+      const label = `${day}${getOrdinalSuffix(day)} of every month`;
       const nextDelivery = calculateNextDelivery(day, minDate);
-      if (!disabled) {
-        label += ` • Next: ${format(nextDelivery, "MMM dd, yyyy")}`;
-      }
 
-      options.push({ day, label, disabled });
+      // All days 1-28 are always selectable for subscriptions.
+      // The user picks a recurring monthly preference (e.g. "15th of every month").
+      // The first delivery is calculated by calculateNextDelivery - it will be
+      // this month if the date hasn't passed, or next month. No need to disable.
+      options.push({
+        day,
+        label: `${label} • Next: ${format(nextDelivery, "MMM dd, yyyy")}`,
+        disabled: false,
+      });
     }
 
     return options;
