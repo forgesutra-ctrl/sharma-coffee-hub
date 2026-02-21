@@ -1497,7 +1497,7 @@ const Checkout = () => {
                 </div>
 
                 <Button onClick={handleNextStep} className="w-full">
-                  Continue to {allItemsAreSubscription ? "Delivery Date" : "Review"}
+                  Continue to {allItemsAreSubscription ? "Order Date" : "Review"}
                 </Button>
               </CardContent>
             </Card>
@@ -1509,7 +1509,7 @@ const Checkout = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-primary">
                   <Package className="w-5 h-5" />
-                  Select Delivery Date
+                  Select Order Date
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1554,9 +1554,9 @@ const Checkout = () => {
 
                 {allItemsAreSubscription && (
                   <div>
-                    <h3 className="font-semibold mb-2">Delivery Schedule</h3>
+                    <h3 className="font-semibold mb-2">Order Schedule</h3>
                     <p className="text-sm text-muted-foreground">
-                      Monthly delivery on the {deliveryDate}
+                      Order placed on the {deliveryDate}
                       {deliveryDate === 1 ? "st" : deliveryDate === 2 ? "nd" : deliveryDate === 3 ? "rd" : "th"} of
                       each month
                     </p>

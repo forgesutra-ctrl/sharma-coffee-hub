@@ -27,7 +27,7 @@ const DeliveryDatePicker = ({
       // this month if the date hasn't passed, or next month. No need to disable.
       options.push({
         day,
-        label: `${label} • Next: ${format(nextDelivery, "MMM dd, yyyy")}`,
+        label: `${label} • Order placed: ${format(nextDelivery, "MMM dd, yyyy")}`,
         disabled: false,
       });
     }
@@ -74,14 +74,15 @@ const DeliveryDatePicker = ({
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-primary">
         <Calendar className="w-4 h-4" />
-        <Label className="text-primary">Select Your Preferred Monthly Delivery Date</Label>
+        <Label className="text-primary">Select Your Preferred Monthly Order Date</Label>
       </div>
 
       <div className="bg-muted/50 border border-primary/20 rounded-lg p-3 text-sm">
         <p className="text-foreground/80">
-          Choose a date between the 1st and 28th of each month. Your coffee will be
-          delivered on this date every month. We recommend choosing dates between
-          1-28 to ensure consistent monthly deliveries.
+          Choose a date between the 1st and 28th of each month. Your order will be
+          placed on this date every month. Actual delivery dates may vary based on
+          shipping logistics. We recommend choosing dates between 1-28 for consistent
+          monthly order placement.
         </p>
       </div>
 
@@ -162,12 +163,12 @@ const DeliveryDatePicker = ({
       {selectedDate && (
         <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
           <p className="text-sm font-medium text-primary">
-            Your next delivery: {format(calculateNextDelivery(selectedDate, minDate), "MMMM dd, yyyy")}
+            Your next order will be placed on {format(calculateNextDelivery(selectedDate, minDate), "MMMM dd, yyyy")}
           </p>
           <p className="text-xs text-foreground/70 mt-1">
-            You'll receive your coffee on the {selectedDate}
-            {getOrdinalSuffix(selectedDate)} of every month. You can change this anytime
-            from your account settings.
+            Your order will be placed on the {selectedDate}
+            {getOrdinalSuffix(selectedDate)} of every month. Actual delivery dates may
+            vary based on shipping. You can change this anytime from your account settings.
           </p>
         </div>
       )}
