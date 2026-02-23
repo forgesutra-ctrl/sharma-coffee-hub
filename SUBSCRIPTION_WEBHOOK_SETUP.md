@@ -4,6 +4,10 @@
 
 This guide explains how to set up the webhook-based subscription flow where subscriptions are only created in `user_subscriptions` **after** payment is confirmed via Razorpay webhook.
 
+**Architecture:** We use **two separate webhooks** to avoid duplicate handling:
+- **razorpay-webhook** — Handles `payment.captured`, `payment.failed`, `invoice.paid` (one-time orders + subscription billing cycles)
+- **razorpay-subscription-webhook** — Handles all `subscription.*` events (subscription lifecycle)
+
 ## Flow Diagram
 
 ```
@@ -68,12 +72,13 @@ supabase functions deploy razorpay-subscription-webhook
      - Replace `YOUR_PROJECT` with your Supabase project reference ID
    - **Alert Email**: Your email address
 
-4. **Select Events**
+4. **Select Events** (subscription events only — payment events go to razorpay-webhook)
    - ✅ `subscription.authenticated` (Payment confirmed)
    - ✅ `subscription.activated` (Subscription activated)
    - ✅ `subscription.charged` (Recurring payment)
    - ✅ `subscription.cancelled` (Subscription cancelled)
    - ✅ `subscription.paused` (Subscription paused)
+   - ✅ `subscription.resumed` (Subscription resumed)
    - ✅ `subscription.completed` (Subscription completed)
    - ✅ `subscription.payment_failed` (Payment failed)
 

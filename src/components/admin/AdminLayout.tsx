@@ -13,7 +13,8 @@ import {
   FolderTree,
   FileText,
   Tag,
-  BookOpen
+  BookOpen,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -33,6 +34,7 @@ const allSidebarLinks = [
   { name: 'Shipping', href: '/admin/shipping', icon: Truck, superAdminOnly: false, staffAllowed: true },
   { name: 'Operations', href: '/admin/operations', icon: Wrench, superAdminOnly: false, staffAllowed: true },
   { name: 'Reports', href: '/admin/reports', icon: FileText, superAdminOnly: true, staffAllowed: false },
+  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, superAdminOnly: true, staffAllowed: false },
 ];
 
 export default function AdminLayout() {

@@ -56,20 +56,28 @@ supabase functions deploy create-razorpay-subscription
 supabase functions deploy razorpay-webhook
 ```
 
-### Step 4: Configure Razorpay Webhook
+### Step 4: Configure Razorpay Webhooks (Two Webhooks Required)
 
-1. Go to Razorpay Dashboard → Settings → Webhooks
-2. Add webhook URL: `https://YOUR_PROJECT.supabase.co/functions/v1/razorpay-webhook`
-3. Select events:
+**Webhook 1 - Payments (razorpay-webhook):**
+1. Add webhook URL: `https://YOUR_PROJECT.supabase.co/functions/v1/razorpay-webhook`
+2. Select events:
    - ✅ `payment.captured`
    - ✅ `payment.failed`
+   - ✅ `invoice.paid`
+3. Copy webhook secret (starts with `whsec_...`)
+
+**Webhook 2 - Subscriptions (razorpay-subscription-webhook):**
+1. Add another webhook URL: `https://YOUR_PROJECT.supabase.co/functions/v1/razorpay-subscription-webhook`
+2. Select events:
    - ✅ `subscription.authenticated`
    - ✅ `subscription.activated`
    - ✅ `subscription.charged`
    - ✅ `subscription.cancelled`
    - ✅ `subscription.paused`
+   - ✅ `subscription.resumed`
    - ✅ `subscription.completed`
-4. Copy webhook secret (starts with `whsec_...`)
+   - ✅ `subscription.payment_failed`
+3. Use the same `RAZORPAY_WEBHOOK_SECRET` for both (or separate secrets if Razorpay provides different ones)
 
 ### Step 5: Add Webhook Secret to Supabase
 

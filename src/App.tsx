@@ -50,6 +50,7 @@ import BlogsPage from "./pages/admin/BlogsPage";
 import ShippingPage from "./pages/admin/ShippingPage";
 import OperationsPage from "./pages/admin/OperationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
+import AnalyticsPage from "./pages/admin/AnalyticsPage";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,7 @@ const App = () => {
                   <Route path="shipping" element={<ShippingPage />} />
                   <Route path="operations" element={<OperationsPage />} />
                   <Route path="reports" element={<ReportsPage />} />
+                  <Route path="analytics" element={<AnalyticsPage />} />
                 </Route>
                 
                 <Route path="*" element={<Layout><NotFound /></Layout>} />

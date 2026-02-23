@@ -240,63 +240,6 @@ async function processWebhookEvent(
         return { success: true };
       }
 
-      case "subscription.authenticated":
-      case "subscription.activated": {
-        // Subscription is now active on Razorpay.
-        // Billing is handled by Razorpay; we simply mark our pending
-        // subscription as active and keep delivery scheduling decoupled.
-        const subscriptionEntity = payload.subscription?.entity;
-
-        if (!subscriptionEntity) {
-          return { success: false, error: "Missing subscription entity" };
-        }
-
-        console.log("🔔 Processing subscription.authenticated/activated:", {
-          subscription_id: subscriptionEntity.id,
-          status: subscriptionEntity.status,
-        });
-
-        const { data: pendingSub, error: pendingError } = await supabaseAdmin
-          .from("pending_subscriptions")
-          .select("id, status")
-          .eq("razorpay_subscription_id", subscriptionEntity.id)
-          .maybeSingle();
-
-        if (pendingError) {
-          console.error("❌ Error fetching pending subscription:", pendingError);
-          return { success: false, error: pendingError.message };
-        }
-
-        if (!pendingSub) {
-          console.warn("⚠️ Pending subscription not found for activation, treating as idempotent");
-          return { success: true };
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from("pending_subscriptions")
-          .update({
-            status: "active",
-            razorpay_subscription_id: subscriptionEntity.id,
-          })
-          .eq("id", pendingSub.id);
-
-        if (updateError) {
-          console.error("❌ Failed to mark pending subscription active:", updateError);
-          return { success: false, error: updateError.message };
-        }
-
-        console.log("✅ Pending subscription marked active:", pendingSub.id);
-        return { success: true };
-      }
-
-      case "subscription.charged": {
-        // Legacy event for recurring charges. In the new architecture we
-        // rely on invoice.paid to drive delivery scheduling, so we simply
-        // log this event and return success.
-        console.log("ℹ️ Received subscription.charged (handled via invoice.paid in new flow)");
-        return { success: true };
-      }
-
       case "invoice.paid": {
         // A billing cycle has been successfully paid.
         // Billing is handled by Razorpay; we create or ensure a delivery
@@ -401,55 +344,6 @@ async function processWebhookEvent(
         return { success: true };
       }
 
-      case "subscription.cancelled":
-      case "subscription.paused":
-      case "subscription.completed": {
-        const subscriptionEntity = payload.subscription?.entity;
-        if (!subscriptionEntity) {
-          return { success: false, error: "Missing subscription entity" };
-        }
-
-        const statusMap: Record<string, "cancelled" | "paused"> = {
-          "subscription.cancelled": "cancelled",
-          "subscription.paused": "paused",
-          "subscription.completed": "cancelled", // treat completed as cancelled for deliveries
-        };
-
-        const newStatus = statusMap[event] || "cancelled";
-
-        console.log(`🔔 Processing ${event} for subscription:`, subscriptionEntity.id);
-
-        // Update our internal subscription status in pending_subscriptions
-        const { data: pendingSub } = await supabaseAdmin
-          .from("pending_subscriptions")
-          .select("id")
-          .eq("razorpay_subscription_id", subscriptionEntity.id)
-          .maybeSingle();
-
-        if (pendingSub) {
-          await supabaseAdmin
-            .from("pending_subscriptions")
-            .update({ status: newStatus })
-            .eq("id", pendingSub.id);
-
-          // For cancelled/completed, cancel all future scheduled deliveries
-          if (newStatus === "cancelled") {
-            const todayIso = new Date().toISOString().slice(0, 10);
-            await supabaseAdmin
-              .from("subscription_deliveries")
-              .update({ status: "skipped" })
-              .eq("subscription_id", pendingSub.id)
-              .eq("status", "scheduled")
-              .gt("delivery_date", todayIso);
-          }
-        } else {
-          console.warn("⚠️ No internal subscription found for cancellation/pausing");
-        }
-
-        console.log(`✅ Internal subscription marked ${newStatus}:`, subscriptionEntity.id);
-        return { success: true };
-      }
-
       case "invoice.failed": {
         const invoiceEntity = payload.invoice?.entity;
         console.log("⚠️ invoice.failed received:", {
@@ -484,8 +378,14 @@ async function processWebhookEvent(
       }
 
       default:
-        console.log("⚠️ Unhandled event:", event);
-        return { success: true }; // Don't fail on unknown events
+        // Subscription events are handled by razorpay-subscription-webhook.
+        // Return success to avoid Razorpay retries if misconfigured.
+        if (event.startsWith("subscription.")) {
+          console.log("ℹ️ Ignoring subscription event (handled by razorpay-subscription-webhook):", event);
+        } else {
+          console.log("⚠️ Unhandled event:", event);
+        }
+        return { success: true };
     }
   } catch (error) {
     console.error("❌ Error processing webhook event:", error);
