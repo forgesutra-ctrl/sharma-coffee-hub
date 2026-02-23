@@ -70,11 +70,14 @@ export default function Navigation() {
     {
       name: 'Shop',
       href: '/shop',
-      children: categories?.map(cat => ({
-        name: cat.name,
-        href: `/shop/${cat.slug}`,
-        description: ''
-      })) || []
+      children: [
+        { name: 'Taste Profile Quiz', href: '/quiz', description: 'Find your perfect coffee' },
+        ...(categories?.map(cat => ({
+          name: cat.name,
+          href: `/shop/${cat.slug}`,
+          description: ''
+        })) || [])
+      ]
     },
     {
       name: 'Blog',

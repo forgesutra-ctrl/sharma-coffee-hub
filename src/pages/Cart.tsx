@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
+import { useProducts } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,6 +31,25 @@ const Cart = () => {
   } = useCart();
 
   const [isPincodeDialogOpen, setIsPincodeDialogOpen] = useState(false);
+  const { data: allProducts } = useProducts();
+
+  // "Customers also bought" - products from same category as cart items, excluding cart
+  const cartProductIds = useMemo(() => new Set(cartItems.map((i) => i.product.id)), [cartItems]);
+  const cartCategoryIds = useMemo(() => {
+    if (!allProducts) return new Set<string>();
+    const ids = new Set<string>();
+    for (const item of cartItems) {
+      const p = allProducts.find((x) => x.id === item.product.id);
+      if (p?.category_id) ids.add(p.category_id);
+    }
+    return ids;
+  }, [cartItems, allProducts]);
+  const recommendations = useMemo(() => {
+    if (!allProducts || cartCategoryIds.size === 0) return [];
+    return allProducts
+      .filter((p) => p.category_id && cartCategoryIds.has(p.category_id) && !cartProductIds.has(p.id))
+      .slice(0, 4);
+  }, [allProducts, cartCategoryIds, cartProductIds]);
 
 const handlePincodeValidated = (
   pincode: string,
@@ -302,6 +322,43 @@ const handlePincodeValidated = (
               </div>
             </div>
           </div>
+
+          {/* Customers also bought */}
+          {recommendations.length > 0 && (
+            <div className="mt-12 pt-12 border-t border-border/50">
+              <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-6">
+                Customers also bought
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {recommendations.map((p) => {
+                  const price = p.product_variants?.length
+                    ? Math.min(...p.product_variants.map((v) => v.price))
+                    : 0;
+                  return (
+                    <Link
+                      key={p.id}
+                      to={`/product/${p.slug}`}
+                      className="group"
+                    >
+                      <div className="aspect-square overflow-hidden bg-card rounded-lg mb-3">
+                        <img
+                          src={p.image_url || '/placeholder.svg'}
+                          alt={p.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <h3 className="font-medium text-foreground group-hover:text-primary transition-colors mb-1 line-clamp-2">
+                        {p.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        from ₹{price.toLocaleString()}
+                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

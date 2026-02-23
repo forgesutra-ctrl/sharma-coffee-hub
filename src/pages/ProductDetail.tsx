@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Minus, Plus, ShoppingBag, Check, Loader2, MapPin, RefreshCw, Package, AlertCircle } from 'lucide-react';
+import { ChevronRight, Minus, Plus, ShoppingBag, Check, MapPin, RefreshCw, Package, AlertCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,7 @@ import { PincodeDialog } from '@/components/PincodeDialog';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { validateSubscriptionPlan } from '@/lib/subscription-validation';
 import { isSubscriptionEligible, getSubscriptionEligibilityError, isCoffeePowderProduct } from '@/lib/subscription-eligibility';
+import { addRecentlyViewed, getRecentlyViewedSlugs } from '@/lib/recently-viewed';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -156,11 +158,41 @@ const ProductDetail = () => {
     variants,
   ]);
 
+  // Track recently viewed (must be before early returns to satisfy Rules of Hooks)
+  useEffect(() => {
+    if (product?.slug) addRecentlyViewed(product.slug);
+  }, [product?.slug]);
+
   // Loading state
   if (isLoading) {
     return (
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="min-h-screen bg-background">
+          <div className="bg-primary text-primary-foreground py-2.5" />
+          <div className="border-b border-border/50">
+            <div className="container mx-auto px-4 py-4">
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8 lg:py-12">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+              <div className="space-y-4">
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-20 w-20 rounded" />
+                  <Skeleton className="h-20 w-20 rounded" />
+                </div>
+              </div>
+              <div className="space-y-6">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-12 w-32" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            </div>
+          </div>
         </div>
     );
   }
@@ -206,6 +238,13 @@ const ProductDetail = () => {
   const relatedProducts = allProducts
     ?.filter(p => p.category_id === product?.category_id && p.id !== product?.id)
     .slice(0, 4) || [];
+
+  // Recently viewed (from localStorage, exclude current)
+  const recentlyViewedSlugs = getRecentlyViewedSlugs(product?.slug);
+  const recentlyViewedProducts = (allProducts || [])
+    .filter((p) => recentlyViewedSlugs.includes(p.slug))
+    .sort((a, b) => recentlyViewedSlugs.indexOf(a.slug) - recentlyViewedSlugs.indexOf(b.slug))
+    .slice(0, 4);
 
   const executeAddToCart = () => {
     if (!selectedVariant || !activeProduct) return;
@@ -720,6 +759,45 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Recently Viewed */}
+        {recentlyViewedProducts.length > 0 && (
+          <div className="border-t border-border/50 py-12 lg:py-16">
+            <div className="container mx-auto px-4">
+              <h2 className="font-serif text-2xl md:text-3xl font-semibold text-center mb-8">
+                Recently Viewed
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {recentlyViewedProducts.map((related) => {
+                  const relatedLowestPrice = related.product_variants?.length > 0
+                    ? Math.min(...related.product_variants.map(v => v.price))
+                    : 0;
+                  return (
+                    <Link
+                      key={related.id}
+                      to={`/product/${related.slug}`}
+                      className="group"
+                    >
+                      <div className="aspect-square overflow-hidden bg-card mb-3">
+                        <img
+                          src={related.image_url || '/placeholder.svg'}
+                          alt={related.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <h3 className="font-medium text-foreground group-hover:text-primary transition-colors mb-1">
+                        {related.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        from ₹{relatedLowestPrice.toLocaleString()}
+                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

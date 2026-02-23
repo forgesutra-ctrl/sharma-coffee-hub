@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Sparkles } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import ProductCard from '@/components/coffee/ProductCard';
 import { cn } from '@/lib/utils';
 import { useProducts, getUniqueProducts, useProductsByCategoryId } from '@/hooks/useProducts';
@@ -31,13 +32,51 @@ import { Button } from "@/components/ui/button";
 
 const Shop = () => {
   const { categorySlug } = useParams<{ categorySlug?: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? '';
 
-  const [sortBy, setSortBy] = useState<string>('featured');
-  const [priceRange, setPriceRange] = useState<string>('all');
-  const [inStockOnly, setInStockOnly] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<string>(() => searchParams.get('sort') || 'featured');
+  const [priceRange, setPriceRange] = useState<string>(() => searchParams.get('price') || 'all');
+  const [inStockOnly, setInStockOnly] = useState<boolean>(() => {
+    const s = searchParams.get('stock');
+    return s === null || s === '' ? true : s === '1' || s === 'true';
+  });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Sync filters to URL
+  const updateUrlFilters = (updates: { sort?: string; price?: string; stock?: boolean }) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (updates.sort !== undefined) (updates.sort && updates.sort !== 'featured') ? next.set('sort', updates.sort) : next.delete('sort');
+      if (updates.price !== undefined) (updates.price && updates.price !== 'all') ? next.set('price', updates.price) : next.delete('price');
+      if (updates.stock !== undefined) next.set('stock', updates.stock ? '1' : '0');
+      return next;
+    }, { replace: true });
+  };
+
+  const handleSortChange = (val: string) => {
+    setSortBy(val);
+    updateUrlFilters({ sort: val });
+  };
+  const handlePriceChange = (val: string) => {
+    setPriceRange(val);
+    updateUrlFilters({ price: val });
+  };
+  const handleStockChange = (checked: boolean) => {
+    setInStockOnly(checked);
+    updateUrlFilters({ stock: checked });
+  };
+
+  // Sync state from URL when user navigates (e.g. back/forward)
+  useEffect(() => {
+    const sort = searchParams.get('sort') || 'featured';
+    const price = searchParams.get('price') || 'all';
+    const stock = searchParams.get('stock');
+    const stockVal = stock === null || stock === '' ? true : stock === '1' || stock === 'true';
+    setSortBy(sort);
+    setPriceRange(price);
+    setInStockOnly(stockVal);
+  }, [searchParams]);
 
   const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
   const { data: currentCategory } = useCategoryBySlug(categorySlug);
@@ -186,11 +225,47 @@ const Shop = () => {
           )}
         </div>
 
+        {/* Taste Profile Quiz CTA */}
+        <div className="border-b border-border/50 bg-primary/5">
+          <div className="container mx-auto px-4 py-4">
+            <Link
+              to="/quiz"
+              className="flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="font-medium">Find your perfect coffee</span>
+              <span className="text-muted-foreground">— Take our 1-minute taste profile quiz</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
         {/* Main Content */}
         <div className="container mx-auto px-4 py-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="flex flex-col lg:flex-row gap-8">
+              <aside className="hidden lg:block w-64 flex-shrink-0">
+                <div className="sticky top-24 space-y-6">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-48 w-full" />
+                </div>
+              </aside>
+              <main className="flex-1">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-9 w-32" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="space-y-4">
+                      <Skeleton className="aspect-square w-full rounded-lg" />
+                      <Skeleton className="h-5 w-3/4 mx-auto" />
+                      <Skeleton className="h-4 w-1/2 mx-auto" />
+                    </div>
+                  ))}
+                </div>
+              </main>
             </div>
           ) : error ? (
             <div className="text-center py-20">
@@ -220,7 +295,7 @@ const Shop = () => {
                               type="checkbox" 
                               className="w-4 h-4 rounded border-border" 
                               checked={inStockOnly}
-                              onChange={(e) => setInStockOnly(e.target.checked)}
+                              onChange={(e) => handleStockChange(e.target.checked)}
                             />
                             <span>In Stock</span>
                             <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
@@ -247,7 +322,7 @@ const Shop = () => {
                                 type="radio"
                                 name="price"
                                 checked={priceRange === range.value}
-                                onChange={() => setPriceRange(range.value)}
+                                onChange={() => handlePriceChange(range.value)}
                                 className="w-4 h-4 border-border"
                               />
                               <span>{range.label}</span>
@@ -339,7 +414,7 @@ const Shop = () => {
                                       type="checkbox" 
                                       className="w-4 h-4 rounded border-border" 
                                       checked={inStockOnly}
-                                      onChange={(e) => setInStockOnly(e.target.checked)}
+                                      onChange={(e) => handleStockChange(e.target.checked)}
                                     />
                                     <span>In Stock</span>
                                     <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
@@ -366,7 +441,7 @@ const Shop = () => {
                                         type="radio"
                                         name="price"
                                         checked={priceRange === range.value}
-                                        onChange={() => setPriceRange(range.value)}
+                                        onChange={() => handlePriceChange(range.value)}
                                         className="w-4 h-4 border-border"
                                       />
                                       <span>{range.label}</span>
@@ -435,7 +510,7 @@ const Shop = () => {
                     </div>
 
                     {/* Sort */}
-                    <Select value={sortBy} onValueChange={setSortBy}>
+                    <Select value={sortBy} onValueChange={handleSortChange}>
                       <SelectTrigger className="w-[140px] lg:w-[180px] bg-transparent border-border/50" style={{ pointerEvents: 'auto' }}>
                         <SelectValue placeholder="Sort by" />
                       </SelectTrigger>
@@ -478,7 +553,7 @@ const Shop = () => {
                     <p className="text-muted-foreground mb-4">No products found in this category.</p>
                     <Link
                       to="/shop"
-                      onClick={() => setPriceRange('all')}
+                      onClick={() => handlePriceChange('all')}
                       className="text-primary hover:underline"
                     >
                       View all products

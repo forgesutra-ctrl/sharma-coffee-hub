@@ -7,6 +7,8 @@ import {
   ShoppingBag,
   Package,
   Phone,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,8 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  /** For assistant messages: the user message that preceded this response */
+  userMessageContent?: string;
 }
 
 const quickActions = [
@@ -33,8 +37,19 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Persist session ID for chat feedback
+  const getSessionId = () => {
+    let sid = sessionStorage.getItem("chat_session_id");
+    if (!sid) {
+      sid = crypto.randomUUID?.() ?? `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem("chat_session_id", sid);
+    }
+    return sid;
+  };
 
   // Welcome message on open
   useEffect(() => {
@@ -58,7 +73,7 @@ export function ChatBot() {
     }
   }, [messages]);
 
-  // Send message handler - FIXED VERSION
+  // Send message handler - streaming support
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
 
@@ -73,10 +88,9 @@ export function ChatBot() {
     setInput("");
     setIsLoading(true);
 
-    try {
-      console.log("📤 Sending message to Edge Function:", text);
+    const assistantId = (Date.now() + 1).toString();
 
-      // Use direct fetch to avoid authentication issues
+    try {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -101,54 +115,90 @@ export function ChatBot() {
         throw new Error(`Chat service error: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
 
-      console.log("📥 Raw response from Edge Function:", data);
+      if (contentType.includes("text/event-stream") && response.body) {
+        // Streaming response - parse OpenAI SSE format
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+            userMessageContent: text,
+          },
+        ]);
 
-      // ✅ BULLETPROOF RESPONSE NORMALIZATION
-      // Handles ALL possible response shapes
-      let assistantText = "Sorry, I couldn't process that.";
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      if (data) {
-        // Case 1: data is a string directly
-        if (typeof data === "string") {
-          // Check if it's JSON string that needs parsing
-          try {
-            const parsed = JSON.parse(data);
-            if (typeof parsed.response === "string") {
-              assistantText = parsed.response;
-            } else {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (typeof delta === "string") {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, content: m.content + delta }
+                        : m
+                    )
+                  );
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+        }
+      } else {
+        // Non-streaming (e.g. demo fallback) - parse JSON
+        const data = await response.json();
+        let assistantText = "Sorry, I couldn't process that.";
+
+        if (data) {
+          if (typeof data === "string") {
+            try {
+              const parsed = JSON.parse(data);
+              assistantText = typeof parsed.response === "string" ? parsed.response : data;
+            } catch {
               assistantText = data;
             }
-          } catch {
-            assistantText = data;
+          } else if (typeof data === "object" && data !== null) {
+            if (typeof data.response === "string") {
+              assistantText = data.response;
+            } else if (data.data && typeof data.data.response === "string") {
+              assistantText = data.data.response;
+            }
           }
         }
-        // Case 2: data is an object with .response
-        else if (typeof data === "object" && data !== null) {
-          if (typeof data.response === "string") {
-            assistantText = data.response;
-          }
-          // Case 3: Nested data.data.response (some Supabase versions)
-          else if (data.data && typeof data.data.response === "string") {
-            assistantText = data.data.response;
-          }
-        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: assistantText,
+            timestamp: new Date(),
+            userMessageContent: text,
+          },
+        ]);
       }
-
-      console.log("✅ Extracted assistant text:", assistantText);
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: assistantText,
-          timestamp: new Date(),
-        },
-      ]);
     } catch (err) {
-      console.error("🔥 ChatBot error:", err);
+      console.error("ChatBot error:", err);
       setMessages((prev) => [
         ...prev,
         {
@@ -161,6 +211,24 @@ export function ChatBot() {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function submitFeedback(messageId: string, isPositive: boolean) {
+    const msg = messages.find((m) => m.id === messageId);
+    if (!msg || msg.role !== "assistant" || messageFeedback[messageId]) return;
+
+    const userContent = msg.userMessageContent ?? "";
+    try {
+      await supabase.from("chat_feedback").insert({
+        message_content: userContent,
+        response_content: msg.content,
+        is_positive: isPositive,
+        session_id: getSessionId(),
+      });
+      setMessageFeedback((prev) => ({ ...prev, [messageId]: isPositive ? "up" : "down" }));
+    } catch (e) {
+      console.error("Failed to submit chat feedback:", e);
     }
   }
 
@@ -225,11 +293,42 @@ export function ChatBot() {
                       )}
                     >
                       {m.content}
+                      {isLoading && m.role === "assistant" && m.id === messages[messages.length - 1]?.id && (
+                        <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse align-middle" aria-hidden />
+                      )}
+                      {m.role === "assistant" && m.id !== "welcome" && (
+                        <div className="flex gap-1 mt-2 pt-2 border-t border-border/50">
+                          <button
+                            type="button"
+                            onClick={() => submitFeedback(m.id, true)}
+                            disabled={!!messageFeedback[m.id]}
+                            className={cn(
+                              "p-1 rounded hover:bg-background/50 transition-colors disabled:opacity-50",
+                              messageFeedback[m.id] === "up" && "text-primary"
+                            )}
+                            aria-label="Helpful"
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => submitFeedback(m.id, false)}
+                            disabled={!!messageFeedback[m.id]}
+                            className={cn(
+                              "p-1 rounded hover:bg-background/50 transition-colors disabled:opacity-50",
+                              messageFeedback[m.id] === "down" && "text-destructive"
+                            )}
+                            aria-label="Not helpful"
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
 
-                {isLoading && (
+                {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
                   <div className="flex justify-start">
                     <div className="bg-muted rounded-xl px-4 py-2">
                       <Loader2 className="w-4 h-4 animate-spin" />

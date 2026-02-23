@@ -28,6 +28,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import FAQ from "./pages/FAQ";
 import Subscriptions from "./pages/Subscriptions";
+import TasteProfileQuiz from "./pages/TasteProfileQuiz";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -97,6 +98,7 @@ const App = () => {
                 <Route path="/shipping-policy" element={<Layout><ShippingPolicy /></Layout>} />
                 <Route path="/faq" element={<Layout><FAQ /></Layout>} />
                 <Route path="/subscriptions" element={<Layout><Subscriptions /></Layout>} />
+                <Route path="/quiz" element={<Layout><TasteProfileQuiz /></Layout>} />
 
                 {/* Protected Routes */}
                 <Route path="/checkout" element={

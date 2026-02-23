@@ -575,6 +575,7 @@ If you find yourself about to write any percentage, discount, or savings amount 
         messages: messages,
         max_tokens: 800,
         temperature: 0.7,
+        stream: true,
       }),
     });
 
@@ -584,18 +585,15 @@ If you find yourself about to write any percentage, discount, or savings amount 
       throw new Error("Failed to get AI response");
     }
 
-    const openaiData = await openaiResponse.json();
-    const aiResponse = openaiData.choices[0].message.content;
-
-    return new Response(
-      JSON.stringify({ response: aiResponse }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Forward the OpenAI stream to the client
+    return new Response(openaiResponse.body, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   } catch (error: any) {
     console.error("Chat assistant error:", error);
     return new Response(
