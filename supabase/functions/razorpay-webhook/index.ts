@@ -464,25 +464,28 @@ Deno.serve(async (req: Request) => {
     console.log("📥 Webhook received:", event);
 
     // Log webhook event
-    await supabaseAdmin.from("webhook_logs").insert({
-      event_type: event,
-      razorpay_event_id: payload.subscription?.entity?.id || payload.order?.entity?.id || null,
-      payload: webhookData,
-      processed: false,
-    });
+    const { data: logData } = await supabaseAdmin
+      .from("webhook_logs")
+      .insert({
+        event_type: event,
+        razorpay_event_id: payload.subscription?.entity?.id || payload.order?.entity?.id || payload.payment?.entity?.id || null,
+        payload: webhookData,
+        processed: false,
+      })
+      .select("id")
+      .single();
+
+    const webhookLogId = logData?.id;
 
     // Process webhook event
     const result = await processWebhookEvent(event, payload, supabaseAdmin);
 
-    if (result.success) {
-      // Mark as processed
+    if (result.success && webhookLogId) {
+      // Mark as processed (only on success - failed webhooks stay processed: false for debugging)
       await supabaseAdmin
         .from("webhook_logs")
         .update({ processed: true })
-        .eq("event_type", event)
-        .eq("razorpay_event_id", payload.subscription?.entity?.id || payload.order?.entity?.id || null)
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .eq("id", webhookLogId);
 
       console.log("✅ Webhook processed successfully");
       return new Response(
