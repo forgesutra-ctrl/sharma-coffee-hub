@@ -1038,6 +1038,7 @@ const Checkout = () => {
           supabase.functions.invoke("create-razorpay-order", {
             body: {
               amount: amountRupees,
+              checkoutData,
             },
           }),
           new Promise<{ data: null; error: { message: string } }>((_, reject) =>

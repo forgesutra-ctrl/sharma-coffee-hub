@@ -331,21 +331,22 @@ Deno.serve(async (req: Request) => {
       console.log("[verify-payment] no Bearer header, using checkout.user_id:", orderUserId);
     }
 
-    const { data: existingOrder } = await supabase
+    // Check if order already exists (by payment_id - already processed)
+    const { data: existingByPayment } = await supabase
       .from("orders")
       .select("id, order_number, payment_status")
       .eq("razorpay_payment_id", razorpayPaymentId)
       .maybeSingle();
 
-    if (existingOrder) {
-      console.log("Order already exists:", existingOrder.id);
+    if (existingByPayment) {
+      console.log("Order already exists (by payment_id):", existingByPayment.id);
       return new Response(
         JSON.stringify({
           verified: true,
           message: "Payment already processed",
-          orderId: existingOrder.id,
-          orderNumber: existingOrder.order_number,
-          paymentStatus: existingOrder.payment_status,
+          orderId: existingByPayment.id,
+          orderNumber: existingByPayment.order_number,
+          paymentStatus: existingByPayment.payment_status,
         }),
         {
           status: 200,
@@ -354,8 +355,130 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // NEW FLOW: Check for order created before payment (by razorpay_order_id)
     const paymentStatus = checkout.payment_type === "cod" ? "advance_paid" : "paid";
+    if (razorpayOrderId) {
+      const { data: existingByOrderId, error: orderLookupErr } = await supabase
+        .from("orders")
+        .select("id, order_number")
+        .eq("razorpay_order_id", razorpayOrderId)
+        .eq("status", "pending_payment")
+        .maybeSingle();
 
+      if (!orderLookupErr && existingByOrderId) {
+        // Order was created before payment - update it
+        const { error: updateErr } = await supabase
+          .from("orders")
+          .update({
+            status: "confirmed",
+            payment_status: paymentStatus,
+            razorpay_payment_id: razorpayPaymentId,
+            payment_verified: true,
+            payment_verified_at: new Date().toISOString(),
+          })
+          .eq("id", existingByOrderId.id);
+
+        if (updateErr) {
+          console.error("❌ Failed to update order:", updateErr);
+          throw new Error(`Failed to update order: ${updateErr.message}`);
+        }
+
+        console.log("✅ Order updated (store-before-payment):", existingByOrderId.id);
+
+        // Fetch order items for shipment and notifications
+        const { data: orderItemsData } = await supabase
+          .from("order_items")
+          .select("*")
+          .eq("order_id", existingByOrderId.id);
+
+        const calculateTotalWeight = () => {
+          if (!orderItemsData || orderItemsData.length === 0) return 0.5;
+          const totalGrams = orderItemsData.reduce((sum, item) => {
+            const w = item.weight && item.weight > 0 ? item.weight : 250;
+            return sum + w * (item.quantity || 1);
+          }, 0);
+          const weightKg = Math.max(0.5, totalGrams / 1000);
+          return Math.min(weightKg, 50);
+        };
+
+        const createShipment = async () => {
+          try {
+            const shipmentPayload = {
+              orderId: existingByOrderId.id,
+              orderNumber: existingByOrderId.order_number,
+              customerName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
+              customerPhone: checkout.shipping_address.phone || "",
+              customerEmail: checkout.shipping_address.email || "",
+              shippingAddress: checkout.shipping_address,
+              orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+                product_name: item.product_name || "",
+                quantity: item.quantity || 0,
+                unit_price: item.unit_price || 0,
+                total_price: item.total_price || 0,
+                weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
+              })),
+              totalWeight: calculateTotalWeight(),
+              orderAmount: checkout.total_amount,
+              paymentType: checkout.payment_type,
+              codAmount: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
+            };
+            const functionUrl = `${supabaseUrl}/functions/v1/create-nimbuspost-shipment`;
+            const response = await fetch(functionUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseServiceKey}` },
+              body: JSON.stringify(shipmentPayload),
+            });
+            if (!response.ok) console.warn("[Payment] Nimbus push failed:", response.status);
+          } catch (e) { console.warn("[Payment] Nimbus push error:", e); }
+        };
+
+        const sendNotifications = async (awbNumber: string | null) => {
+          try {
+            const notificationPayload = {
+              orderId: existingByOrderId.id,
+              customerEmail: checkout.shipping_address.email || "",
+              customerPhone: checkout.shipping_address.phone || "",
+              customerName: checkout.shipping_address.fullName || "Customer",
+              orderNumber: existingByOrderId.order_number || existingByOrderId.id.substring(0, 8).toUpperCase(),
+              orderTotal: checkout.total_amount,
+              orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+                product_name: item.product_name || "",
+                quantity: item.quantity || 0,
+                unit_price: item.unit_price || 0,
+                total_price: item.total_price || 0,
+                weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
+                grind_type: item.grind_type || null,
+              })),
+              shippingAddress: checkout.shipping_address,
+              paymentType: checkout.payment_type,
+              trackingNumber: awbNumber,
+            };
+            const functionUrl = `${supabaseUrl}/functions/v1/send-order-notification`;
+            const response = await fetch(functionUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseServiceKey}` },
+              body: JSON.stringify(notificationPayload),
+            });
+            if (!response.ok) console.error("Failed to send notifications:", await response.text());
+          } catch (e) { console.error("Error sending notifications:", e); }
+        };
+
+        createShipment().then(() => sendNotifications(null).catch(() => {}));
+
+        return new Response(
+          JSON.stringify({
+            verified: true,
+            message: "Payment verified and order updated successfully",
+            orderId: existingByOrderId.id,
+            orderNumber: existingByOrderId.order_number,
+            paymentStatus,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // LEGACY: Create new order (no pre-created order found)
     // Normalize phone number in shipping_address (remove +91, spaces, etc.)
     const normalizedShippingAddress = { ...checkout.shipping_address };
     if (normalizedShippingAddress.phone) {

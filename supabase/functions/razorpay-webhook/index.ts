@@ -135,7 +135,60 @@ async function processWebhookEvent(
           amount: paymentEntity.amount / 100,
         });
 
-        // Find pending order
+        // NEW FLOW: Look up order in orders table (store-before-payment pattern)
+        const { data: existingOrder, error: orderLookupError } = await supabaseAdmin
+          .from("orders")
+          .select("id, order_number, status, payment_status")
+          .eq("razorpay_order_id", razorpayOrderId)
+          .maybeSingle();
+
+        if (orderLookupError) {
+          console.error("❌ Error fetching order by razorpay_order_id:", orderLookupError);
+          return { success: false, error: orderLookupError.message };
+        }
+
+        if (existingOrder && existingOrder.status === "pending_payment") {
+          // Order was created before payment - just update it
+          const paymentStatus = existingOrder.payment_status === "pending" ? "paid" : existingOrder.payment_status;
+          const { error: updateError } = await supabaseAdmin
+            .from("orders")
+            .update({
+              status: "confirmed",
+              payment_status: paymentStatus,
+              razorpay_payment_id: paymentEntity.id,
+              payment_verified: true,
+              payment_verified_at: new Date().toISOString(),
+            })
+            .eq("id", existingOrder.id);
+
+          if (updateError) {
+            console.error("❌ Failed to update order:", updateError);
+            return { success: false, error: updateError.message };
+          }
+
+          console.log("✅ Order updated successfully (store-before-payment):", existingOrder.id);
+
+          // Fire-and-forget: create shipment (in case verify-razorpay-payment wasn't called - e.g. user closed tab)
+          const supabaseUrl = Deno.env.get("SUPABASE_URL");
+          const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+          if (supabaseUrl && supabaseServiceKey) {
+            fetch(`${supabaseUrl}/functions/v1/create-nimbuspost-shipment`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseServiceKey}` },
+              body: JSON.stringify({ order_id: existingOrder.id }),
+            }).catch((e) => console.warn("[Webhook] Nimbus push error:", e));
+          }
+
+          return { success: true };
+        }
+
+        if (existingOrder && existingOrder.status !== "pending_payment") {
+          // Order already processed (e.g. via verify-razorpay-payment)
+          console.log("ℹ️ Order already processed:", existingOrder.id);
+          return { success: true };
+        }
+
+        // FALLBACK: Find pending order (legacy flow)
         const { data: pendingOrder, error: pendingError } = await supabaseAdmin
           .from("pending_orders")
           .select("*")

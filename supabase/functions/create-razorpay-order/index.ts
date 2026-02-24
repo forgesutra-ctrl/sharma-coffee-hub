@@ -184,7 +184,99 @@ Deno.serve(async (req: Request) => {
 
     console.log("✅ Razorpay order created:", razorpayOrder.id);
 
-    // STEP 7: Return clean JSON response (frontend expects camelCase)
+    // STEP 7: Store order before payment (if checkoutData provided)
+    const checkoutData = rawBody?.checkoutData as {
+      user_id?: string;
+      subtotal?: number;
+      total_amount?: number;
+      shipping_address?: Record<string, any>;
+      pincode?: string;
+      shipping_region?: string;
+      shipping_charge?: number;
+      payment_type?: "prepaid" | "cod";
+      cod_advance_paid?: number;
+      cod_handling_fee?: number;
+      cod_balance?: number;
+      promotion_id?: string | null;
+      discount_amount?: number;
+      items?: Array<{
+        product_name: string;
+        product_id?: string;
+        weight: number;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+        variant_id?: string | null;
+      }>;
+    } | null;
+
+    if (checkoutData?.user_id && checkoutData?.items?.length) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        const normalizedShippingAddress = checkoutData.shipping_address ? { ...checkoutData.shipping_address } : {};
+        if (normalizedShippingAddress.phone) {
+          const phoneDigits = String(normalizedShippingAddress.phone).replace(/\D/g, "");
+          if (phoneDigits.length === 12 && phoneDigits.startsWith("91")) {
+            normalizedShippingAddress.phone = phoneDigits.substring(2);
+          } else if (phoneDigits.length === 10) {
+            normalizedShippingAddress.phone = phoneDigits;
+          }
+        }
+
+        const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .insert({
+            user_id: checkoutData.user_id,
+            order_number: orderNumber,
+            status: "pending_payment",
+            payment_status: "pending",
+            subtotal: checkoutData.subtotal ?? checkoutData.total_amount ?? 0,
+            total_amount: checkoutData.total_amount ?? amountRupees,
+            shipping_address: normalizedShippingAddress,
+            pincode: checkoutData.pincode ?? null,
+            shipping_region: checkoutData.shipping_region ?? null,
+            shipping_charge: checkoutData.shipping_charge ?? 0,
+            payment_type: checkoutData.payment_type ?? "prepaid",
+            cod_advance_paid: checkoutData.cod_advance_paid ?? 0,
+            cod_handling_fee: checkoutData.cod_handling_fee ?? 0,
+            cod_balance: checkoutData.cod_balance ?? 0,
+            razorpay_order_id: razorpayOrder.id,
+            payment_method: checkoutData.payment_type === "cod" ? "Cash on Delivery" : "Online Payment",
+            promotion_id: checkoutData.promotion_id ?? null,
+            discount_amount: checkoutData.discount_amount ?? 0,
+          })
+          .select("id")
+          .single();
+
+        if (!orderError && order) {
+          const orderItems = checkoutData.items!.map((item) => ({
+            order_id: order.id,
+            product_name: item.product_name,
+            product_id: item.product_id ?? null,
+            weight: typeof item.weight === "number" ? item.weight : 250,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            variant_id: item.variant_id ?? null,
+          }));
+          const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+          if (itemsError) {
+            console.error("❌ Failed to create order items, rolling back order:", itemsError);
+            await supabase.from("orders").delete().eq("id", order.id);
+          } else {
+            console.log("✅ Order created before payment:", order.id, "razorpay_order_id:", razorpayOrder.id);
+          }
+        } else if (orderError) {
+          console.error("❌ Failed to create order before payment:", orderError);
+        }
+      }
+    }
+
+    // STEP 8: Return clean JSON response (frontend expects camelCase)
     return new Response(
       JSON.stringify({
         order_id: razorpayOrder.id,
