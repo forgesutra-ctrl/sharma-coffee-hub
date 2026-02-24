@@ -102,17 +102,36 @@ async function processWebhookEvent(
   try {
     switch (event) {
       case "payment.captured": {
-        // One-time order payment confirmed
+        /*
+         * RAZORPAY WEBHOOK PAYLOAD STRUCTURE - payment.captured
+         *
+         * Razorpay sends ONLY the payment entity, NOT the order entity.
+         * The payload structure is:
+         * {
+         *   event: "payment.captured",
+         *   payload: {
+         *     payment: { entity: { id, amount, order_id, email, ... } }
+         *     // NOTE: payload.order is NOT present
+         *   }
+         * }
+         *
+         * ALWAYS use paymentEntity.order_id to get the order ID.
+         * NEVER require payload.order?.entity to be present.
+         *
+         * Removing this fix will cause ALL orders to fail silently.
+         */
         const paymentEntity = payload.payment?.entity;
-        const orderEntity = payload.order?.entity;
-
-        if (!paymentEntity || !orderEntity) {
-          return { success: false, error: "Missing payment or order entity" };
+        if (!paymentEntity) {
+          return { success: false, error: "Missing payment entity" };
+        }
+        const razorpayOrderId = paymentEntity.order_id || payload.order?.entity?.id;
+        if (!razorpayOrderId) {
+          return { success: false, error: "Missing order ID in payment entity" };
         }
 
         console.log("💰 Processing payment.captured:", {
           payment_id: paymentEntity.id,
-          order_id: orderEntity.id,
+          order_id: razorpayOrderId,
           amount: paymentEntity.amount / 100,
         });
 
@@ -120,7 +139,7 @@ async function processWebhookEvent(
         const { data: pendingOrder, error: pendingError } = await supabaseAdmin
           .from("pending_orders")
           .select("*")
-          .eq("razorpay_order_id", orderEntity.id)
+          .eq("razorpay_order_id", razorpayOrderId)
           .maybeSingle();
 
         if (pendingError) {
@@ -160,7 +179,7 @@ async function processWebhookEvent(
           payment_method: "razorpay",
           payment_status: "paid",
           payment_type: pendingOrder.payment_type,
-          razorpay_order_id: orderEntity.id,
+          razorpay_order_id: razorpayOrderId,
           razorpay_payment_id: paymentEntity.id,
         };
 
