@@ -26,9 +26,10 @@ interface Message {
   userMessageContent?: string;
 }
 
-const quickActions = [
+const quickActions: Array<{ label: string; icon: typeof Coffee; action: string; prompt?: string }> = [
   { label: "Browse Products", icon: ShoppingBag, action: "/shop" },
   { label: "Track Order", icon: Package, action: "track" },
+  { label: "Coffee tips", icon: Coffee, action: "ask", prompt: "What are your best tips for brewing South Indian filter coffee?" },
   { label: "Contact Us", icon: Phone, action: "/contact" },
 ];
 
@@ -59,7 +60,7 @@ export function ChatBot() {
           id: "welcome",
           role: "assistant",
           content:
-            "Hello! I'm the Sharma Coffee Works assistant ☕ How can I help you today?",
+            "Hello! I'm your Sharma Coffee assistant ☕ I can help with our products, orders & shipping—or answer any question about coffee: brewing, origins, roast levels, and more. What would you like to know?",
           timestamp: new Date(),
         },
       ]);
@@ -233,7 +234,7 @@ export function ChatBot() {
   }
 
   // Quick actions handler
-  function handleQuickAction(action: string) {
+  function handleQuickAction(action: string, prompt?: string) {
     if (action.startsWith("/")) {
       window.location.href = action;
       return;
@@ -241,6 +242,8 @@ export function ChatBot() {
 
     if (action === "track") {
       sendMessage("I want to track my order");
+    } else if (action === "ask" && prompt) {
+      sendMessage(prompt);
     }
   }
 
@@ -343,7 +346,7 @@ export function ChatBot() {
                         key={q.label}
                         variant="outline"
                         size="sm"
-                        onClick={() => handleQuickAction(q.action)}
+                        onClick={() => handleQuickAction(q.action, q.prompt)}
                       >
                         <q.icon className="w-4 h-4 mr-2" />
                         {q.label}
@@ -365,7 +368,7 @@ export function ChatBot() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message…"
+                placeholder="Ask about products, orders, or coffee…"
                 disabled={isLoading}
               />
               <Button type="submit" size="icon" disabled={isLoading}>

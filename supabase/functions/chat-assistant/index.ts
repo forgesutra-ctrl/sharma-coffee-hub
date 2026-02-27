@@ -417,8 +417,18 @@ Deno.serve(async (req: Request) => {
     const policyContext = buildPolicyContext();
     const navigationContext = buildNavigationContext();
 
-    // Build comprehensive system prompt
-    const systemPrompt = `You are a deeply knowledgeable and helpful customer service assistant for Sharma Coffee Works, a premium coffee roaster in India since 1987.
+    // Build comprehensive system prompt - hybrid: website context + general coffee expertise
+    const systemPrompt = `You are a state-of-the-art AI assistant for Sharma Coffee Works, a premium coffee roaster in India since 1987. You have TWO distinct capabilities:
+
+## CAPABILITY 1: COFFEE EXPERT (General Knowledge)
+When users ask about coffee in general—brewing methods, origins, roast levels, types (Arabica vs Robusta), history, health benefits, storage tips, grind sizes, cold brew, espresso, French press, South Indian filter coffee, or any educational coffee question—use your full coffee expertise. Be authoritative, engaging, and helpful. Share accurate, well-known coffee knowledge. You are a coffee sommelier and educator.
+
+## CAPABILITY 2: SHARMA COFFEE SPECIALIST (Website Context Only)
+When users ask about Sharma Coffee products, orders, shipping, subscriptions, policies, or anything specific to this business—you MUST use ONLY the context below. Never invent products, prices, or policies.
+
+---
+
+SHARMA COFFEE CONTEXT (use ONLY for company-specific questions):
 
 ${companyContext}
 
@@ -430,10 +440,16 @@ ${policyContext}
 
 ${navigationContext}
 
-CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
+---
 
-1. ACCURACY & GROUNDING:
-   - ONLY use information provided in the context above
+## INTENT DETECTION
+- "How do I brew...", "What is cold brew?", "Difference between Arabica and Robusta", "Coffee origins", "Roast levels explained" → COFFEE EXPERT mode (use general knowledge)
+- "Your products", "Gold Blend price", "Shipping to Mumbai", "Track my order", "Subscription" → SHARMA COFFEE SPECIALIST mode (use context only)
+
+## CRITICAL RULES FOR SHARMA COFFEE QUESTIONS:
+
+1. ACCURACY & GROUNDING (website questions only):
+   - ONLY use information provided in the context above for company-specific queries
    - NEVER invent products, prices, features, or policies
    - If information is not in the context, say: "I don't see that information listed on our website. Let me help you find what you need, or you can contact our support team at ask@sharmacoffeeworks.com"
    - When discussing products, ALWAYS mention specific variants (weight, price) when relevant
@@ -479,9 +495,9 @@ CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
    - NEVER make promises about delivery times or policies not listed above
 
 7. HANDLING UNKNOWN QUESTIONS:
-   - If you don't have the information, be honest: "I don't see that listed on our website"
-   - Offer to help find related information
-   - Suggest contacting support: ask@sharmacoffeeworks.com or +91 8762 988 145
+   - For SHARMA COFFEE questions: If info isn't in context, say "I don't see that on our website" and suggest support
+   - For GENERAL COFFEE questions: Use your expertise; if truly outside your knowledge, say so and offer related info
+   - Suggest contacting support for company-specific help: ask@sharmacoffeeworks.com or +91 8762 988 145
    - Ask clarifying questions when multiple products/variants might apply
 
 8. PRODUCT RECOMMENDATIONS:
@@ -499,7 +515,14 @@ CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
    - Example CORRECT response: "Subscriptions are available for this product. You'll pay the same price but get free shipping on all deliveries."
    - Example WRONG response: "Subscriptions get 15% off" - THIS IS FORBIDDEN
 
-Remember: You are representing a family business with 40+ years of tradition. Be respectful, knowledgeable, and helpful. Always ground your responses in the actual data provided above. NEVER invent discounts or savings.
+10. COFFEE EXPERT TONE (for general coffee questions):
+   - Be warm, curious, and passionate about coffee
+   - Use analogies and examples when explaining concepts
+   - Offer practical tips (e.g., water temperature, grind size, ratios)
+   - When relevant, gently connect to Sharma Coffee (e.g., "For South Indian filter coffee like ours...")
+   - Keep responses concise but informative—avoid walls of text
+
+Remember: For Sharma Coffee questions, ground responses in the context. For general coffee questions, use your expertise freely. You represent a family business with 40+ years of tradition—be respectful, knowledgeable, and helpful. NEVER invent products, prices, or discounts.
 
 EXAMPLES OF CORRECT SUBSCRIPTION RESPONSES:
 ✅ CORRECT: "Subscriptions are available for this product. You'll pay the same price (₹X) but get free shipping on all deliveries."
@@ -516,7 +539,7 @@ If you find yourself about to write any percentage, discount, or savings amount 
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     
     if (!openaiApiKey) {
-      // Fallback demo mode
+      // Fallback demo mode (when OPENAI_API_KEY not set)
       const lowerMessage = message.toLowerCase();
       let demoResponse = '';
 
@@ -524,10 +547,12 @@ If you find yourself about to write any percentage, discount, or savings amount 
         demoResponse = `Great question! We offer FREE shipping on all subscription orders. For one-time purchases, shipping is weight-based: Karnataka (₹50/kg), South India (₹60/kg), Rest of India (₹100/kg). Delivery typically takes 2-4 business days for metro cities, 4-6 days for tier 2 cities.\n\nWould you like to know more about our products or subscriptions?`;
       } else if (lowerMessage.includes('subscribe') || lowerMessage.includes('subscription')) {
         demoResponse = `Our coffee subscription is perfect for regular coffee lovers! Get free shipping on all subscription orders (no shipping charges), and your favorite coffee delivered automatically. You can pause, skip, or cancel anytime - no commitments!\n\nNote: Subscription prices are the same as one-time purchases - the benefit is free shipping.\n\nWould you like to explore our subscription options?`;
+      } else if (lowerMessage.includes('brew') || lowerMessage.includes('cold brew') || lowerMessage.includes('arabica') || lowerMessage.includes('robusta') || lowerMessage.includes('roast')) {
+        demoResponse = `I'd love to help with that! To give you the best answer, please ensure OPENAI_API_KEY is set in your Supabase Edge Function secrets. With it configured, I can answer any coffee question—brewing tips, origins, roast levels, and more.\n\nFor now, you can check our Brewing Guide at /brewing-guide, or ask about our products!`;
       } else if (lowerMessage.includes('product') || lowerMessage.includes('coffee')) {
-        demoResponse = `We offer a variety of premium coffee powders sourced from Coorg, Karnataka! Each product has multiple weight variants with different prices. Some products are also available for subscription with additional discounts.\n\nWhat kind of coffee do you prefer - strong, medium, or light? I can help you find the perfect match!`;
+        demoResponse = `We offer a variety of premium coffee powders sourced from Coorg, Karnataka! Each product has multiple weight variants with different prices. Subscriptions offer free shipping.\n\nWhat kind of coffee do you prefer - strong, medium, or light? I can help you find the perfect match!`;
       } else {
-        demoResponse = `Hello! Welcome to Sharma Coffee Works - a family legacy since 1987!\n\nI'm here to help you with:\n• Product recommendations and details\n• Shipping & delivery information\n• Subscriptions (free shipping on all orders!)\n• Order tracking\n• Returns & refunds\n\nHow can I assist you today?`;
+        demoResponse = `Hello! Welcome to Sharma Coffee Works - a family legacy since 1987! ☕\n\nI can help with:\n• **Our products** – recommendations, prices, variants\n• **Shipping & orders** – delivery, tracking\n• **Subscriptions** – free shipping, pause anytime\n• **Coffee knowledge** – brewing, origins, tips\n\nAsk me anything about coffee or our products!`;
       }
 
       return new Response(
@@ -564,6 +589,7 @@ If you find yourself about to write any percentage, discount, or savings amount 
       content: message,
     });
 
+    const chatModel = Deno.env.get("CHAT_MODEL") || "gpt-4o-mini";
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -571,9 +597,9 @@ If you find yourself about to write any percentage, discount, or savings amount 
         "Authorization": `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: chatModel,
         messages: messages,
-        max_tokens: 800,
+        max_tokens: 1024,
         temperature: 0.7,
         stream: true,
       }),
