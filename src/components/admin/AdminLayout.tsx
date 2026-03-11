@@ -14,7 +14,8 @@ import {
   FileText,
   Tag,
   BookOpen,
-  BarChart3
+  BarChart3,
+  Repeat
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 const allSidebarLinks = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, superAdminOnly: true, staffAllowed: false },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: true },
+  { name: 'Subscriptions', href: '/admin/subscriptions', icon: Repeat, superAdminOnly: true, staffAllowed: true },
   { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
   { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },
   { name: 'Customers', href: '/admin/customers', icon: Users, superAdminOnly: true, staffAllowed: true },
@@ -93,7 +95,7 @@ export default function AdminLayout() {
   const isRouteAccessible = (path: string) => {
     if (isSuperAdmin) return true;
     if (isStaff) {
-      const allowedPaths = ['/admin/operations', '/admin/shipping', '/admin/orders', '/admin/customers'];
+      const allowedPaths = ['/admin/operations', '/admin/shipping', '/admin/orders', '/admin/customers', '/admin/subscriptions'];
       return allowedPaths.some(p => path.startsWith(p));
     }
     return false;

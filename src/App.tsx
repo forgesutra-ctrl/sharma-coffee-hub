@@ -52,6 +52,7 @@ import ShippingPage from "./pages/admin/ShippingPage";
 import OperationsPage from "./pages/admin/OperationsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
+import SubscriptionsPage from "./pages/admin/SubscriptionsPage";
 
 const queryClient = new QueryClient();
 
@@ -144,6 +145,7 @@ const App = () => {
                 }>
                   <Route index element={<AdminDashboard />} />
                   <Route path="orders" element={<OrdersPage />} />
+                  <Route path="subscriptions" element={<SubscriptionsPage />} />
                   <Route path="products" element={<ProductsPage />} />
                   <Route path="categories" element={<CategoriesPage />} />
                   <Route path="customers" element={<CustomersPage />} />
