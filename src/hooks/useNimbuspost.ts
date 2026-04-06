@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState } from "react";
+
+// NIMBUSPOST - DEPRECATED — shipping flows now use `@/services/prozo`. Kept for reference only.
+/*
 import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -195,5 +198,23 @@ export function useNimbuspost() {
     downloadShippingLabel,
     trackShipment,
     cancelShipment,
+  };
+}
+*/
+
+/** @deprecated Nimbuspost replaced by Prozo; stub avoids runtime use of deprecated Edge Functions. */
+export function useNimbuspost() {
+  const [loading] = useState(false);
+  const [error] = useState<string | null>("Nimbuspost is deprecated — use Prozo (src/services/prozo.ts)");
+  const reject = async () => {
+    throw new Error("Nimbuspost is deprecated. Use src/services/prozo.ts.");
+  };
+  return {
+    loading,
+    error,
+    createConsignment: reject,
+    downloadShippingLabel: reject,
+    trackShipment: reject,
+    cancelShipment: reject,
   };
 }

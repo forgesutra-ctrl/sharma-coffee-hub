@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import AdminOrStaffOnly from '@/components/admin/AdminOrStaffOnly';
+import { createProzoShipment } from '@/services/prozo';
 
 type Order = Tables<'orders'>;
 type OrderItem = Tables<'order_items'>;
@@ -27,9 +28,8 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [creatingShipment, setCreatingShipment] = useState(false);
-  const [nimbusCreateLoading, setNimbusCreateLoading] = useState(false);
-  const [nimbusCreateError, setNimbusCreateError] = useState<string | null>(null);
+  const [prozoCreateLoading, setProzoCreateLoading] = useState(false);
+  const [prozoCreateError, setProzoCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -112,76 +112,122 @@ export default function OrdersPage() {
     setFilteredOrders(filtered);
   };
 
-  const createNimbusShipment = async () => {
+  const createProzoShipmentForOrder = async () => {
     if (!selectedOrder) return;
-    setNimbusCreateLoading(true);
-    setNimbusCreateError(null);
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    setProzoCreateLoading(true);
+    setProzoCreateError(null);
     try {
-      const session = (await supabase.auth.getSession()).data.session;
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token && { Authorization: `Bearer ${session.access_token}` }),
-        },
-        body: JSON.stringify({
-          order_id: selectedOrder.id,
-          order_number: selectedOrder.order_number,
-        }),
-      });
-      const text = await res.text();
-      let data: { success?: boolean; error?: string; details?: string; hint?: string } = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        console.error('[Nimbus] Response not JSON:', text?.slice(0, 200));
-      }
-      if (import.meta.env.DEV) {
-        console.log('[Nimbus] Create shipment response:', res.status, data);
-      }
-      const nimbusBody = (data as { data?: unknown }).data;
-      if (import.meta.env.DEV && nimbusBody != null) {
-        console.log('[Nimbus] Nimbus API response (expand to inspect):', nimbusBody);
-      }
-      if (!res.ok || !data?.success) {
-        let msg = data?.error || data?.details || (res.ok ? 'Unknown error' : `Request failed: ${res.status}`);
-        if (data?.hint) {
-          msg += '\n\n' + data.hint;
-        } else if (typeof msg === 'string' && (msg.includes('Token') || msg.includes('token') || msg.includes('invalid Token'))) {
-          msg += ' Use the Old API key from Nimbuspost (Settings → API → “Your API Key” under Old API), set as NIMBUS_API_KEY in Supabase → Edge Functions → Secrets.';
-        }
-        setNimbusCreateError(msg);
+      const addr = selectedOrder.shipping_address as Record<string, string> | null;
+      if (!addr) {
+        const msg = 'Order has no shipping address';
+        setProzoCreateError(msg);
         toast.error(msg);
         return;
       }
-      if (data?.skipped) {
-        const msg = data?.message || 'Nimbus Post is not configured. Orders are not being sent to Nimbus.';
-        setNimbusCreateError(msg);
-        toast.warning(msg);
-      } else if ((data as { nimbus_response_empty?: boolean }).nimbus_response_empty) {
-        const msg = 'Order data was sent to Nimbus but we got no confirmation. If the order does not appear in Nimbus Post, the API endpoint or payload may be wrong. Get the correct "create order" API from Nimbus Post → Settings → API (or support) and set NIMBUS_API_ORDERS_PATH if needed.';
-        setNimbusCreateError(msg);
-        toast.warning(msg);
-      } else {
-        setNimbusCreateError(null);
-        toast.success(`Shipment created for ${selectedOrder.order_number}`);
-      }
+      const items =
+        orderItems.length > 0
+          ? orderItems.map((item) => ({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              weight: item.weight,
+              product_id: item.product_id,
+              unit_price: item.unit_price,
+            }))
+          : [{ product_name: 'Order', quantity: 1, weight: 250, unit_price: Number(selectedOrder.total_amount) }];
+
+      const { awb } = await createProzoShipment({
+        orderId: selectedOrder.id,
+        totalAmount: Number(selectedOrder.total_amount),
+        paymentType: selectedOrder.payment_type,
+        codBalance: selectedOrder.cod_balance,
+        customerEmail: addr.email || undefined,
+        address: {
+          fullName: addr.fullName || addr.full_name || 'Customer',
+          addressLine1: addr.addressLine1 || addr.address_line1 || '',
+          addressLine2: addr.addressLine2 || addr.address_line2 || '',
+          city: addr.city || '',
+          state: addr.state || '',
+          pincode: addr.pincode || '',
+          phone: addr.phone || '',
+          email: addr.email || '',
+        },
+        items,
+      });
+
+      const now = new Date().toISOString();
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update({
+          tracking_number: awb,
+          shipping_provider: 'prozo',
+          shipment_created_at: now,
+          status: 'shipped',
+        })
+        .eq('id', selectedOrder.id);
+
+      if (updateErr) throw updateErr;
+
+      setSelectedOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              tracking_number: awb,
+              shipping_provider: 'prozo',
+              shipment_created_at: now,
+              status: 'shipped',
+            }
+          : null,
+      );
+      await fetchOrders();
+      setProzoCreateError(null);
+      toast.success(`Prozo shipment created. AWB: ${awb}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create shipment';
-      console.error('[Nimbus] Create shipment error:', err);
-      setNimbusCreateError(msg);
+      console.error('[Prozo] Create shipment error:', err);
+      setProzoCreateError(msg);
       toast.error(msg);
     } finally {
-      setNimbusCreateLoading(false);
+      setProzoCreateLoading(false);
     }
   };
+
+  // NIMBUSPOST - DEPRECATED
+  // const createNimbusShipment = async () => {
+  //   if (!selectedOrder) return;
+  //   setNimbusCreateLoading(true);
+  //   setNimbusCreateError(null);
+  //   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  //   try {
+  //     const session = (await supabase.auth.getSession()).data.session;
+  //     const res = await fetch(`${SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         ...(session?.access_token && { Authorization: `Bearer ${session.access_token}` }),
+  //       },
+  //       body: JSON.stringify({
+  //         order_id: selectedOrder.id,
+  //         order_number: selectedOrder.order_number,
+  //       }),
+  //     });
+  //     const text = await res.text();
+  //     let data: { success?: boolean; error?: string; details?: string; hint?: string } = {};
+  //     try {
+  //       data = text ? JSON.parse(text) : {};
+  //     } catch {
+  //       console.error('[Nimbus] Response not JSON:', text?.slice(0, 200));
+  //     }
+  //      ...
+  //   } finally {
+  //     setNimbusCreateLoading(false);
+  //   }
+  // };
 
   const viewOrderDetails = async (order: Order) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
     setOrderItems([]);
-    setNimbusCreateError(null);
+    setProzoCreateError(null);
 
     try {
       console.log('🔍 OrdersPage: Fetching items for order:', order.id, order.order_number);
@@ -231,63 +277,8 @@ export default function OrdersPage() {
     }
   };
 
-  const createNimbuspostShipment = async (order: Order) => {
-    setCreatingShipment(true);
-    try {
-      const addr = order.shipping_address as Record<string, string> | null;
-      const payload = {
-        orderId: order.id,
-        customerName: addr?.fullName || addr?.full_name || 'Customer',
-        customerPhone: addr?.phone || '',
-        customerEmail: addr?.email || '',
-        shippingAddress: {
-          fullName: addr?.fullName || addr?.full_name || 'Customer',
-          addressLine1: addr?.addressLine1 || addr?.address_line1 || '',
-          addressLine2: addr?.addressLine2 || addr?.address_line2 || '',
-          city: addr?.city || '',
-          state: addr?.state || '',
-          pincode: addr?.pincode || '',
-          phone: addr?.phone || '',
-        },
-        orderItems: orderItems.map((item) => ({
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          weight: item.weight ?? 0,
-        })),
-        totalWeight: 0.5,
-        orderAmount: Number(order.total_amount),
-        paymentType: (order.payment_type as 'prepaid' | 'cod') || 'prepaid',
-        codAmount: order.payment_type === 'cod' ? Number(order.cod_balance || 0) : undefined,
-      };
-      const { data: { session } } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success && data.awbNumber) {
-        toast.success(`Shipment created. AWB: ${data.awbNumber}`);
-        await fetchOrders();
-        setSelectedOrder((prev) => prev ? { ...prev, nimbuspost_awb_number: data.awbNumber, nimbuspost_courier_name: data.courierName ?? null, nimbuspost_tracking_url: data.trackingUrl ?? null } : null);
-      } else if (data.skipped) {
-        const msg = data.message || 'Nimbuspost is not configured. Add NIMBUS_API_KEY in Supabase Dashboard → Project Settings → Edge Functions → Secrets (for this project).';
-        toast.warning(msg);
-      } else {
-        toast.error(data.error || 'Failed to create shipment');
-      }
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to create shipment');
-    } finally {
-      setCreatingShipment(false);
-    }
-  };
+  // NIMBUSPOST - DEPRECATED
+  // const createNimbuspostShipment = async (order: Order) => { ... create-nimbuspost-shipment edge function ... };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -548,7 +539,7 @@ export default function OrdersPage() {
                     {orderItems.length > 0 && (
                       <p className="text-sm font-medium pt-2 border-t">
                         Total weight: {(orderItems.reduce((sum, item) => sum + (item.weight && item.weight > 0 ? item.weight : 250) * (item.quantity || 1), 0) / 1000).toFixed(2)} kg
-                        <span className="text-muted-foreground font-normal ml-1">(use this in Nimbus/shipping)</span>
+                        <span className="text-muted-foreground font-normal ml-1">(use this for shipping weight)</span>
                       </p>
                     )}
                   </div>
@@ -571,15 +562,20 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Shipment (Nimbuspost) */}
+              {/* Shipment (Prozo); legacy Nimbuspost AWB still shown if present */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  Shipment (Nimbuspost)
+                  Shipment (Prozo)
                 </h4>
-                {selectedOrder.nimbuspost_awb_number ? (
+                {selectedOrder.tracking_number && selectedOrder.shipping_provider === 'prozo' ? (
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
-                    <p><span className="font-medium">AWB:</span> <span className="font-mono">{selectedOrder.nimbuspost_awb_number}</span></p>
+                    <p><span className="font-medium">AWB:</span> <span className="font-mono">{selectedOrder.tracking_number}</span></p>
+                    <p><span className="font-medium">Provider:</span> Prozo</p>
+                  </div>
+                ) : selectedOrder.nimbuspost_awb_number ? (
+                  <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
+                    <p><span className="font-medium">AWB (legacy):</span> <span className="font-mono">{selectedOrder.nimbuspost_awb_number}</span></p>
                     {selectedOrder.nimbuspost_courier_name && (
                       <p><span className="font-medium">Courier:</span> {selectedOrder.nimbuspost_courier_name}</p>
                     )}
@@ -597,14 +593,14 @@ export default function OrdersPage() {
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={createNimbusShipment}
-                      disabled={nimbusCreateLoading || orderItems.length === 0}
+                      onClick={createProzoShipmentForOrder}
+                      disabled={prozoCreateLoading || orderItems.length === 0}
                     >
-                      {nimbusCreateLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
+                      {prozoCreateLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
                     </Button>
-                    {nimbusCreateError && (
+                    {prozoCreateError && (
                       <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                        {nimbusCreateError}
+                        {prozoCreateError}
                       </p>
                     )}
                   </>

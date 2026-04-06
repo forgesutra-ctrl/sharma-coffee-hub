@@ -280,6 +280,8 @@ export type Database = {
           nimbuspost_courier_name: string | null
           nimbuspost_tracking_url: string | null
           order_number: string
+          shipping_provider: string | null
+          tracking_number: string | null
           payment_method: string | null
           payment_status: string | null
           payment_type: string | null
@@ -313,6 +315,8 @@ export type Database = {
           nimbuspost_courier_name?: string | null
           nimbuspost_tracking_url?: string | null
           order_number: string
+          shipping_provider?: string | null
+          tracking_number?: string | null
           payment_method?: string | null
           payment_status?: string | null
           payment_type?: string | null
@@ -346,6 +350,8 @@ export type Database = {
           nimbuspost_courier_name?: string | null
           nimbuspost_tracking_url?: string | null
           order_number?: string
+          shipping_provider?: string | null
+          tracking_number?: string | null
           payment_method?: string | null
           payment_status?: string | null
           payment_type?: string | null

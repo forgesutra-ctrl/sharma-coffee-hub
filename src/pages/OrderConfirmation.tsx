@@ -41,6 +41,8 @@ interface Order {
   created_at: string;
   order_items: OrderItem[];
   nimbuspost_awb_number?: string | null;
+  tracking_number?: string | null;
+  shipping_provider?: string | null;
   shipment_created_at?: string | null;
 }
 
@@ -417,7 +419,7 @@ const OrderConfirmation = () => {
         </Card>
 
         {/* Tracking Information */}
-        {order.nimbuspost_awb_number ? (
+        {order.tracking_number || order.nimbuspost_awb_number ? (
           <Card className="mb-6 border-primary/20 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -430,20 +432,29 @@ const OrderConfirmation = () => {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Tracking Number (AWB)</p>
                   <p className="text-lg font-mono font-semibold text-primary">
-                    {order.nimbuspost_awb_number}
+                    {order.tracking_number || order.nimbuspost_awb_number}
                   </p>
                 </div>
-                <Button asChild className="w-full sm:w-auto">
-                  <a
-                    href={`https://sharmacoffeeworks.odrtrk.live/tracking?awb=${order.nimbuspost_awb_number}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2"
-                  >
-                    Track Shipment
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </Button>
+                {order.tracking_number ? (
+                  <Button asChild className="w-full sm:w-auto" variant="default">
+                    <Link to="/account/orders" className="flex items-center gap-2">
+                      Track in My Orders
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild className="w-full sm:w-auto">
+                    <a
+                      href={`https://sharmacoffeeworks.odrtrk.live/tracking?awb=${order.nimbuspost_awb_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      Track Shipment
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                )}
                 {order.shipment_created_at && (
                   <p className="text-xs text-muted-foreground">
                     Shipment created on {format(new Date(order.shipment_created_at), "MMM dd, yyyy 'at' h:mm a")}

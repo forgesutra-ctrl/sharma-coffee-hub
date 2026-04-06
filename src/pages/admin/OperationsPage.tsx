@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { useNimbuspost } from '@/hooks/useNimbuspost';
+import { trackProzoShipment, cancelProzoShipment } from '@/services/prozo';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import BulkInventoryUpload from '@/components/admin/BulkInventoryUpload';
@@ -96,7 +96,7 @@ const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
 
 export default function OperationsPage() {
   const { user } = useAuth();
-  const { trackShipment, cancelShipment, loading: nimbuspostLoading } = useNimbuspost();
+  const [prozoLoading, setProzoLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('inventory');
 
   // ========== INVENTORY STATE ==========
@@ -402,8 +402,14 @@ export default function OperationsPage() {
     setTrackingData(null);
 
     try {
-      const data = await trackShipment(awb);
-      setTrackingData(data);
+      const data = await trackProzoShipment(awb);
+      setTrackingData({
+        currentStatus: data.currentStatus,
+        lastUpdatedDate: data.lastUpdatedDate,
+        lastLocation: data.lastLocation,
+        history: data.history,
+        mappedStatus: data.mappedStatus,
+      });
     } catch (error) {
       toast.error('Failed to track shipment');
     } finally {
@@ -411,18 +417,31 @@ export default function OperationsPage() {
     }
   };
 
+  // NIMBUSPOST - DEPRECATED — handleTrackShipment used trackShipment from useNimbuspost → nimbuspost-track Edge Function
+
   const handleCancelShipment = async (shipment: Shipment) => {
     if (!confirm(`Cancel shipment ${shipment.awb}?`)) return;
 
+    const orderRefId = shipment.order_id?.trim();
+    if (!orderRefId) {
+      toast.error('Cannot cancel: shipment has no order_id for Prozo');
+      return;
+    }
+
+    setProzoLoading(true);
     try {
-      await cancelShipment(shipment.awb);
+      await cancelProzoShipment(orderRefId);
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', shipment.awb);
       toast.success('Shipment cancelled');
       fetchEscalatedShipments();
     } catch (error) {
       toast.error('Failed to cancel shipment');
+    } finally {
+      setProzoLoading(false);
     }
   };
+
+  // NIMBUSPOST - DEPRECATED — cancelShipment(awb) via nimbuspost-cancel Edge Function
 
   // ========== HELPERS ==========
   const getStatusBadge = (status: string | null) => {
@@ -774,7 +793,7 @@ export default function OperationsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleTrackShipment(shipment.awb)}
-                              disabled={nimbuspostLoading}
+                              disabled={prozoLoading}
                             >
                               <MapPin className="h-4 w-4" />
                             </Button>
@@ -789,7 +808,7 @@ export default function OperationsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleCancelShipment(shipment)}
-                              disabled={nimbuspostLoading}
+                              disabled={prozoLoading}
                               className="text-destructive hover:text-destructive"
                             >
                               <XCircle className="h-4 w-4" />

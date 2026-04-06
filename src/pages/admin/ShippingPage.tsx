@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useNimbuspost } from '@/hooks/useNimbuspost';
+import { createProzoShipment, trackProzoShipment, cancelProzoShipment } from '@/services/prozo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,15 +22,21 @@ interface Order {
   total_amount: number;
   shipping_address: {
     full_name?: string;
+    fullName?: string;
     phone?: string;
     address_line1?: string;
     address_line2?: string;
+    addressLine1?: string;
+    addressLine2?: string;
     city?: string;
     state?: string;
     pincode?: string;
+    email?: string;
   } | null;
   status: string;
   created_at: string;
+  payment_type?: string | null;
+  cod_balance?: number | null;
 }
 
 interface Shipment {
@@ -54,7 +60,7 @@ interface TrackingEvent {
 
 export default function ShippingPage() {
   const { user, isAdmin, isStaff } = useAuth();
-  const { loading: nimbuspostLoading, createConsignment, downloadShippingLabel, trackShipment, cancelShipment } = useNimbuspost();
+  const [prozoLoading, setProzoLoading] = useState(false);
 
   // Create Shipment Form State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -86,6 +92,8 @@ export default function ShippingPage() {
   // Cancel Dialog State
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelAwb, setCancelAwb] = useState('');
+  /** Prozo cancel reference — order UUID (same as create reference) */
+  const [cancelOrderReferenceId, setCancelOrderReferenceId] = useState('');
 
   // Quick Track State
   const [quickTrackAwb, setQuickTrackAwb] = useState('');
@@ -100,7 +108,7 @@ export default function ShippingPage() {
   const fetchPendingOrders = async () => {
     const { data, error } = await supabase
       .from('orders')
-      .select('id, order_number, total_amount, shipping_address, status, created_at')
+      .select('id, order_number, total_amount, shipping_address, status, created_at, payment_type, cod_balance')
       .in('status', ['pending', 'confirmed', 'processing'])
       .order('created_at', { ascending: false });
 
@@ -154,37 +162,75 @@ export default function ShippingPage() {
     }
 
     const address = selectedOrder.shipping_address;
-    if (!address?.full_name || !address?.phone || !address?.address_line1 || !address?.pincode || !address?.city || !address?.state) {
+    const fullName = address?.full_name || address?.fullName;
+    const line1 = address?.address_line1 || address?.addressLine1;
+    if (!fullName || !address?.phone || !line1 || !address?.pincode || !address?.city || !address?.state) {
       toast.error('Order is missing required shipping address details');
       return;
     }
 
+    setProzoLoading(true);
     try {
-      const result = await createConsignment({
-        orderId: selectedOrder.order_number,
-        customerName: address.full_name,
-        phone: address.phone,
-        address: [address.address_line1, address.address_line2].filter(Boolean).join(', '),
-        pincode: address.pincode,
-        city: address.city,
-        state: address.state,
-        items: [],
-        totalValue: selectedOrder.total_amount,
-        weightKg: parseFloat(weightKg) || 0.5,
-        dimensionsCm: {
-          length: parseFloat(length) || 10,
-          width: parseFloat(width) || 10,
-          height: parseFloat(height) || 10,
+      const { data: lineItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('product_name, quantity, weight, product_id, unit_price')
+        .eq('order_id', selectedOrder.id);
+
+      if (itemsError) throw itemsError;
+
+      const items =
+        lineItems && lineItems.length > 0
+          ? lineItems.map((row) => ({
+              product_name: row.product_name,
+              quantity: row.quantity,
+              weight: row.weight,
+              product_id: row.product_id,
+              unit_price: row.unit_price,
+            }))
+          : [
+              {
+                product_name: 'Shipment',
+                quantity: 1,
+                weight: Math.round((parseFloat(weightKg) || 0.5) * 1000),
+                unit_price: selectedOrder.total_amount,
+              },
+            ];
+
+      const { awb } = await createProzoShipment({
+        orderId: selectedOrder.id,
+        totalAmount: selectedOrder.total_amount,
+        paymentType: isCOD ? 'cod' : selectedOrder.payment_type || 'prepaid',
+        codBalance: isCOD ? parseFloat(codAmount) : selectedOrder.cod_balance,
+        customerEmail: address.email || undefined,
+        address: {
+          fullName,
+          addressLine1: line1,
+          addressLine2: address.address_line2 || address.addressLine2 || '',
+          city: address.city,
+          state: address.state,
+          pincode: address.pincode,
+          phone: address.phone,
+          email: address.email || '',
         },
-        isCOD,
-        codAmount: isCOD ? parseFloat(codAmount) : undefined,
+        items,
+        shipmentWeightGrams: Math.round((parseFloat(weightKg) || 0.5) * 1000),
+        itemLengthCm: parseFloat(length) || 20,
+        itemBreadthCm: parseFloat(width) || 15,
+        itemHeightCm: parseFloat(height) || 10,
       });
 
-      // Save to database
+      const now = new Date().toISOString();
+      await supabase.from('orders').update({
+        tracking_number: awb,
+        shipping_provider: 'prozo',
+        status: 'shipped',
+        shipment_created_at: now,
+      }).eq('id', selectedOrder.id);
+
       await supabase.from('shipments').insert({
         order_id: selectedOrder.id,
-        awb: result.awb,
-        customer_name: address.full_name,
+        awb,
+        customer_name: fullName,
         customer_phone: address.phone,
         shipping_address: address,
         weight_kg: parseFloat(weightKg) || 0.5,
@@ -194,25 +240,22 @@ export default function ShippingPage() {
         status: 'booked',
       });
 
-      // Update order status
-      await supabase.from('orders').update({ status: 'shipped' }).eq('id', selectedOrder.id);
-
-      setCreatedAwb(result.awb);
-      toast.success(`Shipment created! AWB: ${result.awb}`);
+      setCreatedAwb(awb);
+      toast.success(`Shipment created! AWB: ${awb}`);
       fetchPendingOrders();
       fetchShipments();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create shipment');
+    } finally {
+      setProzoLoading(false);
     }
   };
 
-  const handlePrintLabel = async (awb: string) => {
-    try {
-      await downloadShippingLabel(awb);
-      toast.success('Label downloaded');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to download label');
-    }
+  // NIMBUSPOST - DEPRECATED — previously: createConsignment via useNimbuspost / create-nimbuspost-shipment
+
+  const handlePrintLabel = async (_awb: string) => {
+    // NIMBUSPOST - DEPRECATED — label PDF was fetched from nimbuspost-shipping-label Edge Function
+    toast.info('Labels for Prozo are not wired in the app yet. Use the Prozo dashboard or API.');
   };
 
   const handleTrack = async (awb: string) => {
@@ -220,8 +263,13 @@ export default function ShippingPage() {
     setTrackingModalOpen(true);
     setTrackingLoading(true);
     try {
-      const data = await trackShipment(awb);
-      setTrackingData(data);
+      const data = await trackProzoShipment(awb);
+      setTrackingData({
+        currentStatus: data.currentStatus,
+        lastUpdatedDate: data.lastUpdatedDate,
+        lastLocation: data.lastLocation,
+        history: data.history,
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to track shipment');
     } finally {
@@ -238,16 +286,26 @@ export default function ShippingPage() {
   };
 
   const handleCancelConfirm = async () => {
+    if (!cancelOrderReferenceId.trim()) {
+      toast.error('Missing order id for Prozo cancellation');
+      return;
+    }
+    setProzoLoading(true);
     try {
-      await cancelShipment(cancelAwb);
+      await cancelProzoShipment(cancelOrderReferenceId.trim());
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', cancelAwb);
       toast.success('Shipment cancelled');
       setCancelDialogOpen(false);
+      setCancelOrderReferenceId('');
       fetchShipments();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to cancel shipment');
+    } finally {
+      setProzoLoading(false);
     }
   };
+
+  // NIMBUSPOST - DEPRECATED — cancelShipment(awb) via nimbuspost-cancel Edge Function
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
@@ -300,7 +358,7 @@ export default function ShippingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create New Shipment</CardTitle>
-              <CardDescription>Select an order and create a Nimbuspost shipment</CardDescription>
+              <CardDescription>Select an order and create a Prozo shipment</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -367,8 +425,8 @@ export default function ShippingPage() {
               </div>
 
               <div className="flex gap-4">
-                <Button onClick={handleCreateShipment} disabled={!selectedOrder || nimbuspostLoading}>
-                  {nimbuspostLoading ? 'Creating...' : 'Create Shipment'}
+                <Button onClick={handleCreateShipment} disabled={!selectedOrder || prozoLoading}>
+                  {prozoLoading ? 'Creating...' : 'Create Shipment'}
                 </Button>
 
                 {createdAwb && (
@@ -454,6 +512,7 @@ export default function ShippingPage() {
                                 className="text-destructive"
                                 onClick={() => {
                                   setCancelAwb(shipment.awb);
+                                  setCancelOrderReferenceId(shipment.order_id || '');
                                   setCancelDialogOpen(true);
                                 }}
                               >
@@ -513,7 +572,7 @@ export default function ShippingPage() {
                   onChange={e => setQuickTrackAwb(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleQuickTrack()}
                 />
-                <Button onClick={handleQuickTrack} disabled={nimbuspostLoading}>
+                <Button onClick={handleQuickTrack} disabled={prozoLoading}>
                   <Search className="h-4 w-4 mr-2" />
                   Track
                 </Button>
@@ -578,7 +637,7 @@ export default function ShippingPage() {
             <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
               Keep Shipment
             </Button>
-            <Button variant="destructive" onClick={handleCancelConfirm} disabled={nimbuspostLoading}>
+            <Button variant="destructive" onClick={handleCancelConfirm} disabled={prozoLoading}>
               Cancel Shipment
             </Button>
           </DialogFooter>

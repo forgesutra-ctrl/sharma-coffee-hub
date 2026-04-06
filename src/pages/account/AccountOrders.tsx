@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { trackProzoShipment } from '@/services/prozo';
 import { Tables, Json } from '@/integrations/supabase/types';
 
 type Order = Tables<'orders'>;
@@ -164,14 +165,16 @@ export default function OrdersPage() {
   const handleTrackShipment = async (awb: string) => {
     setTrackingLoading(true);
     setTrackingOpen(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('nimbuspost-track', {
-        body: { awb },
-      });
 
-      if (error) throw error;
-      setTrackingData(data);
+    try {
+      const data = await trackProzoShipment(awb);
+      setTrackingData({
+        currentStatus: data.currentStatus,
+        lastUpdatedDate: data.lastUpdatedDate,
+        lastLocation: data.lastLocation,
+        history: data.history,
+        mappedStatus: data.mappedStatus,
+      });
     } catch (error) {
       console.error('Error tracking shipment:', error);
       setTrackingData({ error: 'Unable to fetch tracking information' });
@@ -179,6 +182,9 @@ export default function OrdersPage() {
       setTrackingLoading(false);
     }
   };
+
+  // NIMBUSPOST - DEPRECATED
+  // const { data, error } = await supabase.functions.invoke('nimbuspost-track', { body: { awb } });
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -296,14 +302,14 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  {/* Shipment Tracking (Nimbuspost AWB on order or legacy shipments table) */}
-                  {(order.nimbuspost_awb_number || (order.shipment && order.shipment.awb)) && (
+                  {/* Shipment tracking (Prozo tracking_number, legacy Nimbuspost AWB, or shipments row) */}
+                  {(order.tracking_number || order.nimbuspost_awb_number || (order.shipment && order.shipment.awb)) && (
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <Truck className="w-5 h-5 text-primary" />
                         <div>
                           <p className="text-sm font-medium">
-                            AWB: {order.nimbuspost_awb_number || order.shipment!.awb}
+                            AWB: {order.tracking_number || order.nimbuspost_awb_number || order.shipment!.awb}
                           </p>
                           {order.shipment?.tracking_status && (
                             <p className="text-xs text-muted-foreground">
@@ -315,7 +321,11 @@ export default function OrdersPage() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleTrackShipment(order.nimbuspost_awb_number || order.shipment!.awb)}
+                        onClick={() =>
+                          handleTrackShipment(
+                            order.tracking_number || order.nimbuspost_awb_number || order.shipment!.awb,
+                          )
+                        }
                       >
                         Track
                         <ChevronRight className="w-4 h-4 ml-1" />
