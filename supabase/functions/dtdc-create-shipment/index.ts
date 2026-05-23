@@ -175,8 +175,12 @@ function buildConsignment(
 
   return {
     customer_code: customerCode,
-    service_type_id: "B2C SMART EXPRESS",
+    service_type_id: "B2C PRIORITY",
     load_type: "NON-DOCUMENT",
+    // Direction of the shipment. "Forward" = origin → destination
+    // (a normal outbound delivery). The opposite would be a reverse / return
+    // shipment, which we don't support yet.
+    consignment_type: "Forward",
     description,
     dimension_unit: "cm",
     length,
@@ -220,7 +224,7 @@ function buildConsignment(
     customer_reference_number: input.orderId,
     cod_collection_mode: isCod ? "CASH" : "",
     cod_amount: isCod ? String(codAmount) : "",
-    commodity_id: "99",
+    commodity_id: "17",
     eway_bill: "",
     is_risk_surcharge_applicable: false,
     invoice_number: input.orderId,
