@@ -352,6 +352,8 @@ export interface DtdcTrackingEvent {
   /** Format from API: "HHMM". */
   time: string;
   remarks: string;
+  /** Per-event normalized status, derived from `action` via `mapDtdcStatus`. */
+  mappedStatus?: DtdcMappedStatus;
 }
 
 /** Result returned by the tracking function once we add it. */
