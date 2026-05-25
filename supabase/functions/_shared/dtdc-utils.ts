@@ -460,15 +460,23 @@ type DtdcAdminRole = typeof DTDC_ADMIN_ROLES[number];
  * dtdc-shipping-label, dtdc-cancel.
  *
  * Auth bypass order:
- *   1. DTDC_INTERNAL_SECRET (preferred for internal webhook calls)
- *   2. SUPABASE_SERVICE_ROLE_KEY (legacy/fallback — currently blocked by
- *      gateway in some Supabase setups)
- *   3. Valid user JWT with admin role (admin-only callers via browser session)
+ *   1. DTDC_INTERNAL_SECRET (custom shared secret — currently blocked by
+ *      Supabase Edge Function gateway, kept for future)
+ *   2. DTDC_LEGACY_SERVICE_ROLE_JWT (the project's legacy service_role JWT —
+ *      used by webhooks; passes gateway because JWT format)
+ *   3. SUPABASE_SERVICE_ROLE_KEY (auto-injected by Supabase runtime —
+ *      currently the new sb_secret_* opaque key, blocked by gateway)
+ *   4. Valid user JWT with admin role (via browser session)
  *
- * Both bypass secrets are byte-for-byte compared against the bearer token;
- * no JWT payload is trusted without signature verification. Both are
- * Supabase server-side secrets never exposed to the browser, so the bypass
- * is safe.
+ * All bypass secrets are byte-for-byte compared against the bearer token;
+ * no JWT payload is trusted without signature verification. All are
+ * Supabase server-side secrets never exposed to the browser, so the bypasses
+ * are safe.
+ *
+ * NOTE: The DTDC_LEGACY_SERVICE_ROLE_JWT bypass is tied to Supabase's legacy
+ * key system. If Supabase deprecates legacy keys, webhooks will need to be
+ * migrated to a different auth scheme (e.g., custom header outside
+ * Authorization).
  *
  * Returns a typed discriminated union — callers should branch on `result.ok`
  * and use `jsonError(result.error, result.status)` on failure.
@@ -494,12 +502,18 @@ export async function verifyAdminAuth(
     return { ok: false, status: 401, error: "Invalid token format" };
   }
 
-  // Bypass secrets — both are Supabase server-side secrets, never exposed
-  // to the browser. Read both up-front so the debug log below can report on
-  // each. DTDC_INTERNAL_SECRET is the preferred bypass for internal webhook
-  // calls because some Supabase gateway configurations strip / rewrite the
-  // Authorization header when its value equals SUPABASE_SERVICE_ROLE_KEY.
+  // Bypass secrets — all three are Supabase server-side secrets, never
+  // exposed to the browser. Read them all up-front so the debug log below
+  // can report on each. See the JSDoc above for why we keep three: gateway
+  // rewrite/reject behaviour differs by bearer value type, and one of the
+  // three is currently the actual working path for webhooks.
   const internalSecret = readEnv("DTDC_INTERNAL_SECRET");
+
+  // DTDC_LEGACY_SERVICE_ROLE_JWT is the project's legacy (JWT-format)
+  // service_role key. Webhooks send this because the Supabase Edge Function
+  // gateway accepts JWT-formatted bearers but rejects opaque ones (which
+  // includes the new sb_secret_* keys and our custom DTDC_INTERNAL_SECRET).
+  const legacyServiceRoleJwt = readEnv("DTDC_LEGACY_SERVICE_ROLE_JWT");
 
   // readEnv (defined at top of this file) trims whitespace and strips
   // trailing newlines. Pasting long JWTs into the Supabase secrets UI
@@ -511,30 +525,36 @@ export async function verifyAdminAuth(
   // Set DTDC_AUTH_DEBUG=true in Supabase secrets to enable temporarily.
   if (Deno.env.get("DTDC_AUTH_DEBUG") === "true") {
     console.log(
-      "[DTDC auth] token len:",
-      token.length,
-      "internal secret len:",
-      internalSecret.length,
-      "internal match:",
-      token === internalSecret,
-      "service key len:",
-      serviceRoleKey.length,
-      "service match:",
-      token === serviceRoleKey,
+      "[DTDC auth]",
+      "token len:", token.length,
+      "internal secret len:", internalSecret.length,
+      "internal match:", token === internalSecret,
+      "legacy jwt len:", legacyServiceRoleJwt.length,
+      "legacy match:", token === legacyServiceRoleJwt,
+      "service key len:", serviceRoleKey.length,
+      "service match:", token === serviceRoleKey,
     );
   }
 
-  // Primary bypass — internal shared secret for server-to-server callers
-  // (Razorpay webhooks, automation, etc.). Set DTDC_INTERNAL_SECRET in
-  // Supabase secrets and have callers send `Authorization: Bearer <secret>`.
+  // Bypass #1 — internal shared secret. Currently blocked by the Supabase
+  // Edge Function gateway (it rejects non-JWT bearers); kept here as dead
+  // code for the day the gateway is fixed or bypassed.
   if (internalSecret && token === internalSecret) {
     return { ok: true, user: { id: "internal-secret", email: undefined } };
   }
 
-  // Fallback bypass — direct service-role-key match. Some Supabase gateway
-  // setups rewrite or strip this header before it reaches the function, so
-  // this path may never trigger in practice; kept for projects / future
-  // versions where the gateway does pass it through unchanged.
+  // Bypass #2 — legacy service_role JWT. This is the actual path used by
+  // webhooks in production today: it passes the Supabase gateway because
+  // the value is JWT-formatted, and we trust it inside the function via
+  // byte-for-byte equality (no JWT payload decoding).
+  if (legacyServiceRoleJwt && token === legacyServiceRoleJwt) {
+    return { ok: true, user: { id: "legacy-service-role", email: undefined } };
+  }
+
+  // Bypass #3 — direct match against SUPABASE_SERVICE_ROLE_KEY. On projects
+  // that have rolled over to the new sb_secret_* opaque keys this is also
+  // blocked by the gateway; kept here for backward compat and in case the
+  // env var ever returns a JWT-format value again.
   if (serviceRoleKey && token === serviceRoleKey) {
     return { ok: true, user: { id: "service-role", email: undefined } };
   }
@@ -580,15 +600,23 @@ export async function verifyAdminAuth(
  * belonging to the user's own orders (customers).
  *
  * Auth bypass order:
- *   1. DTDC_INTERNAL_SECRET (preferred for internal webhook calls)
- *   2. SUPABASE_SERVICE_ROLE_KEY (legacy/fallback — currently blocked by
- *      gateway in some Supabase setups)
- *   3. Valid user JWT (admin or customer; `isAdmin` flag indicates role)
+ *   1. DTDC_INTERNAL_SECRET (custom shared secret — currently blocked by
+ *      Supabase Edge Function gateway, kept for future)
+ *   2. DTDC_LEGACY_SERVICE_ROLE_JWT (the project's legacy service_role JWT —
+ *      used by webhooks; passes gateway because JWT format)
+ *   3. SUPABASE_SERVICE_ROLE_KEY (auto-injected by Supabase runtime —
+ *      currently the new sb_secret_* opaque key, blocked by gateway)
+ *   4. Valid user JWT (admin or customer; `isAdmin` flag indicates role)
  *
- * Both bypass secrets are byte-for-byte compared against the bearer token
+ * All bypass secrets are byte-for-byte compared against the bearer token
  * and treated as `isAdmin: true`, so internal webhooks / cron jobs can
  * invoke dtdc-track without restriction. No JWT payload is trusted without
  * signature verification.
+ *
+ * NOTE: The DTDC_LEGACY_SERVICE_ROLE_JWT bypass is tied to Supabase's legacy
+ * key system. If Supabase deprecates legacy keys, webhooks will need to be
+ * migrated to a different auth scheme (e.g., custom header outside
+ * Authorization).
  */
 export async function verifyUserAuth(
   req: Request,
@@ -609,10 +637,11 @@ export async function verifyUserAuth(
     return { ok: false, status: 401, error: "Invalid token format" };
   }
 
-  // Bypass secrets — see verifyAdminAuth for the full rationale on why
-  // DTDC_INTERNAL_SECRET is preferred over SUPABASE_SERVICE_ROLE_KEY for
-  // server-to-server callers (gateway-rewrite issue).
+  // Bypass secrets — see verifyAdminAuth for the full rationale on the
+  // three-secret arrangement and which one actually works in production
+  // today (DTDC_LEGACY_SERVICE_ROLE_JWT).
   const internalSecret = readEnv("DTDC_INTERNAL_SECRET");
+  const legacyServiceRoleJwt = readEnv("DTDC_LEGACY_SERVICE_ROLE_JWT");
 
   // Sanitised env read — see verifyAdminAuth for why we don't use raw
   // Deno.env.get here.
@@ -620,26 +649,31 @@ export async function verifyUserAuth(
 
   if (Deno.env.get("DTDC_AUTH_DEBUG") === "true") {
     console.log(
-      "[DTDC auth] token len:",
-      token.length,
-      "internal secret len:",
-      internalSecret.length,
-      "internal match:",
-      token === internalSecret,
-      "service key len:",
-      serviceRoleKey.length,
-      "service match:",
-      token === serviceRoleKey,
+      "[DTDC auth]",
+      "token len:", token.length,
+      "internal secret len:", internalSecret.length,
+      "internal match:", token === internalSecret,
+      "legacy jwt len:", legacyServiceRoleJwt.length,
+      "legacy match:", token === legacyServiceRoleJwt,
+      "service key len:", serviceRoleKey.length,
+      "service match:", token === serviceRoleKey,
     );
   }
 
-  // Primary bypass — internal shared secret for server-to-server callers.
+  // Bypass #1 — internal shared secret. Currently blocked by Supabase
+  // Edge Function gateway; kept as dead code for future use.
   if (internalSecret && token === internalSecret) {
     return { ok: true, user: { id: "internal-secret", email: undefined }, isAdmin: true };
   }
 
-  // Fallback bypass — direct service-role-key match. May not trigger in
-  // practice on some Supabase gateway setups; see verifyAdminAuth.
+  // Bypass #2 — legacy service_role JWT. The actual path used by webhooks
+  // in production today; passes the gateway because the value is JWT-formatted.
+  if (legacyServiceRoleJwt && token === legacyServiceRoleJwt) {
+    return { ok: true, user: { id: "legacy-service-role", email: undefined }, isAdmin: true };
+  }
+
+  // Bypass #3 — direct match against SUPABASE_SERVICE_ROLE_KEY. May be
+  // blocked by the gateway depending on key format; see verifyAdminAuth.
   if (serviceRoleKey && token === serviceRoleKey) {
     return { ok: true, user: { id: "service-role", email: undefined }, isAdmin: true };
   }
