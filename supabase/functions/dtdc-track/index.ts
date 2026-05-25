@@ -21,6 +21,7 @@ import {
   jsonResponse,
   jsonError,
   mapDtdcStatus,
+  verifyUserAuth,
   DTDC_ENDPOINTS,
   type DtdcTrackingResult,
   type DtdcTrackingEvent,
@@ -211,6 +212,25 @@ Deno.serve(async (req: Request) => {
     if (req.method !== "POST") {
       return jsonError("Method not allowed. Use POST.", 405);
     }
+
+    /**
+     * Auth check — `dtdc-track` is the ONLY DTDC function that accepts
+     * non-admin callers. Customers need to be able to track their own
+     * shipments from `src/pages/account/AccountOrders.tsx`, so we use
+     * `verifyUserAuth` (any logged-in user passes) instead of
+     * `verifyAdminAuth` (which the other three DTDC functions —
+     * create-shipment, shipping-label, cancel — will use).
+     *
+     * Service-role bearer tokens also pass with `isAdmin: true`, allowing
+     * internal webhooks / cron jobs to call this endpoint server-to-server.
+     */
+    const authResult = await verifyUserAuth(req);
+    if (!authResult.ok) {
+      return jsonError(authResult.error, authResult.status);
+    }
+    // TODO: Tighten auth — if !isAdmin, look up the order by AWB and verify
+    //       order.user_id matches authResult.user.id. Currently any logged-in
+    //       user can track any AWB if they know it.
 
     let body: TrackingBody | null = null;
     try {
