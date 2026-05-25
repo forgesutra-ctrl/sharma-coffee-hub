@@ -515,42 +515,80 @@ Deno.serve(async (req: Request) => {
           `[DTDC idempotency] DTDC duplicate-key for orderId=${body.orderId} — treating as race loss, re-fetching winner.`,
         );
 
+        /**
+         * Retry-with-backoff for the winner re-fetch.
+         *
+         * The race-within-race: DTDC has already accepted the winning caller's
+         * request (which is why we got duplicate-key), but the winner's
+         * Phase C UPDATE may not have landed in our DB yet. We poll briefly
+         * to give the winner time to finish its write.
+         *
+         * Bounded: at most MAX_REFETCH_ATTEMPTS attempts with REFETCH_BACKOFF_MS
+         * between each. Total worst-case wall-clock cost:
+         *   (MAX_REFETCH_ATTEMPTS - 1) * REFETCH_BACKOFF_MS
+         * = 2 * 100 = 200 ms of sleep + (3 DB round-trips).
+         *
+         * If still nothing after all attempts, we fall through to the
+         * "DB-inconsistency" branch and surface the original DTDC error.
+         */
+        const MAX_REFETCH_ATTEMPTS = 3;
+        const REFETCH_BACKOFF_MS = 100;
+
         let dupWinnerAwb: string | null = null;
         let dupWinnerProvider: string | null = null;
-        try {
-          const { data: winner, error: winnerErr } = await supabase
-            .from("orders")
-            .select("tracking_number, shipping_provider")
-            .eq("id", body.orderId)
-            .maybeSingle();
-          if (winnerErr) {
+        let refetchAttempts = 0;
+
+        for (let attempt = 1; attempt <= MAX_REFETCH_ATTEMPTS; attempt++) {
+          refetchAttempts = attempt;
+          try {
+            const { data: winner, error: winnerErr } = await supabase
+              .from("orders")
+              .select("tracking_number, shipping_provider")
+              .eq("id", body.orderId)
+              .maybeSingle();
+            if (winnerErr) {
+              console.error(
+                `[DTDC idempotency] Failed to re-fetch winner after duplicate-key for orderId=${body.orderId} (attempt ${attempt}/${MAX_REFETCH_ATTEMPTS}):`,
+                winnerErr,
+              );
+            } else if (winner) {
+              dupWinnerAwb = (winner.tracking_number as string | null) ?? null;
+              dupWinnerProvider =
+                (winner.shipping_provider as string | null) ?? null;
+            }
+          } catch (dupRefetchErr) {
             console.error(
-              `[DTDC idempotency] Failed to re-fetch winner after duplicate-key for orderId=${body.orderId}:`,
-              winnerErr,
+              `[DTDC idempotency] Re-fetch exception after duplicate-key for orderId=${body.orderId} (attempt ${attempt}/${MAX_REFETCH_ATTEMPTS}):`,
+              dupRefetchErr,
             );
-          } else if (winner) {
-            dupWinnerAwb = (winner.tracking_number as string | null) ?? null;
-            dupWinnerProvider =
-              (winner.shipping_provider as string | null) ?? null;
           }
-        } catch (dupRefetchErr) {
-          console.error(
-            `[DTDC idempotency] Re-fetch exception after duplicate-key for orderId=${body.orderId}:`,
-            dupRefetchErr,
-          );
+
+          if (dupWinnerAwb && dupWinnerProvider === "dtdc") {
+            break;
+          }
+
+          if (attempt < MAX_REFETCH_ATTEMPTS) {
+            console.log(
+              `[DTDC idempotency] Re-fetch attempt ${attempt}/${MAX_REFETCH_ATTEMPTS} for orderId=${body.orderId} — winner not visible yet, waiting ${REFETCH_BACKOFF_MS}ms`,
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, REFETCH_BACKOFF_MS)
+            );
+          }
         }
 
         if (!dupWinnerAwb || dupWinnerProvider !== "dtdc") {
           /**
-           * DTDC says duplicate, but our DB doesn't yet have a DTDC AWB for
-           * this order. Possible causes: the winning caller's Phase C UPDATE
-           * is still in flight; or the winning caller crashed between DTDC
-           * success and DB write; or someone manually cleared the row. Don't
-           * fabricate success — surface the original DTDC error so the
-           * caller can retry / investigate.
+           * DTDC says duplicate, but our DB still doesn't have a DTDC AWB for
+           * this order after all retries. Possible causes: the winning
+           * caller's Phase C UPDATE is taking longer than our backoff budget;
+           * or the winning caller crashed between DTDC success and DB write;
+           * or someone manually cleared the row. Don't fabricate success —
+           * surface the original DTDC error so the caller can retry /
+           * investigate.
            */
           console.error(
-            `[DTDC idempotency] DTDC said duplicate but DB has no DTDC AWB. Possible inconsistency for orderId=${body.orderId} (provider=${dupWinnerProvider} awb=${dupWinnerAwb})`,
+            `[DTDC idempotency] DTDC said duplicate but DB has no DTDC AWB. Possible inconsistency for orderId=${body.orderId} (provider=${dupWinnerProvider} awb=${dupWinnerAwb}) (after ${refetchAttempts} retries)`,
           );
           return jsonResponse(
             {
