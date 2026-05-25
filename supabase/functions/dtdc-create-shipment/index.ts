@@ -175,7 +175,7 @@ function buildConsignment(
 
   return {
     customer_code: customerCode,
-    service_type_id: "B2C PRIORITY",
+    service_type_id: "B2C SMART EXPRESS",
     load_type: "NON-DOCUMENT",
     // Direction of the shipment. "Forward" = origin → destination
     // (a normal outbound delivery). The opposite would be a reverse / return
