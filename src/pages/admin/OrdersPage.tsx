@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import AdminOrStaffOnly from '@/components/admin/AdminOrStaffOnly';
-import { createProzoShipment } from '@/services/prozo';
+import { createDtdcShipment } from '@/services/dtdc';
 
 type Order = Tables<'orders'>;
 type OrderItem = Tables<'order_items'>;
@@ -135,7 +135,7 @@ export default function OrdersPage() {
             }))
           : [{ product_name: 'Order', quantity: 1, weight: 250, unit_price: Number(selectedOrder.total_amount) }];
 
-      const { awb } = await createProzoShipment({
+      const { awb } = await createDtdcShipment({
         orderId: selectedOrder.id,
         totalAmount: Number(selectedOrder.total_amount),
         paymentType: selectedOrder.payment_type,
@@ -159,7 +159,7 @@ export default function OrdersPage() {
         .from('orders')
         .update({
           tracking_number: awb,
-          shipping_provider: 'prozo',
+          shipping_provider: 'dtdc',
           shipment_created_at: now,
           status: 'shipped',
         })
@@ -172,7 +172,7 @@ export default function OrdersPage() {
           ? {
               ...prev,
               tracking_number: awb,
-              shipping_provider: 'prozo',
+              shipping_provider: 'dtdc',
               shipment_created_at: now,
               status: 'shipped',
             }
@@ -180,10 +180,10 @@ export default function OrdersPage() {
       );
       await fetchOrders();
       setProzoCreateError(null);
-      toast.success(`Prozo shipment created. AWB: ${awb}`);
+      toast.success(`DTDC shipment created. AWB: ${awb}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create shipment';
-      console.error('[Prozo] Create shipment error:', err);
+      console.error('[DTDC] Create shipment error:', err);
       setProzoCreateError(msg);
       toast.error(msg);
     } finally {
@@ -568,10 +568,10 @@ export default function OrdersPage() {
                   <Truck className="w-4 h-4" />
                   Shipment (Prozo)
                 </h4>
-                {selectedOrder.tracking_number && selectedOrder.shipping_provider === 'prozo' ? (
+                {selectedOrder.tracking_number && (selectedOrder.shipping_provider === 'dtdc' || selectedOrder.shipping_provider === 'prozo') ? (
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
                     <p><span className="font-medium">AWB:</span> <span className="font-mono">{selectedOrder.tracking_number}</span></p>
-                    <p><span className="font-medium">Provider:</span> Prozo</p>
+                    <p><span className="font-medium">Provider:</span> {selectedOrder.shipping_provider === 'dtdc' ? 'DTDC' : 'Prozo'}</p>
                   </div>
                 ) : selectedOrder.nimbuspost_awb_number ? (
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">

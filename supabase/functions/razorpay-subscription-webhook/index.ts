@@ -490,6 +490,92 @@ Deno.serve(async (req: Request) => {
 
           console.log("[SUB-WEBHOOK] Created order:", orderNumber);
 
+          // Fire-and-forget: push to DTDC for AWB creation. Subscriptions are
+          // always prepaid (no COD). dtdc-create-shipment is idempotent on
+          // orderId so even if this webhook re-runs we won't double-ship.
+          // Failures here MUST NOT mark the subscription as failed — we have
+          // the order row + subscription_orders entry committed; AWB can be
+          // backfilled manually from the admin Operations page.
+          {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const dtdcInternalJwt = Deno.env.get("DTDC_LEGACY_SERVICE_ROLE_JWT");
+            const addr = (userSub.shipping_address ?? {}) as Record<string, any>;
+            const dtdcFullName = addr.fullName || addr.full_name || "";
+            const dtdcAddressLine1 = addr.addressLine1 || addr.address_line1 || "";
+            const dtdcAddressLine2 = addr.addressLine2 || addr.address_line2 || "";
+            const hasRequiredAddress = !!(
+              dtdcFullName &&
+              addr.phone &&
+              addr.pincode &&
+              dtdcAddressLine1 &&
+              addr.city &&
+              addr.state
+            );
+
+            if (!supabaseUrl || !dtdcInternalJwt) {
+              console.warn(
+                "[SUB-WEBHOOK] DTDC push skipped: env not configured for order",
+                order.order_number,
+              );
+            } else if (!hasRequiredAddress) {
+              console.warn(
+                "[SUB-WEBHOOK] DTDC push skipped: incomplete shipping_address for order",
+                order.order_number,
+              );
+            } else {
+              const dtdcPayload = {
+                orderId: order.id,
+                totalAmount: amountRupees,
+                paymentType: "prepaid",
+                customerEmail: addr.email || "",
+                address: {
+                  fullName: dtdcFullName || "Customer",
+                  addressLine1: dtdcAddressLine1,
+                  addressLine2: dtdcAddressLine2,
+                  city: addr.city || "",
+                  state: addr.state || "",
+                  pincode: addr.pincode || "",
+                  phone: addr.phone || "",
+                  email: addr.email || "",
+                },
+                items: [{
+                  product_name: product?.name ?? "Subscription Item",
+                  quantity: userSub.quantity ?? 1,
+                  weight: variant?.weight ?? 250,
+                  unit_price: unitPrice,
+                }],
+                shipmentWeightGrams: (variant?.weight ?? 250) * (userSub.quantity ?? 1),
+              };
+
+              void fetch(`${supabaseUrl}/functions/v1/dtdc-create-shipment`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${dtdcInternalJwt}`,
+                },
+                body: JSON.stringify(dtdcPayload),
+              })
+                .then((r) => r.json())
+                .then((result) => {
+                  if (result?.success) {
+                    console.log(
+                      `[SUB-WEBHOOK] DTDC push succeeded for order ${order.order_number}: AWB=${result.awb} alreadyExisted=${result.alreadyExisted ?? false}`,
+                    );
+                  } else {
+                    console.warn(
+                      `[SUB-WEBHOOK] DTDC push returned non-success for order ${order.order_number}: ${result?.errorMessage || "unknown"}`,
+                    );
+                  }
+                })
+                .catch((e) => {
+                  console.warn(
+                    `[SUB-WEBHOOK] DTDC push fetch failed for order ${order.order_number}:`,
+                    e?.message ?? e,
+                  );
+                });
+            }
+          }
+
           try {
             const { data: profile } = await supabaseAdmin.from("profiles").select("email, phone").eq("id", userSub.user_id).maybeSingle();
             if (profile?.email || profile?.phone) {

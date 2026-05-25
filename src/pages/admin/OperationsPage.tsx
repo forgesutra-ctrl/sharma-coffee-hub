@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { trackProzoShipment, cancelProzoShipment } from '@/services/prozo';
+import { trackDtdcShipment, cancelDtdcShipment } from '@/services/dtdc';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import BulkInventoryUpload from '@/components/admin/BulkInventoryUpload';
@@ -402,7 +402,7 @@ export default function OperationsPage() {
     setTrackingData(null);
 
     try {
-      const data = await trackProzoShipment(awb);
+      const data = await trackDtdcShipment(awb);
       setTrackingData({
         currentStatus: data.currentStatus,
         lastUpdatedDate: data.lastUpdatedDate,
@@ -422,15 +422,15 @@ export default function OperationsPage() {
   const handleCancelShipment = async (shipment: Shipment) => {
     if (!confirm(`Cancel shipment ${shipment.awb}?`)) return;
 
-    const orderRefId = shipment.order_id?.trim();
-    if (!orderRefId) {
-      toast.error('Cannot cancel: shipment has no order_id for Prozo');
+    const awb = shipment.awb?.trim();
+    if (!awb) {
+      toast.error('Cannot cancel: shipment has no AWB');
       return;
     }
 
     setProzoLoading(true);
     try {
-      await cancelProzoShipment(orderRefId);
+      await cancelDtdcShipment(awb);
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', shipment.awb);
       toast.success('Shipment cancelled');
       fetchEscalatedShipments();

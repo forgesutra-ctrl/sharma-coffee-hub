@@ -403,33 +403,43 @@ Deno.serve(async (req: Request) => {
 
         const createShipment = async () => {
           try {
+            const dtdcInternalJwt = Deno.env.get("DTDC_LEGACY_SERVICE_ROLE_JWT");
+            if (!supabaseUrl || !dtdcInternalJwt) {
+              console.warn("[Payment] DTDC push skipped: env not configured");
+              return;
+            }
             const shipmentPayload = {
               orderId: existingByOrderId.id,
-              orderNumber: existingByOrderId.order_number,
-              customerName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
-              customerPhone: checkout.shipping_address.phone || "",
+              totalAmount: checkout.total_amount,
+              paymentType: checkout.payment_type,
+              codBalance: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
               customerEmail: checkout.shipping_address.email || "",
-              shippingAddress: checkout.shipping_address,
-              orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+              address: {
+                fullName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
+                addressLine1: checkout.shipping_address.addressLine1 || checkout.shipping_address.address_line1 || "",
+                addressLine2: checkout.shipping_address.addressLine2 || checkout.shipping_address.address_line2 || "",
+                city: checkout.shipping_address.city || "",
+                state: checkout.shipping_address.state || "",
+                pincode: checkout.shipping_address.pincode || "",
+                phone: checkout.shipping_address.phone || "",
+                email: checkout.shipping_address.email || "",
+              },
+              items: (orderItemsData || checkout.items || []).map((item: any) => ({
                 product_name: item.product_name || "",
                 quantity: item.quantity || 0,
-                unit_price: item.unit_price || 0,
-                total_price: item.total_price || 0,
                 weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
+                unit_price: item.unit_price || 0,
               })),
-              totalWeight: calculateTotalWeight(),
-              orderAmount: checkout.total_amount,
-              paymentType: checkout.payment_type,
-              codAmount: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
+              shipmentWeightGrams: Math.round(calculateTotalWeight() * 1000),
             };
-            const functionUrl = `${supabaseUrl}/functions/v1/create-nimbuspost-shipment`;
+            const functionUrl = `${supabaseUrl}/functions/v1/dtdc-create-shipment`;
             const response = await fetch(functionUrl, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseServiceKey}` },
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${dtdcInternalJwt}` },
               body: JSON.stringify(shipmentPayload),
             });
-            if (!response.ok) console.warn("[Payment] Nimbus push failed:", response.status);
-          } catch (e) { console.warn("[Payment] Nimbus push error:", e); }
+            if (!response.ok) console.warn("[Payment] DTDC push failed:", response.status);
+          } catch (e) { console.warn("[Payment] DTDC push error:", e); }
         };
 
         const sendNotifications = async (awbNumber: string | null) => {
@@ -633,54 +643,55 @@ Deno.serve(async (req: Request) => {
       return Math.min(weightKg, 50); // Max 50kg
     };
 
-    // Create Nimbuspost shipment (fire and forget - don't block response)
+    // Create DTDC shipment (fire and forget - don't block response)
     const createShipment = async () => {
       try {
-        console.log(`[Payment] Creating Nimbuspost shipment for order: ${order.id}`);
+        const dtdcInternalJwt = Deno.env.get("DTDC_LEGACY_SERVICE_ROLE_JWT");
+        if (!supabaseUrl || !dtdcInternalJwt) {
+          console.warn("[Payment] DTDC push skipped: env not configured");
+          return;
+        }
 
         const shipmentPayload = {
           orderId: order.id,
-          orderNumber: order.order_number,
-          customerName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
-          customerPhone: checkout.shipping_address.phone || "",
+          totalAmount: checkout.total_amount,
+          paymentType: checkout.payment_type,
+          codBalance: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
           customerEmail: checkout.shipping_address.email || "",
-          shippingAddress: checkout.shipping_address,
-          orderItems: (orderItemsData || checkout.items || []).map((item: any) => ({
+          address: {
+            fullName: checkout.shipping_address.fullName || checkout.shipping_address.full_name || "Customer",
+            addressLine1: checkout.shipping_address.addressLine1 || checkout.shipping_address.address_line1 || "",
+            addressLine2: checkout.shipping_address.addressLine2 || checkout.shipping_address.address_line2 || "",
+            city: checkout.shipping_address.city || "",
+            state: checkout.shipping_address.state || "",
+            pincode: checkout.shipping_address.pincode || "",
+            phone: checkout.shipping_address.phone || "",
+            email: checkout.shipping_address.email || "",
+          },
+          items: (orderItemsData || checkout.items || []).map((item: any) => ({
             product_name: item.product_name || "",
             quantity: item.quantity || 0,
-            unit_price: item.unit_price || 0,
-            total_price: item.total_price || 0,
             weight: (typeof item.weight === "number" && item.weight > 0) ? item.weight : 250,
+            unit_price: item.unit_price || 0,
           })),
-          totalWeight: calculateTotalWeight(),
-          orderAmount: checkout.total_amount,
-          paymentType: checkout.payment_type,
-          codAmount: checkout.payment_type === "cod" ? (checkout.cod_balance || 0) : undefined,
+          shipmentWeightGrams: Math.round(calculateTotalWeight() * 1000),
         };
 
-        // Call shipment creation function via HTTP
-        const functionUrl = `${supabaseUrl}/functions/v1/create-nimbuspost-shipment`;
+        const functionUrl = `${supabaseUrl}/functions/v1/dtdc-create-shipment`;
         const response = await fetch(functionUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "Authorization": `Bearer ${dtdcInternalJwt}`,
           },
           body: JSON.stringify(shipmentPayload),
         });
         if (!response.ok) {
           const errText = await response.text();
-          console.warn("[Payment] Nimbus push failed:", response.status, errText.slice(0, 200));
-        } else {
-          const result = await response.json();
-          if (result.skipped) {
-            console.log("[Payment] Nimbus not configured, skip push");
-          } else {
-            console.log("[Payment] Order pushed to Nimbus:", order.order_number, "weight_kg:", shipmentPayload.totalWeight);
-          }
+          console.warn("[Payment] DTDC push failed:", response.status, errText.slice(0, 200));
         }
       } catch (error) {
-        console.warn("[Payment] Nimbus push error:", error);
+        console.warn("[Payment] DTDC push error:", error);
       }
     };
 
