@@ -21,6 +21,7 @@ import {
   getDtdcEnv,
   jsonResponse,
   jsonError,
+  verifyAdminAuth,
   DTDC_ENDPOINTS,
   type DtdcCreateShipmentResult,
 } from "../_shared/dtdc-utils.ts";
@@ -243,6 +244,17 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method !== "POST") {
       return jsonError("Method not allowed. Use POST.", 405);
+    }
+
+    /**
+     * Auth gate: only admin/staff users (via browser JWT) OR backend webhooks
+     * (via service-role key) can create real DTDC shipments. Anonymous or
+     * customer-role callers are rejected. See _shared/dtdc-utils.ts for
+     * the role list and service-role bypass logic.
+     */
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.ok) {
+      return jsonError(authResult.error, authResult.status);
     }
 
     let body: CreateShipmentBody | null = null;
