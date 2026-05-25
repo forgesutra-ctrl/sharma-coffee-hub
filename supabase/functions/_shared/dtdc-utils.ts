@@ -4,6 +4,8 @@
 //   2. Tracking — auth via username/password → access token, sent as "X-Access-Token" header.
 // All credentials live in Supabase Edge Function secrets and NEVER touch the browser.
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -436,4 +438,144 @@ export interface DtdcCancelResult {
   /** Raw DTDC response body for debugging. */
   raw: unknown;
   errorMessage?: string;
+}
+
+// === Auth helpers ============================================================
+
+/**
+ * Roles allowed to invoke the admin-only DTDC functions
+ * (create-shipment, shipping-label, cancel).
+ *
+ * Mirrors the role set used by `src/components/auth/ProtectedRoute.tsx` and
+ * `src/context/AuthContext.tsx` so a user who passes the frontend admin gate
+ * will also pass the Edge Function gate.
+ */
+const DTDC_ADMIN_ROLES = ["super_admin", "admin", "staff", "shop_staff"] as const;
+type DtdcAdminRole = typeof DTDC_ADMIN_ROLES[number];
+
+/**
+ * Verify that the caller is an admin (super_admin / admin / staff / shop_staff).
+ *
+ * Used by the admin-only DTDC functions: dtdc-create-shipment,
+ * dtdc-shipping-label, dtdc-cancel.
+ *
+ * Special case — service-role bypass: if the `Authorization` header is exactly
+ * `Bearer <SUPABASE_SERVICE_ROLE_KEY>`, we trust the caller without a JWT
+ * lookup. This lets internal server-to-server callers (e.g. razorpay-webhook,
+ * verify-razorpay-payment, or any future automation) invoke DTDC functions
+ * without forging a user session. The service-role key is a Supabase secret
+ * never exposed to the browser, so this bypass is safe.
+ *
+ * Returns a typed discriminated union — callers should branch on `result.ok`
+ * and use `jsonError(result.error, result.status)` on failure.
+ */
+export async function verifyAdminAuth(
+  req: Request,
+): Promise<
+  | { ok: true; user: { id: string; email?: string } }
+  | { ok: false; status: number; error: string }
+> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return { ok: false, status: 401, error: "Missing authorization header" };
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+    return { ok: true, user: { id: "service-role", email: undefined } };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Supabase environment not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing).",
+    };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return { ok: false, status: 401, error: "Invalid token" };
+  }
+  const user = userData.user;
+
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const role = (roleRow?.role ?? "") as string;
+  if (!DTDC_ADMIN_ROLES.includes(role as DtdcAdminRole)) {
+    return { ok: false, status: 403, error: "Admin access required" };
+  }
+
+  return { ok: true, user: { id: user.id, email: user.email ?? undefined } };
+}
+
+/**
+ * Verify that the caller is any authenticated user — used by dtdc-track.
+ *
+ * Customers placing orders should be able to track their own shipments, so
+ * this helper does NOT reject non-admin users. Instead it returns an
+ * `isAdmin` flag alongside the user info; the tracking function can then
+ * decide whether to allow tracking arbitrary AWBs (admins) or only AWBs
+ * belonging to the user's own orders (customers).
+ *
+ * Special case — service-role bypass: same as `verifyAdminAuth`. Service-role
+ * callers are treated as admins (`isAdmin: true`), so internal webhooks /
+ * cron jobs can invoke dtdc-track without restriction.
+ */
+export async function verifyUserAuth(
+  req: Request,
+): Promise<
+  | { ok: true; user: { id: string; email?: string }; isAdmin: boolean }
+  | { ok: false; status: number; error: string }
+> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return { ok: false, status: 401, error: "Missing authorization header" };
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+    return { ok: true, user: { id: "service-role", email: undefined }, isAdmin: true };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Supabase environment not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing).",
+    };
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return { ok: false, status: 401, error: "Invalid token" };
+  }
+  const user = userData.user;
+
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const role = (roleRow?.role ?? "") as string;
+  const isAdmin = DTDC_ADMIN_ROLES.includes(role as DtdcAdminRole);
+
+  return {
+    ok: true,
+    user: { id: user.id, email: user.email ?? undefined },
+    isAdmin,
+  };
 }
