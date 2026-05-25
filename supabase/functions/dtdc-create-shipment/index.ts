@@ -484,6 +484,102 @@ Deno.serve(async (req: Request) => {
     if (!respSuccess) {
       const errorMessage = extractErrorMessage(firstNode);
       console.warn("[DTDC] DTDC rejected the shipment:", errorMessage);
+
+      /**
+       * Race-loss detection — DTDC enforces uniqueness on
+       * `customer_reference_number` (our `orderId`) at THEIR layer. If two of
+       * our callers fire concurrently for the same orderId, caller 1's
+       * request succeeds and caller 2's request comes back with:
+       *
+       *   { success: false,
+       *     message: 'duplicate key value violates unique constraint
+       *               "consignment_customer_reference_number_unique_idx"' }
+       *
+       * The shipment IS created (by caller 1) — we just need to re-fetch
+       * the winner's AWB and return success. No orphan-cancel is needed
+       * because DTDC never created OUR AWB (it rejected before generating
+       * a reference_number).
+       *
+       * Match signal is intentionally narrow: both "duplicate key" AND
+       * "customer_reference_number" must appear in the message. Any other
+       * DTDC rejection (TAT, pincode, weight, customer-code, etc.) falls
+       * through as a normal failure response.
+       */
+      const lowerError = errorMessage.toLowerCase();
+      const isDuplicateKey =
+        lowerError.includes("duplicate key") &&
+        lowerError.includes("customer_reference_number");
+
+      if (isDuplicateKey) {
+        console.warn(
+          `[DTDC idempotency] DTDC duplicate-key for orderId=${body.orderId} — treating as race loss, re-fetching winner.`,
+        );
+
+        let dupWinnerAwb: string | null = null;
+        let dupWinnerProvider: string | null = null;
+        try {
+          const { data: winner, error: winnerErr } = await supabase
+            .from("orders")
+            .select("tracking_number, shipping_provider")
+            .eq("id", body.orderId)
+            .maybeSingle();
+          if (winnerErr) {
+            console.error(
+              `[DTDC idempotency] Failed to re-fetch winner after duplicate-key for orderId=${body.orderId}:`,
+              winnerErr,
+            );
+          } else if (winner) {
+            dupWinnerAwb = (winner.tracking_number as string | null) ?? null;
+            dupWinnerProvider =
+              (winner.shipping_provider as string | null) ?? null;
+          }
+        } catch (dupRefetchErr) {
+          console.error(
+            `[DTDC idempotency] Re-fetch exception after duplicate-key for orderId=${body.orderId}:`,
+            dupRefetchErr,
+          );
+        }
+
+        if (!dupWinnerAwb || dupWinnerProvider !== "dtdc") {
+          /**
+           * DTDC says duplicate, but our DB doesn't yet have a DTDC AWB for
+           * this order. Possible causes: the winning caller's Phase C UPDATE
+           * is still in flight; or the winning caller crashed between DTDC
+           * success and DB write; or someone manually cleared the row. Don't
+           * fabricate success — surface the original DTDC error so the
+           * caller can retry / investigate.
+           */
+          console.error(
+            `[DTDC idempotency] DTDC said duplicate but DB has no DTDC AWB. Possible inconsistency for orderId=${body.orderId} (provider=${dupWinnerProvider} awb=${dupWinnerAwb})`,
+          );
+          return jsonResponse(
+            {
+              success: false,
+              awb: null,
+              customerReferenceNumber,
+              errorMessage,
+              raw,
+            } satisfies DtdcCreateShipmentResult,
+            200,
+          );
+        }
+
+        console.log(
+          `[DTDC idempotency] Duplicate-key resolved: orderId=${body.orderId} winner AWB=${dupWinnerAwb}`,
+        );
+        return jsonResponse(
+          {
+            success: true,
+            awb: dupWinnerAwb,
+            customerReferenceNumber: body.orderId,
+            alreadyExisted: true,
+            raceLost: true,
+            raw: null,
+          } satisfies IdempotentDtdcResult,
+          200,
+        );
+      }
+
       return jsonResponse(
         {
           success: false,
