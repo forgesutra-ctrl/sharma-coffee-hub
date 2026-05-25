@@ -480,8 +480,36 @@ export async function verifyAdminAuth(
     return { ok: false, status: 401, error: "Missing authorization header" };
   }
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+  // Parse & trim the bearer token once, up front. Both the service-role
+  // equality check and the JWT validation path below use this same
+  // normalised value, so any stray whitespace on the client side gets
+  // stripped here (matching readEnv() which strips it on the env-var side).
+  // The /i flag accepts "Bearer", "bearer", "BEARER", etc.
+  const token = (authHeader.match(/^Bearer\s+(.+)$/i)?.[1] ?? "").trim();
+  if (!token) {
+    return { ok: false, status: 401, error: "Invalid token format" };
+  }
+
+  // readEnv (defined at top of this file) trims whitespace and strips
+  // trailing newlines. Pasting long JWTs into the Supabase secrets UI
+  // routinely appends a trailing newline; raw Deno.env.get would cause
+  // the byte-for-byte equality check below to silently fail.
+  const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Optional diagnostic — lengths only, never the actual key bytes.
+  // Set DTDC_AUTH_DEBUG=true in Supabase secrets to enable temporarily.
+  if (Deno.env.get("DTDC_AUTH_DEBUG") === "true") {
+    console.log(
+      "[DTDC auth] token len:",
+      token.length,
+      "service key len:",
+      serviceRoleKey.length,
+      "match:",
+      token === serviceRoleKey,
+    );
+  }
+
+  if (serviceRoleKey && token === serviceRoleKey) {
     return { ok: true, user: { id: "service-role", email: undefined } };
   }
 
@@ -494,7 +522,6 @@ export async function verifyAdminAuth(
     };
   }
 
-  const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
@@ -541,8 +568,30 @@ export async function verifyUserAuth(
     return { ok: false, status: 401, error: "Missing authorization header" };
   }
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+  // Parse & trim the bearer token once, up front — see verifyAdminAuth for
+  // the full rationale. Both this helper and verifyAdminAuth must use the
+  // same parsing logic so they behave consistently across DTDC functions.
+  const token = (authHeader.match(/^Bearer\s+(.+)$/i)?.[1] ?? "").trim();
+  if (!token) {
+    return { ok: false, status: 401, error: "Invalid token format" };
+  }
+
+  // Sanitised env read — see verifyAdminAuth for why we don't use raw
+  // Deno.env.get here.
+  const serviceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (Deno.env.get("DTDC_AUTH_DEBUG") === "true") {
+    console.log(
+      "[DTDC auth] token len:",
+      token.length,
+      "service key len:",
+      serviceRoleKey.length,
+      "match:",
+      token === serviceRoleKey,
+    );
+  }
+
+  if (serviceRoleKey && token === serviceRoleKey) {
     return { ok: true, user: { id: "service-role", email: undefined }, isAdmin: true };
   }
 
@@ -555,7 +604,6 @@ export async function verifyUserAuth(
     };
   }
 
-  const token = authHeader.replace(/^Bearer\s+/i, "");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
