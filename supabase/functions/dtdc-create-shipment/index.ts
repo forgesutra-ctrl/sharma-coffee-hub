@@ -7,15 +7,47 @@
  *   3. POST it to DTDC's Order Upload API with the api-key header.
  *   4. Return a normalized JSON result containing the AWB.
  *
+ * --- Idempotency contract ----------------------------------------------------
+ *
+ * `orderId` is REQUIRED and is the idempotency key. The function is safe to
+ * call multiple times for the same orderId — only ONE real DTDC AWB will ever
+ * land in `orders.tracking_number`.
+ *
+ * Flow:
+ *   Phase A (pre-flight): SELECT orders[orderId]. If tracking_number is
+ *     already set for DTDC, short-circuit with that AWB. If set for another
+ *     provider, refuse with 409. If the order is cancelled, refuse with 409.
+ *   Phase B (DTDC API call): unchanged — translate body to DTDC softdata,
+ *     POST to DTDC, parse response, get the AWB.
+ *   Phase C (conditional write-back): UPDATE orders SET tracking_number=awb,
+ *     ... WHERE id=orderId AND tracking_number IS NULL. The `IS NULL` clause
+ *     makes this atomic per row — only the first concurrent caller wins.
+ *   Phase D (race-loss cleanup): if Phase C affected 0 rows, our AWB is an
+ *     orphan at DTDC. Fire-and-forget cancel via internal call to dtdc-cancel
+ *     (Bearer DTDC_LEGACY_SERVICE_ROLE_JWT) and return the WINNER's AWB to
+ *     the caller so UX is consistent.
+ *
+ * This protects against the Phase-3 scenario where verify-razorpay-payment
+ * AND razorpay-webhook both fire dtdc-create-shipment for the same order.
+ *
+ * --- Required Supabase secrets ----------------------------------------------
+ *
  * Credentials live in Supabase secrets (DTDC_API_KEY, DTDC_CUSTOMER_CODE,
  * optional DTDC_API_BASE_URL) and pickup-address details live in Supabase
  * secrets too (STORE_NAME, STORE_PHONE, STORE_EMAIL, STORE_ADDRESS,
  * STORE_CITY, STORE_STATE, STORE_PINCODE). Nothing is read from the browser.
  *
+ * Idempotency additionally requires:
+ *   - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (auto-injected by Supabase
+ *     Edge Functions runtime; used for the conditional UPDATE).
+ *   - DTDC_LEGACY_SERVICE_ROLE_JWT (used as Bearer for the internal
+ *     fire-and-forget call to dtdc-cancel on race-loss).
+ *
  * The frontend body shape intentionally mirrors Prozo's `ProzoCreateShipmentInput`
  * so the rest of the app doesn't need to change when we switch providers.
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   corsHeaders,
   getDtdcEnv,
@@ -60,6 +92,16 @@ interface CreateShipmentBody {
   itemLengthCm?: number;
   itemBreadthCm?: number;
   itemHeightCm?: number;
+}
+
+/**
+ * Local extension of `DtdcCreateShipmentResult` with the idempotency-only
+ * fields. `alreadyExisted` is true when we short-circuited (Phase A) OR when
+ * we lost a write race (Phase D). `raceLost` is true only in Phase D.
+ */
+interface IdempotentDtdcResult extends DtdcCreateShipmentResult {
+  alreadyExisted: boolean;
+  raceLost?: boolean;
 }
 
 // === Helpers =================================================================
@@ -269,9 +311,109 @@ Deno.serve(async (req: Request) => {
       return jsonError("Invalid JSON body", 400);
     }
 
+    /**
+     * Strict orderId guard — `orderId` is the idempotency key. Reject early
+     * with a specific message before `validateInput` runs its broader checks.
+     */
+    if (!body || !body.orderId || typeof body.orderId !== "string") {
+      return jsonError(
+        "orderId is required for idempotent shipment creation",
+        400,
+      );
+    }
+
     const validationError = validateInput(body);
     if (validationError) {
       return jsonError(validationError, 400);
+    }
+
+    /**
+     * Phase A — Idempotency pre-flight.
+     *
+     * Create a service-role Supabase client and look up the order. If a
+     * tracking_number is already present, short-circuit (DTDC AWB) or refuse
+     * (different provider) before spending a real DTDC API call.
+     *
+     * SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are read with raw Deno.env.get
+     * (same pattern as verify-razorpay-payment lines 285-293). We throw on
+     * missing — the outer try/catch surfaces this as jsonError(..., 500).
+     */
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error(
+        "Supabase configuration missing (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY)",
+      );
+    }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let preflight: {
+      id: string;
+      tracking_number: string | null;
+      shipping_provider: string | null;
+      status: string | null;
+    } | null = null;
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, tracking_number, shipping_provider, status")
+        .eq("id", body.orderId)
+        .maybeSingle();
+      if (error) {
+        console.error(
+          "[DTDC idempotency] Pre-flight lookup error:",
+          error,
+        );
+        return jsonError(
+          `Failed to look up order: ${error.message}`,
+          500,
+        );
+      }
+      if (!data) {
+        return jsonError("Order not found", 404);
+      }
+      preflight = data as typeof preflight;
+    } catch (preflightErr) {
+      console.error(
+        "[DTDC idempotency] Pre-flight exception:",
+        preflightErr,
+      );
+      return jsonError(
+        preflightErr instanceof Error
+          ? preflightErr.message
+          : "Pre-flight check failed",
+        500,
+      );
+    }
+
+    if (preflight.status === "cancelled") {
+      return jsonError(
+        "Order is cancelled; cannot create shipment",
+        409,
+      );
+    }
+
+    if (preflight.tracking_number) {
+      const provider = preflight.shipping_provider ?? "unknown";
+      if (provider === "dtdc") {
+        console.log(
+          `[DTDC idempotency] Short-circuit: order ${body.orderId} already has DTDC AWB ${preflight.tracking_number}`,
+        );
+        return jsonResponse(
+          {
+            success: true,
+            awb: preflight.tracking_number,
+            customerReferenceNumber: body.orderId,
+            alreadyExisted: true,
+            raw: null,
+          } satisfies IdempotentDtdcResult,
+          200,
+        );
+      }
+      return jsonError(
+        `Order already has a ${provider} AWB. Cancel that shipment first to switch providers.`,
+        409,
+      );
     }
 
     const env = getDtdcEnv(["apiKey", "customerCode"]);
@@ -369,13 +511,175 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[DTDC] Shipment created:", respRef, "for order:", body.orderId);
+
+    /**
+     * Phase C — Conditional write-back.
+     *
+     * `UPDATE orders SET tracking_number=respRef, shipping_provider='dtdc', ...
+     *    WHERE id = body.orderId AND tracking_number IS NULL`
+     *
+     * The `.is("tracking_number", null)` clause makes this atomic at the row
+     * level. If a concurrent caller wrote a tracking_number between our
+     * Phase A SELECT and this UPDATE, our UPDATE affects 0 rows and we fall
+     * through to Phase D (race-loss cleanup).
+     *
+     * On DB error we STILL return success with the AWB — the caller's UX
+     * shouldn't break because of an internal write failure, and the orphan
+     * AWB is recoverable via the operator (logged loudly).
+     */
+    const shipmentCreatedAt = new Date().toISOString();
+    let claimSucceeded = false;
+    try {
+      const { data: claimed, error: claimError } = await supabase
+        .from("orders")
+        .update({
+          tracking_number: respRef,
+          shipping_provider: "dtdc",
+          shipment_created_at: shipmentCreatedAt,
+          status: "shipped",
+        })
+        .eq("id", body.orderId)
+        .is("tracking_number", null)
+        .select("id, tracking_number, shipping_provider");
+
+      if (claimError) {
+        console.error(
+          `[DTDC idempotency] Write-back failed for order ${body.orderId} AWB ${respRef}:`,
+          claimError,
+        );
+        return jsonResponse(
+          {
+            success: true,
+            awb: respRef,
+            customerReferenceNumber,
+            alreadyExisted: false,
+            raw,
+          } satisfies IdempotentDtdcResult,
+          200,
+        );
+      }
+
+      claimSucceeded = Array.isArray(claimed) && claimed.length === 1;
+    } catch (writeErr) {
+      console.error(
+        `[DTDC idempotency] Write-back exception for order ${body.orderId} AWB ${respRef}:`,
+        writeErr,
+      );
+      return jsonResponse(
+        {
+          success: true,
+          awb: respRef,
+          customerReferenceNumber,
+          alreadyExisted: false,
+          raw,
+        } satisfies IdempotentDtdcResult,
+        200,
+      );
+    }
+
+    if (claimSucceeded) {
+      console.log(
+        `[DTDC idempotency] Claim succeeded for order ${body.orderId} -> AWB ${respRef}`,
+      );
+      return jsonResponse(
+        {
+          success: true,
+          awb: respRef,
+          customerReferenceNumber,
+          alreadyExisted: false,
+          raw,
+        } satisfies IdempotentDtdcResult,
+        200,
+      );
+    }
+
+    /**
+     * Phase D — Race-loss cleanup.
+     *
+     * Phase C's conditional UPDATE returned 0 rows: another caller (the other
+     * payment webhook, or an admin click) wrote a tracking_number between our
+     * Phase A SELECT and our Phase C UPDATE. Our AWB (respRef) is now an
+     * orphan at DTDC — we must cancel it to avoid paying for a duplicate
+     * consignment.
+     *
+     * We re-fetch the order to learn the winner's AWB (which we return to
+     * the caller for consistent UX), then fire a best-effort cancel on our
+     * orphan via an internal call to dtdc-cancel.
+     */
+    let winnerAwb: string | null = null;
+    let winnerProvider: string | null = null;
+    try {
+      const { data: winner, error: winnerErr } = await supabase
+        .from("orders")
+        .select("tracking_number, shipping_provider")
+        .eq("id", body.orderId)
+        .maybeSingle();
+      if (winnerErr) {
+        console.error(
+          `[DTDC idempotency] Failed to re-fetch winner for order ${body.orderId}:`,
+          winnerErr,
+        );
+      } else if (winner) {
+        winnerAwb = (winner.tracking_number as string | null) ?? null;
+        winnerProvider = (winner.shipping_provider as string | null) ?? null;
+      }
+    } catch (refetchErr) {
+      console.error(
+        `[DTDC idempotency] Winner re-fetch exception for order ${body.orderId}:`,
+        refetchErr,
+      );
+    }
+
+    console.warn(
+      `[DTDC idempotency] Race loss for orderId=${body.orderId}. Our AWB ${respRef} is orphan. Winner: provider=${winnerProvider} awb=${winnerAwb}`,
+    );
+
+    /**
+     * Fire-and-forget orphan cancel via internal call to dtdc-cancel.
+     *
+     * `DTDC_LEGACY_SERVICE_ROLE_JWT` is read with raw `Deno.env.get` (NOT the
+     * `readEnv` sanitizer) so the bytes we put into the Authorization header
+     * are byte-identical to what's stored as the Supabase secret. The auth
+     * helper in dtdc-cancel does its own trimming when comparing.
+     */
+    const legacyServiceRoleJwt = Deno.env.get("DTDC_LEGACY_SERVICE_ROLE_JWT") ?? "";
+    if (legacyServiceRoleJwt) {
+      void fetch(`${supabaseUrl}/functions/v1/dtdc-cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${legacyServiceRoleJwt}`,
+        },
+        body: JSON.stringify({ awb: respRef }),
+      })
+        .then((r) => r.json())
+        .then((result) => {
+          console.log(
+            `[DTDC idempotency] Orphan cancel result for ${respRef}:`,
+            JSON.stringify(result),
+          );
+        })
+        .catch((e) => {
+          console.error(
+            `[DTDC idempotency] Orphan cancel FAILED for ${respRef}:`,
+            e instanceof Error ? e.message : e,
+          );
+        });
+    } else {
+      console.error(
+        `[DTDC idempotency] Cannot fire orphan cancel for AWB ${respRef}: DTDC_LEGACY_SERVICE_ROLE_JWT is not set. Manual cancellation required at DTDC.`,
+      );
+    }
+
     return jsonResponse(
       {
         success: true,
-        awb: respRef,
-        customerReferenceNumber,
-        raw,
-      } satisfies DtdcCreateShipmentResult,
+        awb: winnerAwb ?? respRef,
+        customerReferenceNumber: body.orderId,
+        alreadyExisted: true,
+        raw: null,
+        raceLost: true,
+      } satisfies IdempotentDtdcResult,
       200,
     );
   } catch (err) {
