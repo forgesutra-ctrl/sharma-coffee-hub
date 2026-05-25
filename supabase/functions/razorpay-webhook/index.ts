@@ -170,13 +170,93 @@ async function processWebhookEvent(
 
           // Fire-and-forget: create shipment (in case verify-razorpay-payment wasn't called - e.g. user closed tab)
           const supabaseUrl = Deno.env.get("SUPABASE_URL");
-          const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-          if (supabaseUrl && supabaseServiceKey) {
-            fetch(`${supabaseUrl}/functions/v1/create-nimbuspost-shipment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseServiceKey}` },
-              body: JSON.stringify({ order_id: existingOrder.id }),
-            }).catch((e) => console.warn("[Webhook] Nimbus push error:", e));
+          const dtdcInternalJwt = Deno.env.get("DTDC_LEGACY_SERVICE_ROLE_JWT");
+          if (supabaseUrl && dtdcInternalJwt) {
+            // `existingOrder` above was selected with only 4 columns (id,
+            // order_number, status, payment_status). dtdc-create-shipment needs
+            // shipping_address, total_amount, payment_type, cod_balance plus
+            // order_items — so re-fetch inline before firing the call.
+            (async () => {
+              const { data: fullOrder, error: orderFetchErr } = await supabaseAdmin
+                .from("orders")
+                .select("*")
+                .eq("id", existingOrder.id)
+                .maybeSingle();
+              if (orderFetchErr || !fullOrder) {
+                console.warn(
+                  "[Webhook] DTDC push skipped: failed to load order:",
+                  orderFetchErr?.message ?? "order not found",
+                );
+                return;
+              }
+
+              const addr = (fullOrder.shipping_address ?? {}) as Record<string, any>;
+              const hasName = !!(addr.fullName || addr.full_name);
+              const hasPhone = !!addr.phone;
+              const hasPincode = !!addr.pincode;
+              if (!hasName || !hasPhone || !hasPincode) {
+                console.warn(
+                  "[Webhook] DTDC push skipped: shipping_address incomplete for order:",
+                  existingOrder.id,
+                );
+                return;
+              }
+
+              const { data: items, error: itemsFetchErr } = await supabaseAdmin
+                .from("order_items")
+                .select("*")
+                .eq("order_id", existingOrder.id);
+              if (itemsFetchErr) {
+                console.warn(
+                  "[Webhook] DTDC push skipped: failed to load order_items:",
+                  itemsFetchErr.message,
+                );
+                return;
+              }
+
+              const itemsArr = (items ?? []) as Array<Record<string, any>>;
+              const totalGrams = itemsArr.length === 0
+                ? 500
+                : itemsArr.reduce((sum, it) => {
+                    const w = typeof it.weight === "number" && it.weight > 0 ? it.weight : 250;
+                    return sum + w * (it.quantity || 1);
+                  }, 0);
+              const shipmentWeightGrams = Math.max(500, Math.min(50000, Math.round(totalGrams)));
+
+              const dtdcPayload = {
+                orderId: existingOrder.id,
+                totalAmount: Number(fullOrder.total_amount) || 0,
+                paymentType: fullOrder.payment_type ?? "prepaid",
+                codBalance: fullOrder.payment_type === "cod" ? (Number(fullOrder.cod_balance) || 0) : undefined,
+                customerEmail: addr.email || "",
+                address: {
+                  fullName: addr.fullName || addr.full_name || "Customer",
+                  addressLine1: addr.addressLine1 || addr.address_line1 || "",
+                  addressLine2: addr.addressLine2 || addr.address_line2 || "",
+                  city: addr.city || "",
+                  state: addr.state || "",
+                  pincode: addr.pincode || "",
+                  phone: addr.phone || "",
+                  email: addr.email || "",
+                },
+                items: itemsArr.map((it) => ({
+                  product_name: it.product_name || "",
+                  quantity: it.quantity || 0,
+                  weight: typeof it.weight === "number" && it.weight > 0 ? it.weight : 250,
+                  unit_price: it.unit_price || 0,
+                })),
+                shipmentWeightGrams,
+              };
+
+              const response = await fetch(`${supabaseUrl}/functions/v1/dtdc-create-shipment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${dtdcInternalJwt}` },
+                body: JSON.stringify(dtdcPayload),
+              });
+              if (!response.ok) {
+                console.warn("[Webhook] DTDC push failed:", response.status);
+              }
+            })().catch((e) => console.warn("[Webhook] DTDC push error:", e));
           }
 
           return { success: true };
