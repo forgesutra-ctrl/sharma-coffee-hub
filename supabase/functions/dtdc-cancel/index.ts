@@ -19,6 +19,7 @@ import {
   getDtdcEnv,
   jsonResponse,
   jsonError,
+  verifyAdminAuth,
   DTDC_ENDPOINTS,
   type DtdcCancelResult,
 } from "../_shared/dtdc-utils.ts";
@@ -81,6 +82,16 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method !== "POST") {
       return jsonError("Method not allowed. Use POST.", 405);
+    }
+
+    /**
+     * Auth gate: only admin/staff users (via browser JWT) OR backend internal
+     * callers (via DTDC_LEGACY_SERVICE_ROLE_JWT) can cancel DTDC shipments.
+     * Anonymous and customer-role callers are rejected.
+     */
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.ok) {
+      return jsonError(authResult.error, authResult.status);
     }
 
     let body: SingleCancelBody | null = null;
