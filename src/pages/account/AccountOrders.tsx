@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { trackProzoShipment } from '@/services/prozo';
+import { trackDtdcShipment } from '@/services/dtdc';
 import { Tables, Json } from '@/integrations/supabase/types';
 
 type Order = Tables<'orders'>;
@@ -167,7 +167,7 @@ export default function OrdersPage() {
     setTrackingOpen(true);
 
     try {
-      const data = await trackProzoShipment(awb);
+      const data = await trackDtdcShipment(awb);
       setTrackingData({
         currentStatus: data.currentStatus,
         lastUpdatedDate: data.lastUpdatedDate,
