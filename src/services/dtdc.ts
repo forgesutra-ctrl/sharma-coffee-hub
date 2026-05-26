@@ -8,20 +8,11 @@
  * Functions then validate that JWT via `verifyAdminAuth` / `verifyUserAuth`
  * in `_shared/dtdc-utils.ts`. No DTDC credentials, no service-role keys,
  * and no Prozo-style username/password ever touch the browser.
- *
- * This file is intentionally additive — it does NOT replace
- * `src/services/prozo.ts` yet. Once UI components are migrated to import
- * from here instead of from `./prozo`, the Prozo client can be removed.
  */
 
 import { supabase } from "@/integrations/supabase/client";
 
-// === Re-exports — keep the Prozo type surface stable during migration ========
-//
-// Every existing consumer of `src/services/prozo.ts` types (createShipment
-// input, tracking result, etc.) can swap its import path from
-// `@/services/prozo` to `@/services/dtdc` and keep working without any code
-// changes. The shape contract is preserved verbatim.
+// === Re-exports — shared shipping type surface (see shipping-types.ts) =======
 
 import type {
   MappedOrderStatus,
@@ -30,7 +21,7 @@ import type {
   ProzoCreateShipmentInput,
   ProzoTrackingEvent,
   ProzoTrackingResult,
-} from "./prozo";
+} from "./shipping-types";
 
 export type {
   MappedOrderStatus,
