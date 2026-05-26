@@ -202,12 +202,12 @@ export function useNimbuspost() {
 }
 */
 
-/** @deprecated Nimbuspost replaced by Prozo; stub avoids runtime use of deprecated Edge Functions. */
+/** @deprecated Nimbuspost replaced by DTDC; stub avoids runtime use of deprecated Edge Functions. */
 export function useNimbuspost() {
   const [loading] = useState(false);
-  const [error] = useState<string | null>("Nimbuspost is deprecated — use Prozo (src/services/prozo.ts)");
+  const [error] = useState<string | null>("Nimbuspost is deprecated — use @/services/dtdc");
   const reject = async () => {
-    throw new Error("Nimbuspost is deprecated. Use src/services/prozo.ts.");
+    throw new Error("Nimbuspost is deprecated. Use @/services/dtdc.");
   };
   return {
     loading,

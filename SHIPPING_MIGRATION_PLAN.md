@@ -6,12 +6,12 @@ Replace all shipping integrations with a clean, fresh DTDC integration.
 ## Final state we want
 - ✅ DTDC active and creating shipments
 - ❌ Nimbuspost code removed
-- ❌ Prozo code removed
+- ✅ Prozo browser client removed (Phase 6b — `src/services/prozo.ts` deleted; types in `shipping-types.ts`)
 - ❌ Old DTDC ghost code cleaned
 
 ---
 
-## Current state (as of investigation)
+## Current state (as of Phase 6b)
 
 ### 🔴 Nimbuspost — DORMANT (30+ files)
 Documentation:
@@ -41,18 +41,20 @@ Backend / Supabase:
 - supabase/config.toml
 - supabase/functions/* (nimbuspost-utils, shipment, cancel, serviceability, label, track, nimbus, webhook, payment)
 
-### 🟡 Prozo — ACTIVE (9 files) — DO NOT TOUCH YET
-- .env.example
-- src/hooks/useNimbuspost.ts (shared with Nimbus)
-- src/pages/account/AccountOrders.tsx (shared)
-- src/pages/admin/OperationsPage.tsx (shared)
-- src/pages/admin/OrdersPage.tsx (shared)
-- src/pages/admin/ShippingPage.tsx (shared)
-- src/services/prozo.ts
-- supabase/migrations/20260406000000_orders_prozo_tracking.sql
-- vite.config.ts
+### ✅ Prozo — REMOVED (Phase 6b)
+- ~~src/services/prozo.ts~~ — **deleted**; types moved to `src/services/shipping-types.ts`
+- Frontend pages migrated to `@/services/dtdc` (Phase 4 complete)
+- `vite.config.ts` Prozo dev proxy removed
+- `.env.example` VITE_PROZO_* and VITE_STORE_* removed (DTDC uses Supabase Edge Function secrets)
+- `supabase/migrations/20260406000000_orders_prozo_tracking.sql` — **kept** (database history; adds `tracking_number` / `shipping_provider` columns)
 
-### ⚫ DTDC — GHOST (4 files, historical only)
+### ✅ DTDC — ACTIVE
+- `src/services/dtdc.ts` — frontend client
+- `src/services/shipping-types.ts` — shared type definitions
+- `supabase/functions/dtdc-*` — Edge Functions (create, track, cancel, label)
+- Webhooks call `dtdc-create-shipment` for new orders
+
+### ⚫ DTDC — historical migrations only
 - NIMBUSPOST_INTEGRATION.md (mentions DTDC history)
 - supabase/migrations/20260109140804_*.sql (do not delete - history)
 - supabase/migrations/20260118000000_add_dtdc_awb_to_orders.sql (do not delete - history)
@@ -67,32 +69,27 @@ Backend / Supabase:
 - Identified Prozo as the active provider
 - Documented file footprint
 
-### ⏳ Phase 2: Build new DTDC integration (NEXT)
-- Build DTDC alongside Prozo (do NOT remove Prozo yet)
-- Create new files in clearly separated location (e.g., src/services/dtdc.ts)
-- Create new Supabase functions for DTDC
-- Use Cursor AI chat to scaffold the new integration
-- Test thoroughly in development before switching
+### ✅ Phase 2: Build new DTDC integration — COMPLETE
+- `src/services/dtdc.ts` and `supabase/functions/dtdc-*` created and tested
 
-### ⏳ Phase 3: Switch over
-- Switch live site from Prozo to DTDC
-- Monitor for issues
-- Keep Prozo code temporarily as rollback option
+### ✅ Phase 3: Switch over — COMPLETE
+- Live flows use DTDC (webhooks + admin/customer UI)
 
-### ⏳ Phase 4: Cleanup
-- Remove all Nimbuspost code
-- Remove all Prozo code
-- Update documentation
-- Final commit and deploy
+### ✅ Phase 4: Frontend Prozo → DTDC migration — COMPLETE
+- All admin and customer pages import from `@/services/dtdc`
+- No runtime imports from `@/services/prozo` remain
+
+### ⏳ Phase 5 / 6: Cleanup — IN PROGRESS
+- **Phase 6b (complete):** Delete `prozo.ts`, extract types to `shipping-types.ts`, remove Vite proxy and stale env vars
+- **Remaining:** Remove Nimbuspost code, cosmetic Prozo* renames, update remaining docs
 
 ---
 
 ## Critical rules during this migration
 
 1. ❗ Migration SQL files in supabase/migrations/ — DO NOT DELETE old ones (they're database history)
-2. ❗ Do not touch Prozo code until DTDC is fully tested
-3. ❗ Test everything on the `remove-old-shipping` branch first
-4. ❗ Never deploy to live until verified working in dev
+2. ❗ Test everything on the `remove-old-shipping` branch first
+3. ❗ Never deploy to live until verified working in dev
 
 ---
 
