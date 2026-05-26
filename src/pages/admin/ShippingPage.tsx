@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { createProzoShipment, trackProzoShipment, cancelProzoShipment } from '@/services/prozo';
+import { createDtdcShipment, trackDtdcShipment, cancelDtdcShipment, getDtdcShippingLabel, downloadLabelPdf } from '@/services/dtdc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,8 +92,6 @@ export default function ShippingPage() {
   // Cancel Dialog State
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelAwb, setCancelAwb] = useState('');
-  /** Prozo cancel reference — order UUID (same as create reference) */
-  const [cancelOrderReferenceId, setCancelOrderReferenceId] = useState('');
 
   // Quick Track State
   const [quickTrackAwb, setQuickTrackAwb] = useState('');
@@ -196,7 +194,7 @@ export default function ShippingPage() {
               },
             ];
 
-      const { awb } = await createProzoShipment({
+      const { awb, alreadyExisted } = await createDtdcShipment({
         orderId: selectedOrder.id,
         totalAmount: selectedOrder.total_amount,
         paymentType: isCOD ? 'cod' : selectedOrder.payment_type || 'prepaid',
@@ -222,7 +220,7 @@ export default function ShippingPage() {
       const now = new Date().toISOString();
       await supabase.from('orders').update({
         tracking_number: awb,
-        shipping_provider: 'prozo',
+        shipping_provider: 'dtdc',
         status: 'shipped',
         shipment_created_at: now,
       }).eq('id', selectedOrder.id);
@@ -241,7 +239,7 @@ export default function ShippingPage() {
       });
 
       setCreatedAwb(awb);
-      toast.success(`Shipment created! AWB: ${awb}`);
+      toast.success(alreadyExisted ? `Shipment already booked. AWB: ${awb}` : `Shipment created! AWB: ${awb}`);
       fetchPendingOrders();
       fetchShipments();
     } catch (err) {
@@ -253,9 +251,17 @@ export default function ShippingPage() {
 
   // NIMBUSPOST - DEPRECATED — previously: createConsignment via useNimbuspost / create-nimbuspost-shipment
 
-  const handlePrintLabel = async (_awb: string) => {
-    // NIMBUSPOST - DEPRECATED — label PDF was fetched from nimbuspost-shipping-label Edge Function
-    toast.info('Labels for Prozo are not wired in the app yet. Use the Prozo dashboard or API.');
+  const handlePrintLabel = async (awb: string) => {
+    try {
+      const blob = await getDtdcShippingLabel(awb);
+      if (blob instanceof Blob) {
+        downloadLabelPdf(blob, `dtdc-${awb}.pdf`);
+      } else {
+        toast.error('Unexpected label response format');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch label');
+    }
   };
 
   const handleTrack = async (awb: string) => {
@@ -263,7 +269,7 @@ export default function ShippingPage() {
     setTrackingModalOpen(true);
     setTrackingLoading(true);
     try {
-      const data = await trackProzoShipment(awb);
+      const data = await trackDtdcShipment(awb);
       setTrackingData({
         currentStatus: data.currentStatus,
         lastUpdatedDate: data.lastUpdatedDate,
@@ -286,17 +292,16 @@ export default function ShippingPage() {
   };
 
   const handleCancelConfirm = async () => {
-    if (!cancelOrderReferenceId.trim()) {
-      toast.error('Missing order id for Prozo cancellation');
+    if (!cancelAwb.trim()) {
+      toast.error('Missing AWB for cancellation');
       return;
     }
     setProzoLoading(true);
     try {
-      await cancelProzoShipment(cancelOrderReferenceId.trim());
+      await cancelDtdcShipment(cancelAwb.trim());
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', cancelAwb);
       toast.success('Shipment cancelled');
       setCancelDialogOpen(false);
-      setCancelOrderReferenceId('');
       fetchShipments();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to cancel shipment');
@@ -358,7 +363,7 @@ export default function ShippingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Create New Shipment</CardTitle>
-              <CardDescription>Select an order and create a Prozo shipment</CardDescription>
+              <CardDescription>Select an order and create a DTDC shipment</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -512,7 +517,6 @@ export default function ShippingPage() {
                                 className="text-destructive"
                                 onClick={() => {
                                   setCancelAwb(shipment.awb);
-                                  setCancelOrderReferenceId(shipment.order_id || '');
                                   setCancelDialogOpen(true);
                                 }}
                               >
