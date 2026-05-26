@@ -191,38 +191,6 @@ export default function OrdersPage() {
     }
   };
 
-  // NIMBUSPOST - DEPRECATED
-  // const createNimbusShipment = async () => {
-  //   if (!selectedOrder) return;
-  //   setNimbusCreateLoading(true);
-  //   setNimbusCreateError(null);
-  //   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  //   try {
-  //     const session = (await supabase.auth.getSession()).data.session;
-  //     const res = await fetch(`${SUPABASE_URL}/functions/v1/create-nimbuspost-shipment`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         ...(session?.access_token && { Authorization: `Bearer ${session.access_token}` }),
-  //       },
-  //       body: JSON.stringify({
-  //         order_id: selectedOrder.id,
-  //         order_number: selectedOrder.order_number,
-  //       }),
-  //     });
-  //     const text = await res.text();
-  //     let data: { success?: boolean; error?: string; details?: string; hint?: string } = {};
-  //     try {
-  //       data = text ? JSON.parse(text) : {};
-  //     } catch {
-  //       console.error('[Nimbus] Response not JSON:', text?.slice(0, 200));
-  //     }
-  //      ...
-  //   } finally {
-  //     setNimbusCreateLoading(false);
-  //   }
-  // };
-
   const viewOrderDetails = async (order: Order) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
@@ -559,7 +527,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Shipment (DTDC); legacy Prozo/Nimbuspost AWBs still shown if present */}
+              {/* DTDC shipment; legacy AWB columns still shown if present */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Truck className="w-4 h-4" />

@@ -183,9 +183,6 @@ export default function OrdersPage() {
     }
   };
 
-  // NIMBUSPOST - DEPRECATED
-  // const { data, error } = await supabase.functions.invoke('nimbuspost-track', { body: { awb } });
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -302,7 +299,7 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  {/* Shipment tracking (Prozo tracking_number, legacy Nimbuspost AWB, or shipments row) */}
+                  {/* Shipment tracking (tracking_number, legacy AWB columns, or shipments row) */}
                   {(order.tracking_number || order.nimbuspost_awb_number || (order.shipment && order.shipment.awb)) && (
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">

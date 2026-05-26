@@ -803,7 +803,7 @@ const Checkout = () => {
 
       console.log("Calling Edge Function...");
       
-      // Get fresh session (matches pattern used by create-nimbuspost-shipment)
+      // Get fresh session for Edge Function authorization
       const { data: { session: freshSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !freshSession?.access_token) {

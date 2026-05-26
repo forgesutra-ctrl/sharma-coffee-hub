@@ -249,8 +249,6 @@ export default function ShippingPage() {
     }
   };
 
-  // NIMBUSPOST - DEPRECATED — previously: createConsignment via useNimbuspost / create-nimbuspost-shipment
-
   const handlePrintLabel = async (awb: string) => {
     try {
       const blob = await getDtdcShippingLabel(awb);
@@ -309,8 +307,6 @@ export default function ShippingPage() {
       setShippingLoading(false);
     }
   };
-
-  // NIMBUSPOST - DEPRECATED — cancelShipment(awb) via nimbuspost-cancel Edge Function
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
