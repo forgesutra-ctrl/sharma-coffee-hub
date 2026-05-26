@@ -6,12 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Eye, Package, RefreshCw, Truck, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, Eye, Package, RefreshCw, Truck, ExternalLink, Loader2, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import AdminOrStaffOnly from '@/components/admin/AdminOrStaffOnly';
-import { createDtdcShipment } from '@/services/dtdc';
+import { createDtdcShipment, getDtdcShippingLabel, downloadLabelPdf } from '@/services/dtdc';
 
 type Order = Tables<'orders'>;
 type OrderItem = Tables<'order_items'>;
@@ -188,6 +188,19 @@ export default function OrdersPage() {
       toast.error(msg);
     } finally {
       setShipmentCreateLoading(false);
+    }
+  };
+
+  const handlePrintLabel = async (awb: string) => {
+    try {
+      const blob = await getDtdcShippingLabel(awb);
+      if (blob instanceof Blob) {
+        downloadLabelPdf(blob, `dtdc-${awb}.pdf`);
+      } else {
+        toast.error('Unexpected label response format');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch label');
     }
   };
 
@@ -537,6 +550,16 @@ export default function OrdersPage() {
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
                     <p><span className="font-medium">AWB:</span> <span className="font-mono">{selectedOrder.tracking_number}</span></p>
                     <p><span className="font-medium">Provider:</span> {selectedOrder.shipping_provider === 'dtdc' ? 'DTDC' : 'Prozo'}</p>
+                    {selectedOrder.shipping_provider === 'dtdc' && selectedOrder.tracking_number && selectedOrder.status !== 'cancelled' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintLabel(selectedOrder.tracking_number!)}
+                      >
+                        <Printer className="w-3 h-3 mr-1" />
+                        Print Label
+                      </Button>
+                    )}
                   </div>
                 ) : selectedOrder.nimbuspost_awb_number ? (
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">
