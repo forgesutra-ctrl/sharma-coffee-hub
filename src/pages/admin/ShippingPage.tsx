@@ -60,7 +60,7 @@ interface TrackingEvent {
 
 export default function ShippingPage() {
   const { user, isAdmin, isStaff } = useAuth();
-  const [prozoLoading, setProzoLoading] = useState(false);
+  const [shippingLoading, setShippingLoading] = useState(false);
 
   // Create Shipment Form State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -167,7 +167,7 @@ export default function ShippingPage() {
       return;
     }
 
-    setProzoLoading(true);
+    setShippingLoading(true);
     try {
       const { data: lineItems, error: itemsError } = await supabase
         .from('order_items')
@@ -245,7 +245,7 @@ export default function ShippingPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create shipment');
     } finally {
-      setProzoLoading(false);
+      setShippingLoading(false);
     }
   };
 
@@ -296,7 +296,7 @@ export default function ShippingPage() {
       toast.error('Missing AWB for cancellation');
       return;
     }
-    setProzoLoading(true);
+    setShippingLoading(true);
     try {
       await cancelDtdcShipment(cancelAwb.trim());
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', cancelAwb);
@@ -306,7 +306,7 @@ export default function ShippingPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to cancel shipment');
     } finally {
-      setProzoLoading(false);
+      setShippingLoading(false);
     }
   };
 
@@ -430,8 +430,8 @@ export default function ShippingPage() {
               </div>
 
               <div className="flex gap-4">
-                <Button onClick={handleCreateShipment} disabled={!selectedOrder || prozoLoading}>
-                  {prozoLoading ? 'Creating...' : 'Create Shipment'}
+                <Button onClick={handleCreateShipment} disabled={!selectedOrder || shippingLoading}>
+                  {shippingLoading ? 'Creating...' : 'Create Shipment'}
                 </Button>
 
                 {createdAwb && (
@@ -576,7 +576,7 @@ export default function ShippingPage() {
                   onChange={e => setQuickTrackAwb(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleQuickTrack()}
                 />
-                <Button onClick={handleQuickTrack} disabled={prozoLoading}>
+                <Button onClick={handleQuickTrack} disabled={shippingLoading}>
                   <Search className="h-4 w-4 mr-2" />
                   Track
                 </Button>
@@ -641,7 +641,7 @@ export default function ShippingPage() {
             <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
               Keep Shipment
             </Button>
-            <Button variant="destructive" onClick={handleCancelConfirm} disabled={prozoLoading}>
+            <Button variant="destructive" onClick={handleCancelConfirm} disabled={shippingLoading}>
               Cancel Shipment
             </Button>
           </DialogFooter>
