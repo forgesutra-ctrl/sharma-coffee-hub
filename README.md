@@ -86,7 +86,7 @@ See `.env.example` for required environment variables. Key variables include:
 - 📧 Email notifications
 - 📱 Responsive design
 - ☕ Subscription management
-- 🚚 Shipping integration (Nimbuspost)
+- 🚚 Shipping integration (DTDC)
 
 ## 🚀 Deployment
 

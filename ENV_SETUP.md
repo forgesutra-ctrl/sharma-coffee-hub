@@ -93,33 +93,39 @@ The AI customer support chatbot can be configured with your preferred AI service
 
 **Fallback:** If not configured, the chatbot button will still appear but users will see an error message when trying to use it.
 
-### Shipping Integration - Nimbuspost
+### Shipping Integration - DTDC
 
-Required for automated shipment creation, label generation, and tracking.
+The DTDC shipping integration uses Supabase Edge Function secrets (NOT browser-side `VITE_` variables). Set these via the Supabase dashboard (Project Settings → Edge Functions → Secrets):
 
-| Variable | Description | Required | Default | Where to Get |
-|----------|-------------|----------|---------|--------------|
-| `NIMBUSPOST_EMAIL` | Nimbuspost account email | ✅ Required | (see .env) | Nimbuspost Dashboard |
-| `NIMBUSPOST_PASSWORD` | Nimbuspost account password | ✅ Required | (see .env) | Nimbuspost Dashboard |
-| `NIMBUSPOST_TRACKING_DOMAIN` | Tracking page domain | 🔶 Optional | `sharmacoffeeworks.odrtrk.live` | Nimbuspost |
+**DTDC API credentials:**
+- `DTDC_API_KEY` (required) — DTDC API key for shipment creation
+- `DTDC_CUSTOMER_CODE` (required) — DTDC customer code
+- `DTDC_ACCESS_TOKEN` (required) — DTDC access token
+- `DTDC_TRACKING_USERNAME` (required) — DTDC tracking API username
+- `DTDC_TRACKING_PASSWORD` (required) — DTDC tracking API password
+- `DTDC_API_BASE_URL` (optional, default: `https://dtdcapi.shipsy.io`) — DTDC API base URL
+- `DTDC_TRACKING_BASE_URL` (optional) — DTDC tracking API base URL
 
-**Status:** Configure in Supabase Edge Function secrets for shipment creation after payment.
+**Warehouse / pickup details:**
+- `STORE_NAME` (required) — Warehouse name
+- `STORE_PHONE` (required) — Warehouse contact phone
+- `STORE_EMAIL` (required) — Warehouse contact email
+- `STORE_ADDRESS` (required) — Warehouse street address
+- `STORE_CITY` (required) — Warehouse city
+- `STORE_STATE` (required) — Warehouse state
+- `STORE_PINCODE` (required) — Warehouse pincode
 
-**Affected Features:**
-- Automatic shipment creation after payment (create-nimbuspost-shipment)
-- Pincode serviceability check (nimbuspost-check-serviceability; optional for checkout)
-- Shipping label download (nimbuspost-shipping-label)
-- Real-time tracking (nimbuspost-track)
-- Shipment cancellation (nimbuspost-cancel)
+**Affected features:** Order creation triggers automatic DTDC AWB generation via the payment webhook. Admin can also manually create/track/cancel shipments and download shipping labels.
 
-**Edge Functions Using These:**
-- `create-nimbuspost-shipment`
-- `nimbuspost-check-serviceability`
-- `nimbuspost-shipping-label`
-- `nimbuspost-track`
-- `nimbuspost-cancel`
+**Active Edge Functions:**
+- `dtdc-create-shipment` — Creates DTDC AWB for an order
+- `dtdc-track` — Fetches tracking events for an AWB
+- `dtdc-cancel` — Cancels a DTDC shipment
+- `dtdc-shipping-label` — Downloads label PDF for an AWB
 
-**Fallback:** If not configured, shipment creation after payment will fail; admin can create shipments manually via Nimbuspost dashboard.
+For staging vs production credentials and detailed configuration, see `DTDC_WORKING_CONFIG.md` at the repo root.
+
+**Legacy note:** The `orders` table retains 3 columns (`nimbuspost_awb_number`, `nimbuspost_courier_name`, `nimbuspost_tracking_url`) for orders that pre-date the DTDC migration. No Nimbus secrets are required; these columns are read-only fallback display in customer/admin UI.
 
 ---
 
@@ -133,7 +139,7 @@ Required for automated shipment creation, label generation, and tracking.
 | **Razorpay** | ❌ Not Configured | **HIGH** - No payments | Configure immediately |
 | **Resend** | ❌ Not Configured | **HIGH** - No auth | Configure immediately |
 | **AI Chatbot** | ❌ Not Configured | **MEDIUM** - Chatbot down | Configure for better UX |
-| **Nimbuspost** | Configure in Supabase | **MEDIUM** - Auto shipments | Set NIMBUSPOST_EMAIL, NIMBUSPOST_PASSWORD |
+| **DTDC** | Configure in Supabase | **MEDIUM** - Auto shipments | Set DTDC API and warehouse secrets (see above) |
 
 ### Build Status
 
@@ -144,7 +150,7 @@ The application compiles and runs without errors. However, the following feature
 1. **Payment Processing** - Requires Razorpay
 2. **User Authentication** - Requires Resend
 3. **AI Chatbot** - Optional feature
-4. **Automated Shipping** - Requires Nimbuspost (NIMBUSPOST_EMAIL, NIMBUSPOST_PASSWORD)
+4. **Automated Shipping** - Requires DTDC (see Shipping Integration - DTDC section)
 
 ---
 
@@ -189,17 +195,26 @@ The application compiles and runs without errors. However, the following feature
 
 The AI chatbot can be configured with your preferred AI service provider. Contact the development team for configuration details.
 
-### Step 4: Configure Nimbuspost (Shipping)
+### Step 4: Configure DTDC (Shipping)
 
-1. Log in to [Nimbuspost](https://ship.nimbuspost.com/) and obtain your account email/password.
+1. Obtain DTDC API credentials and warehouse/pickup details from your DTDC account (see `DTDC_WORKING_CONFIG.md` for staging values).
 2. Add to Supabase Edge Function secrets:
    ```bash
    # In Supabase Dashboard > Settings > Edge Functions > Secrets
-   NIMBUSPOST_EMAIL=your-nimbuspost-email@example.com
-   NIMBUSPOST_PASSWORD=your-nimbuspost-password
-   NIMBUSPOST_TRACKING_DOMAIN=sharmacoffeeworks.odrtrk.live
+   DTDC_API_KEY=your-dtdc-api-key
+   DTDC_CUSTOMER_CODE=your-customer-code
+   DTDC_ACCESS_TOKEN=your-access-token
+   DTDC_TRACKING_USERNAME=your-tracking-username
+   DTDC_TRACKING_PASSWORD=your-tracking-password
+   STORE_NAME=Sharma Coffee Works
+   STORE_PHONE=your-warehouse-phone
+   STORE_EMAIL=your-warehouse-email
+   STORE_ADDRESS=your-warehouse-address
+   STORE_CITY=your-city
+   STORE_STATE=your-state
+   STORE_PINCODE=your-pincode
    ```
-3. Deploy Edge Functions: `create-nimbuspost-shipment`, `nimbuspost-track`, `nimbuspost-shipping-label`, `nimbuspost-cancel`, `nimbuspost-check-serviceability`.
+3. Deploy Edge Functions: `dtdc-create-shipment`, `dtdc-track`, `dtdc-cancel`, `dtdc-shipping-label`.
 
 ### Step 5: Verify Configuration
 
@@ -263,8 +278,8 @@ Common issues:
 - Check browser console for specific error messages
 
 **Shipping errors:**
-- Check Nimbuspost credentials (email/password) in Edge Function secrets
-- Verify Nimbuspost API is accessible; contact Nimbuspost support if integration fails
+- Check DTDC API credentials and warehouse secrets in Edge Function secrets
+- Verify DTDC API is accessible; see `DTDC_WORKING_CONFIG.md` or contact your shipping partner support if integration fails
 
 ---
 
@@ -289,7 +304,7 @@ For issues with:
 - **Razorpay:** [Razorpay Support](https://razorpay.com/support/)
 - **Resend:** [Resend Support](https://resend.com/support)
 - **AI Chatbot:** Contact development team
-- **Nimbuspost:** Contact Nimbuspost support or check dashboard for API status
+- **Shipping (DTDC):** Contact your shipping partner support or see `DTDC_WORKING_CONFIG.md`
 
 ---
 

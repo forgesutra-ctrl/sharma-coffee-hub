@@ -5,7 +5,7 @@ Replace all shipping integrations with a clean, fresh DTDC integration.
 
 ## Final state we want
 - ✅ DTDC active and creating shipments
-- ❌ Nimbuspost code removed
+- ✅ Nimbuspost code removed (Phase 6c)
 - ✅ Prozo browser client removed (Phase 6b — `src/services/prozo.ts` deleted; types in `shipping-types.ts`)
 - ❌ Old DTDC ghost code cleaned
 
@@ -13,20 +13,16 @@ Replace all shipping integrations with a clean, fresh DTDC integration.
 
 ## Current state (as of Phase 6b)
 
-### 🔴 Nimbuspost — DORMANT (30+ files)
-Documentation:
-- CREATE_SHIPMENT_CHECKLIST.md
-- DATABASE_STATUS.md
-- ENV_SETUP.md
-- NIMBUSPOST_INTEGRATION.md
-- NIMBUS_AND_ORDERS_DEBUG_HISTORY.md
-- NIMBUS_PUSH_MISSING_ORDERS.md
-- NIMBUS_SECRETS_STEP_BY_STEP.md
-- README.md (mentions only)
+### ✅ Nimbuspost — REMOVED (Phase 6c, May 2026)
 
-Frontend:
-- src/hooks/useNimbuspost.ts
-- src/lib/nimbuspost/constants.ts
+- 6 Edge Functions deleted from repo (6c-1); deployed functions to be removed in 6c-4
+- `src/hooks/useNimbuspost.ts` — deleted
+- `src/lib/nimbuspost/constants.ts` — deleted
+- Documentation archived to `docs/archive/nimbus/`
+- Legacy DB columns KEPT for historical orders: `nimbuspost_awb_number`, `nimbuspost_courier_name`, `nimbuspost_tracking_url`
+- UI fallback display for legacy orders is preserved
+
+Frontend (legacy column reads only):
 - src/pages/Checkout.tsx
 - src/pages/OrderConfirmation.tsx
 - src/pages/account/AccountOrders.tsx
@@ -34,12 +30,10 @@ Frontend:
 - src/pages/admin/OperationsPage.tsx
 - src/pages/admin/OrdersPage.tsx
 - src/pages/admin/ShippingPage.tsx
-- src/data/legalContent.ts
 - src/integrations/supabase/types.ts
 
 Backend / Supabase:
-- supabase/config.toml
-- supabase/functions/* (nimbuspost-utils, shipment, cancel, serviceability, label, track, nimbus, webhook, payment)
+- supabase/migrations/20260202000000_nimbuspost_replace_dtdc.sql — **kept** (database history)
 
 ### ✅ Prozo — REMOVED (Phase 6b)
 - ~~src/services/prozo.ts~~ — **deleted**; types moved to `src/services/shipping-types.ts`
@@ -55,7 +49,6 @@ Backend / Supabase:
 - Webhooks call `dtdc-create-shipment` for new orders
 
 ### ⚫ DTDC — historical migrations only
-- NIMBUSPOST_INTEGRATION.md (mentions DTDC history)
 - supabase/migrations/20260109140804_*.sql (do not delete - history)
 - supabase/migrations/20260118000000_add_dtdc_awb_to_orders.sql (do not delete - history)
 - supabase/migrations/20260202000000_nimbuspost_replace_dtdc.sql (do not delete - history)
@@ -81,7 +74,11 @@ Backend / Supabase:
 
 ### ⏳ Phase 5 / 6: Cleanup — IN PROGRESS
 - **Phase 6b (complete):** Delete `prozo.ts`, extract types to `shipping-types.ts`, remove Vite proxy and stale env vars
-- **Remaining:** Remove Nimbuspost code, cosmetic Prozo* renames, update remaining docs
+- **Phase 6c-1:** Nimbus code deletion — ✅ COMPLETE
+- **Phase 6c-2:** Comment cleanup — ✅ COMPLETE
+- **Phase 6c-3:** Docs + legal — 🟡 IN PROGRESS (this commit)
+- **Phase 6c-4:** Delete deployed Nimbus Edge Functions — ⏳ PENDING (manual)
+- **Remaining:** Cosmetic Prozo* renames, legalContent.ts update (Commit B)
 
 ---
 
