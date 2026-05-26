@@ -1,13 +1,14 @@
 /**
  * DTDC service client. Wraps the 4 dtdc-* Edge Functions. Returns
- * Prozo-compatible types where possible so UI components can swap trivially.
+ * shared shipping-types shapes so UI components can consume tracking and
+ * shipment results consistently.
  *
  * Auth: every call below uses `supabase.functions.invoke()` (or a raw fetch
  * that mirrors what `invoke` does), which attaches the current user's
  * Supabase session JWT as `Authorization: Bearer <jwt>`. The dtdc-* Edge
  * Functions then validate that JWT via `verifyAdminAuth` / `verifyUserAuth`
- * in `_shared/dtdc-utils.ts`. No DTDC credentials, no service-role keys,
- * and no Prozo-style username/password ever touch the browser.
+ * in `_shared/dtdc-utils.ts`. No DTDC credentials or service-role keys
+ * ever touch the browser.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -16,20 +17,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 import type {
   MappedOrderStatus,
-  ProzoLineItem,
-  ProzoShippingAddressInput,
-  ProzoCreateShipmentInput,
-  ProzoTrackingEvent,
-  ProzoTrackingResult,
+  ShippingLineItem,
+  ShippingAddressInput,
+  CreateShipmentInput,
+  ShippingTrackingEvent,
+  ShippingTrackingResult,
 } from "./shipping-types";
 
 export type {
   MappedOrderStatus,
-  ProzoLineItem,
-  ProzoShippingAddressInput,
-  ProzoCreateShipmentInput,
-  ProzoTrackingEvent,
-  ProzoTrackingResult,
+  ShippingLineItem,
+  ShippingAddressInput,
+  CreateShipmentInput,
+  ShippingTrackingEvent,
+  ShippingTrackingResult,
 };
 
 // === Public DTDC-specific types ==============================================
@@ -112,7 +113,7 @@ interface DtdcLabelBase64Wire {
 // === Helpers =================================================================
 
 /**
- * Convert DTDC's 6-value `mappedStatus` union to Prozo's 4-value
+ * Convert DTDC's 6-value `mappedStatus` union to the 4-value
  * `MappedOrderStatus`. Two collapses are intentional:
  *   - "out_for_delivery" → "shipped"  (UI doesn't distinguish; the human
  *                                      `currentStatus` text still tells the
@@ -120,7 +121,7 @@ interface DtdcLabelBase64Wire {
  *   - "rto"              → "cancelled" (from the customer's POV, a returned
  *                                       shipment is a cancelled order)
  */
-function mapDtdcStatusToProzo(
+function mapDtdcStatusToShippingStatus(
   value: string | undefined,
 ): MappedOrderStatus | undefined {
   if (!value) return undefined;
@@ -145,8 +146,8 @@ function mapDtdcStatusToProzo(
 /**
  * Build a human-readable current status string. Prefers the DTDC-provided
  * text (`trackHeader.strStatus`); falls back to a label derived from the
- * normalized `mappedStatus`. Mirrors the same precedence as Prozo's
- * `trackProzoShipment`.
+ * normalized `mappedStatus`. Uses the same precedence as typical tracking
+ * adapters: prefer carrier text, then fall back to mapped status labels.
  */
 function deriveCurrentStatus(
   raw: string | null | undefined,
@@ -181,9 +182,8 @@ function combineDateTime(
 // === Public API ==============================================================
 
 /**
- * Create a DTDC shipment for the given order. The body shape mirrors
- * Prozo's `createProzoShipment` argument so existing call sites can swap
- * import paths without touching their argument-building code.
+ * Create a DTDC shipment for the given order. The body shape matches
+ * `CreateShipmentInput` so call sites can build arguments from shipping-types.
  *
  * Idempotent at the Edge Function layer: calling twice for the same
  * `orderId` will only ever produce one real AWB. The returned
@@ -192,7 +192,7 @@ function combineDateTime(
  * value.
  */
 export async function createDtdcShipment(
-  input: ProzoCreateShipmentInput,
+  input: CreateShipmentInput,
 ): Promise<DtdcCreateShipmentResult> {
   const body = {
     orderId: input.orderId,
@@ -252,17 +252,16 @@ export async function createDtdcShipment(
 }
 
 /**
- * Track a DTDC shipment by AWB. Returns a `ProzoTrackingResult`-shaped
- * value so UI components that previously consumed Prozo tracking continue
- * to work byte-for-byte. The adapter:
+ * Track a DTDC shipment by AWB. Returns a `ShippingTrackingResult` value.
+ * The adapter:
  *   - Sorts/picks the newest event (Edge Function already sorts desc).
- *   - Collapses DTDC's 6-value `mappedStatus` to Prozo's 4-value union.
+ *   - Collapses DTDC's 6-value `mappedStatus` to the 4-value union.
  *   - Synthesizes `courierName: "DTDC"` (DTDC tracking has no courier name).
  *   - Omits `estimatedDelivery` (DTDC tracking has no ETA field).
  */
 export async function trackDtdcShipment(
   awb: string,
-): Promise<ProzoTrackingResult> {
+): Promise<ShippingTrackingResult> {
   const trimmed = awb?.trim();
   if (!trimmed) {
     throw new Error("trackDtdcShipment: AWB is required");
@@ -287,7 +286,7 @@ export async function trackDtdcShipment(
   const eventsWire = Array.isArray(data.events) ? data.events : [];
   const first = eventsWire[0];
 
-  const mappedStatus = mapDtdcStatusToProzo(data.mappedStatus);
+  const mappedStatus = mapDtdcStatusToShippingStatus(data.mappedStatus);
   const currentStatus = deriveCurrentStatus(data.currentStatus, mappedStatus);
 
   const lastUpdatedDate = first
@@ -300,7 +299,7 @@ export async function trackDtdcShipment(
     (data.origin && data.origin.trim()) ||
     "";
 
-  const history: ProzoTrackingEvent[] = eventsWire.map((e) => {
+  const history: ShippingTrackingEvent[] = eventsWire.map((e) => {
     const remarks = e.remarks?.trim();
     return {
       status: e.action || "",
@@ -326,10 +325,8 @@ export async function trackDtdcShipment(
  * Cancel a DTDC shipment by AWB.
  *
  * NOTE: The argument is the AWB (consignment number), NOT the order UUID.
- * This is a deliberate semantic divergence from `cancelProzoShipment`
- * (which takes the order reference UUID). DTDC's cancel endpoint only
- * accepts AWBs, so the caller is responsible for resolving order → AWB
- * before invoking this function.
+ * DTDC's cancel endpoint only accepts AWBs, so the caller is responsible
+ * for resolving order → AWB before invoking this function.
  */
 export async function cancelDtdcShipment(awb: string): Promise<unknown> {
   const trimmed = awb?.trim();
