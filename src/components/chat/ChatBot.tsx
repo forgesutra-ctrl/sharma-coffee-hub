@@ -16,6 +16,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { trackDtdcShipment } from "@/services/dtdc";
+import type { Tables } from "@/integrations/supabase/types";
+
+type TrackableOrder = Pick<
+  Tables<"orders">,
+  | "order_number"
+  | "status"
+  | "tracking_number"
+  | "shipping_provider"
+  | "nimbuspost_awb_number"
+  | "nimbuspost_courier_name"
+  | "nimbuspost_tracking_url"
+  | "shipment_created_at"
+  | "created_at"
+>;
 
 interface Message {
   id: string;
@@ -39,6 +55,8 @@ export function ChatBot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({});
+
+  const { user, isLoading: authLoading } = useAuth();
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -233,6 +251,131 @@ export function ChatBot() {
     }
   }
 
+  function formatOrderBlock(order: TrackableOrder): string {
+    const status = order.status ?? "unknown";
+    const statusDisplay = status.charAt(0).toUpperCase() + status.slice(1);
+    const lines: string[] = [`${order.order_number} · ${statusDisplay}`];
+    const awb = order.tracking_number ?? order.nimbuspost_awb_number;
+    if (awb) {
+      const courier =
+        order.shipping_provider === "dtdc"
+          ? "DTDC"
+          : order.nimbuspost_courier_name ?? order.shipping_provider ?? "Courier";
+      const legacyTag = order.nimbuspost_awb_number && !order.tracking_number ? " (legacy)" : "";
+      lines.push(`AWB: ${awb}${legacyTag} · Courier: ${courier}`);
+    } else {
+      lines.push(
+        "Tracking is not available yet. We usually assign an AWB within 1–2 business days after dispatch.",
+      );
+    }
+    if (order.nimbuspost_tracking_url && order.shipping_provider !== "dtdc") {
+      lines.push(`Track: ${order.nimbuspost_tracking_url}`);
+    }
+    return lines.join("\n");
+  }
+
+  async function handleTrackMyOrders() {
+    if (isLoading) return;
+    const userText = "Track my order";
+    const userMessageId = Date.now().toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: userMessageId,
+        role: "user",
+        content: userText,
+        timestamp: new Date(),
+      },
+    ]);
+    setIsLoading(true);
+
+    const interimId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: interimId,
+        role: "assistant",
+        content: "Looking up your orders…",
+        timestamp: new Date(),
+        userMessageContent: userText,
+      },
+    ]);
+
+    const replaceInterim = (content: string) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === interimId ? { ...m, content } : m)),
+      );
+    };
+
+    try {
+      if (authLoading) {
+        replaceInterim("I'm still verifying your session. Please try again in a moment.");
+        return;
+      }
+      if (!user?.id) {
+        replaceInterim(
+          "To view your order tracking, please log in at /auth. You can also see all orders at /account/orders once you're signed in.",
+        );
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id ?? user.id;
+      if (!userId) {
+        replaceInterim("Please log in at /auth to track your orders.");
+        return;
+      }
+
+      const { data: orders, error } = await supabase
+        .from("orders")
+        .select(
+          "order_number, status, tracking_number, shipping_provider, nimbuspost_awb_number, nimbuspost_courier_name, nimbuspost_tracking_url, shipment_created_at, created_at",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      if (!orders?.length) {
+        replaceInterim(
+          "You don't have any orders yet. After you place an order, tracking will appear here and in My Orders (/account/orders).",
+        );
+        return;
+      }
+
+      const blocks: string[] = [];
+      for (const order of orders as TrackableOrder[]) {
+        let block = formatOrderBlock(order);
+        if (order.shipping_provider === "dtdc" && order.tracking_number) {
+          try {
+            const tracking = await trackDtdcShipment(order.tracking_number);
+            const extras: string[] = [`Current status: ${tracking.currentStatus}`];
+            if (tracking.lastLocation) extras.push(`Location: ${tracking.lastLocation}`);
+            if (tracking.lastUpdatedDate) extras.push(`Last update: ${tracking.lastUpdatedDate}`);
+            block += "\n" + extras.join("\n");
+          } catch {
+            block +=
+              "\nLive tracking is temporarily unavailable. Your AWB is saved — check /account/orders for updates.";
+          }
+        }
+        blocks.push(block);
+      }
+
+      replaceInterim(
+        `Here are your recent orders:\n\n${blocks.join("\n\n")}\n\nFor full details, visit /account/orders.`,
+      );
+    } catch (err) {
+      console.error("ChatBot track orders error:", err);
+      replaceInterim(
+        "I couldn't load your orders right now. Please try /account/orders or contact ask@sharmacoffeeworks.com.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // Quick actions handler
   function handleQuickAction(action: string, prompt?: string) {
     if (action.startsWith("/")) {
@@ -241,7 +384,7 @@ export function ChatBot() {
     }
 
     if (action === "track") {
-      sendMessage("I want to track my order");
+      void handleTrackMyOrders();
     } else if (action === "ask" && prompt) {
       sendMessage(prompt);
     }
@@ -339,21 +482,19 @@ export function ChatBot() {
                   </div>
                 )}
 
-                {messages.length === 1 && (
-                  <div className="grid gap-2 mt-4">
-                    {quickActions.map((q) => (
-                      <Button
-                        key={q.label}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuickAction(q.action, q.prompt)}
-                      >
-                        <q.icon className="w-4 h-4 mr-2" />
-                        {q.label}
-                      </Button>
-                    ))}
-                  </div>
-                )}
+                <div className="grid gap-2 mt-4">
+                  {quickActions.map((q) => (
+                    <Button
+                      key={q.label}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleQuickAction(q.action, q.prompt)}
+                    >
+                      <q.icon className="w-4 h-4 mr-2" />
+                      {q.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </ScrollArea>
 
