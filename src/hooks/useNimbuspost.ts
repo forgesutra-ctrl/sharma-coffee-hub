@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-// NIMBUSPOST - DEPRECATED — shipping flows now use `@/services/prozo`. Kept for reference only.
+// NIMBUSPOST - DEPRECATED — shipping flows now use `@/services/dtdc`. Kept for reference only.
 /*
 import { supabase } from '@/integrations/supabase/client';
 

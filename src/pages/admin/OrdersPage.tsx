@@ -277,9 +277,6 @@ export default function OrdersPage() {
     }
   };
 
-  // NIMBUSPOST - DEPRECATED
-  // const createNimbuspostShipment = async (order: Order) => { ... create-nimbuspost-shipment edge function ... };
-
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -562,11 +559,11 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Shipment (Prozo); legacy Nimbuspost AWB still shown if present */}
+              {/* Shipment (DTDC); legacy Prozo/Nimbuspost AWBs still shown if present */}
               <div className="border-t pt-4">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  Shipment (Prozo)
+                  Shipment
                 </h4>
                 {selectedOrder.tracking_number && (selectedOrder.shipping_provider === 'dtdc' || selectedOrder.shipping_provider === 'prozo') ? (
                   <div className="p-3 bg-muted/50 rounded-lg space-y-2 text-sm">

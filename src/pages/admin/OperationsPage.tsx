@@ -417,8 +417,6 @@ export default function OperationsPage() {
     }
   };
 
-  // NIMBUSPOST - DEPRECATED — handleTrackShipment used trackShipment from useNimbuspost → nimbuspost-track Edge Function
-
   const handleCancelShipment = async (shipment: Shipment) => {
     if (!confirm(`Cancel shipment ${shipment.awb}?`)) return;
 
@@ -440,8 +438,6 @@ export default function OperationsPage() {
       setProzoLoading(false);
     }
   };
-
-  // NIMBUSPOST - DEPRECATED — cancelShipment(awb) via nimbuspost-cancel Edge Function
 
   // ========== HELPERS ==========
   const getStatusBadge = (status: string | null) => {
