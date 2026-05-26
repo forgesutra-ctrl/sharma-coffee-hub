@@ -3,7 +3,7 @@
 
 export const privacyPolicyContent = {
   title: "Privacy Policy",
-  lastUpdated: "January 2026",
+  lastUpdated: "May 2026",
   sections: [
     {
       heading: "Introduction",
@@ -36,7 +36,7 @@ export const privacyPolicyContent = {
       heading: "Information Sharing",
       content: `We share your information only with:`,
       list: [
-        "Shipping partners (Nimbuspost and partner couriers) to deliver your orders",
+        "Shipping and logistics partners and their courier networks to deliver your orders",
         "Payment processors to complete transactions securely",
         "Service providers who assist in our operations"
       ],
@@ -209,11 +209,11 @@ export const refundPolicyContent = {
 
 export const shippingPolicyContent = {
   title: "Shipping Policy",
-  lastUpdated: "January 2026",
+  lastUpdated: "May 2026",
   sections: [
     {
       heading: "Shipping Coverage",
-      content: `We deliver across India through our shipping partner Nimbuspost and their network of couriers. Currently, we do not ship internationally.`
+      content: `We deliver across India through our shipping and logistics partners and their courier networks. Currently, we do not ship internationally.`
     },
     {
       heading: "Processing Time",
