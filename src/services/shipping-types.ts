@@ -1,14 +1,10 @@
 /**
  * Carrier-neutral shipping types shared by the DTDC client and UI layers.
- * Names retain the historical Prozo prefix for backward compatibility with
- * existing imports and call sites.
- *
- * NOTE: Prozo* identifiers will be renamed to Shipping* in a follow-up commit.
  */
 
 export type MappedOrderStatus = "confirmed" | "shipped" | "delivered" | "cancelled";
 
-export interface ProzoLineItem {
+export interface ShippingLineItem {
   product_name: string;
   quantity: number;
   weight?: number | null;
@@ -17,7 +13,7 @@ export interface ProzoLineItem {
   unit_price: number;
 }
 
-export interface ProzoShippingAddressInput {
+export interface ShippingAddressInput {
   fullName: string;
   addressLine1: string;
   addressLine2?: string;
@@ -28,14 +24,14 @@ export interface ProzoShippingAddressInput {
   email?: string;
 }
 
-export interface ProzoCreateShipmentInput {
+export interface CreateShipmentInput {
   /** UUID — reference, client_order_id, invoice_number */
   orderId: string;
   totalAmount: number;
   paymentType?: string | null;
   codBalance?: number | null;
-  address: ProzoShippingAddressInput;
-  items: ProzoLineItem[];
+  address: ShippingAddressInput;
+  items: ShippingLineItem[];
   /** Customer / order email for delivery_details.to_email */
   customerEmail?: string | null;
   /** Optional shipment dimensions (grams, cm); defaults used if omitted */
@@ -45,18 +41,18 @@ export interface ProzoCreateShipmentInput {
   itemHeightCm?: number;
 }
 
-export interface ProzoTrackingEvent {
+export interface ShippingTrackingEvent {
   status: string;
   date: string;
   location: string;
   description?: string;
 }
 
-export interface ProzoTrackingResult {
+export interface ShippingTrackingResult {
   currentStatus: string;
   lastUpdatedDate: string;
   lastLocation: string;
-  history: ProzoTrackingEvent[];
+  history: ShippingTrackingEvent[];
   mappedStatus?: MappedOrderStatus;
   courierName?: string;
   estimatedDelivery?: string;

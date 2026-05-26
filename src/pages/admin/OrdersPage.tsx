@@ -28,8 +28,8 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [prozoCreateLoading, setProzoCreateLoading] = useState(false);
-  const [prozoCreateError, setProzoCreateError] = useState<string | null>(null);
+  const [shipmentCreateLoading, setShipmentCreateLoading] = useState(false);
+  const [shipmentCreateError, setShipmentCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -112,15 +112,15 @@ export default function OrdersPage() {
     setFilteredOrders(filtered);
   };
 
-  const createProzoShipmentForOrder = async () => {
+  const createShipmentForOrder = async () => {
     if (!selectedOrder) return;
-    setProzoCreateLoading(true);
-    setProzoCreateError(null);
+    setShipmentCreateLoading(true);
+    setShipmentCreateError(null);
     try {
       const addr = selectedOrder.shipping_address as Record<string, string> | null;
       if (!addr) {
         const msg = 'Order has no shipping address';
-        setProzoCreateError(msg);
+        setShipmentCreateError(msg);
         toast.error(msg);
         return;
       }
@@ -179,15 +179,15 @@ export default function OrdersPage() {
           : null,
       );
       await fetchOrders();
-      setProzoCreateError(null);
+      setShipmentCreateError(null);
       toast.success(`DTDC shipment created. AWB: ${awb}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create shipment';
       console.error('[DTDC] Create shipment error:', err);
-      setProzoCreateError(msg);
+      setShipmentCreateError(msg);
       toast.error(msg);
     } finally {
-      setProzoCreateLoading(false);
+      setShipmentCreateLoading(false);
     }
   };
 
@@ -195,7 +195,7 @@ export default function OrdersPage() {
     setSelectedOrder(order);
     setIsDialogOpen(true);
     setOrderItems([]);
-    setProzoCreateError(null);
+    setShipmentCreateError(null);
 
     try {
       console.log('🔍 OrdersPage: Fetching items for order:', order.id, order.order_number);
@@ -558,14 +558,14 @@ export default function OrdersPage() {
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={createProzoShipmentForOrder}
-                      disabled={prozoCreateLoading || orderItems.length === 0}
+                      onClick={createShipmentForOrder}
+                      disabled={shipmentCreateLoading || orderItems.length === 0}
                     >
-                      {prozoCreateLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
+                      {shipmentCreateLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Creating…</> : 'Create shipment'}
                     </Button>
-                    {prozoCreateError && (
+                    {shipmentCreateError && (
                       <p className="text-sm text-destructive mt-2 flex items-center gap-1">
-                        {prozoCreateError}
+                        {shipmentCreateError}
                       </p>
                     )}
                   </>

@@ -96,7 +96,7 @@ const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
 
 export default function OperationsPage() {
   const { user } = useAuth();
-  const [prozoLoading, setProzoLoading] = useState(false);
+  const [shippingLoading, setShippingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('inventory');
 
   // ========== INVENTORY STATE ==========
@@ -426,7 +426,7 @@ export default function OperationsPage() {
       return;
     }
 
-    setProzoLoading(true);
+    setShippingLoading(true);
     try {
       await cancelDtdcShipment(awb);
       await supabase.from('shipments').update({ status: 'cancelled' }).eq('awb', shipment.awb);
@@ -435,7 +435,7 @@ export default function OperationsPage() {
     } catch (error) {
       toast.error('Failed to cancel shipment');
     } finally {
-      setProzoLoading(false);
+      setShippingLoading(false);
     }
   };
 
@@ -789,7 +789,7 @@ export default function OperationsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleTrackShipment(shipment.awb)}
-                              disabled={prozoLoading}
+                              disabled={shippingLoading}
                             >
                               <MapPin className="h-4 w-4" />
                             </Button>
@@ -804,7 +804,7 @@ export default function OperationsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleCancelShipment(shipment)}
-                              disabled={prozoLoading}
+                              disabled={shippingLoading}
                               className="text-destructive hover:text-destructive"
                             >
                               <XCircle className="h-4 w-4" />
