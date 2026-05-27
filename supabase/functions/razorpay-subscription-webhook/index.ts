@@ -187,21 +187,8 @@ Deno.serve(async (req: Request) => {
               return deliveryDate.toISOString().split("T")[0];
             };
 
-            const { data: defaultPlan } = await supabaseAdmin
-              .from("subscription_plans")
-              .select("id")
-              .eq("is_active", true)
-              .limit(1)
-              .maybeSingle();
-            const planIdForPending = defaultPlan?.id ?? (await supabaseAdmin.from("subscription_plans").select("id").limit(1).maybeSingle()).data?.id;
-            if (!planIdForPending) {
-              console.error("[SUB-WEBHOOK] No subscription_plan found for pending subscription");
-              break;
-            }
-
             const subscriptionData = {
               user_id: pendingSub.user_id,
-              plan_id: planIdForPending,
               razorpay_subscription_id: razorpaySubscriptionId,
               product_id: pendingSub.product_id,
               variant_id: pendingSub.variant_id,
@@ -272,20 +259,12 @@ Deno.serve(async (req: Request) => {
           }
 
           if (!userId || !productId || !variantId) {
-            console.warn("[SUB-WEBHOOK] Cannot create user_subscription: missing user_id, product_id, or variant_id. plan_id:", razorpayPlanId);
-            break;
-          }
-
-          const { data: defaultPlan } = await supabaseAdmin.from("subscription_plans").select("id").eq("is_active", true).limit(1).maybeSingle();
-          const planId = defaultPlan?.id;
-          if (!planId) {
-            console.error("[SUB-WEBHOOK] No active subscription_plan found");
+            console.warn("[SUB-WEBHOOK] Cannot create user_subscription: missing user_id, product_id, or variant_id. razorpay_plan_id:", razorpayPlanId);
             break;
           }
 
           const subscriptionData = {
             user_id: userId,
-            plan_id: planId,
             razorpay_subscription_id: razorpaySubscriptionId,
             product_id: productId,
             variant_id: variantId,
@@ -344,12 +323,6 @@ Deno.serve(async (req: Request) => {
             .maybeSingle();
 
           if (pendingSub) {
-            const { data: defPlan } = await supabaseAdmin.from("subscription_plans").select("id").eq("is_active", true).limit(1).maybeSingle();
-            const planIdAct = defPlan?.id ?? (await supabaseAdmin.from("subscription_plans").select("id").limit(1).maybeSingle()).data?.id;
-            if (!planIdAct) {
-              console.error("[SUB-WEBHOOK] No subscription_plan for activation");
-              break;
-            }
             const calculateNextDeliveryDate = (dayOfMonth: number): string => {
               const now = new Date();
               const currentDay = now.getDate();
@@ -361,7 +334,6 @@ Deno.serve(async (req: Request) => {
             const subDay = pendingSub.preferred_delivery_date ?? 15;
             const subscriptionData = {
               user_id: pendingSub.user_id,
-              plan_id: planIdAct,
               razorpay_subscription_id: razorpaySubscriptionId,
               product_id: pendingSub.product_id,
               variant_id: pendingSub.variant_id,
