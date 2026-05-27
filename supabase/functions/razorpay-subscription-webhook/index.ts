@@ -71,22 +71,35 @@ Deno.serve(async (req: Request) => {
 
     if (!isInternalRetry && webhookSecret) {
       const signature = req.headers.get("X-Razorpay-Signature");
-      const expectedSignature = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(rawBody + webhookSecret)
+      if (!signature) {
+        return new Response(
+          JSON.stringify({ error: "Missing signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const encoder = new TextEncoder();
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(webhookSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
       );
-      const expectedSignatureHex = Array.from(new Uint8Array(expectedSignature))
+      const signatureBuffer = await crypto.subtle.sign(
+        "HMAC",
+        cryptoKey,
+        encoder.encode(rawBody)
+      );
+      const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
 
-      if (signature !== expectedSignatureHex) {
-        console.error("Invalid webhook signature");
+      if (signature !== expectedSignature) {
+        console.error("[SUB-WEBHOOK] Signature mismatch");
         return new Response(
           JSON.stringify({ error: "Invalid signature" }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     } else if (isInternalRetry) {
@@ -95,6 +108,18 @@ Deno.serve(async (req: Request) => {
 
     const webhookData: WebhookPayload = JSON.parse(rawBody);
     const { event, payload } = webhookData;
+
+    // Initialize Supabase client and extract subscription entity BEFORE first use.
+    // Previously these were declared on lines 117-122 but used on lines 99-100,
+    // causing a TDZ ReferenceError that was silently swallowed by the outer catch.
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const subscriptionEntity = payload.subscription?.entity;
+    const razorpaySubscriptionId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id;
+    const notes = subscriptionEntity?.notes || {};
 
     const razorpayEventId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id ?? payload.payment?.entity?.id ?? null;
     const { data: logData } = await supabaseAdmin
@@ -113,15 +138,6 @@ Deno.serve(async (req: Request) => {
     console.log("Event:", event);
     console.log("Timestamp:", new Date().toISOString());
     console.log("Payload:", JSON.stringify(payload, null, 2));
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const subscriptionEntity = payload.subscription?.entity;
-    const razorpaySubscriptionId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id;
-    const notes = subscriptionEntity?.notes || {};
 
     // For subscription.* events, require subscription entity
     if (event.startsWith("subscription.") && !subscriptionEntity) {
