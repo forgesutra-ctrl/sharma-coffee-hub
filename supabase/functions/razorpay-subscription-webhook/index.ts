@@ -71,22 +71,35 @@ Deno.serve(async (req: Request) => {
 
     if (!isInternalRetry && webhookSecret) {
       const signature = req.headers.get("X-Razorpay-Signature");
-      const expectedSignature = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(rawBody + webhookSecret)
+      if (!signature) {
+        return new Response(
+          JSON.stringify({ error: "Missing signature" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const encoder = new TextEncoder();
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(webhookSecret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
       );
-      const expectedSignatureHex = Array.from(new Uint8Array(expectedSignature))
+      const signatureBuffer = await crypto.subtle.sign(
+        "HMAC",
+        cryptoKey,
+        encoder.encode(rawBody)
+      );
+      const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
         .map(b => b.toString(16).padStart(2, "0"))
         .join("");
 
-      if (signature !== expectedSignatureHex) {
-        console.error("Invalid webhook signature");
+      if (signature !== expectedSignature) {
+        console.error("[SUB-WEBHOOK] Signature mismatch");
         return new Response(
           JSON.stringify({ error: "Invalid signature" }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     } else if (isInternalRetry) {
@@ -95,6 +108,18 @@ Deno.serve(async (req: Request) => {
 
     const webhookData: WebhookPayload = JSON.parse(rawBody);
     const { event, payload } = webhookData;
+
+    // Initialize Supabase client and extract subscription entity BEFORE first use.
+    // Previously these were declared on lines 117-122 but used on lines 99-100,
+    // causing a TDZ ReferenceError that was silently swallowed by the outer catch.
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const subscriptionEntity = payload.subscription?.entity;
+    const razorpaySubscriptionId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id;
+    const notes = subscriptionEntity?.notes || {};
 
     const razorpayEventId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id ?? payload.payment?.entity?.id ?? null;
     const { data: logData } = await supabaseAdmin
@@ -113,15 +138,6 @@ Deno.serve(async (req: Request) => {
     console.log("Event:", event);
     console.log("Timestamp:", new Date().toISOString());
     console.log("Payload:", JSON.stringify(payload, null, 2));
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const subscriptionEntity = payload.subscription?.entity;
-    const razorpaySubscriptionId = subscriptionEntity?.id ?? payload.invoice?.entity?.subscription_id;
-    const notes = subscriptionEntity?.notes || {};
 
     // For subscription.* events, require subscription entity
     if (event.startsWith("subscription.") && !subscriptionEntity) {
@@ -171,21 +187,8 @@ Deno.serve(async (req: Request) => {
               return deliveryDate.toISOString().split("T")[0];
             };
 
-            const { data: defaultPlan } = await supabaseAdmin
-              .from("subscription_plans")
-              .select("id")
-              .eq("is_active", true)
-              .limit(1)
-              .maybeSingle();
-            const planIdForPending = defaultPlan?.id ?? (await supabaseAdmin.from("subscription_plans").select("id").limit(1).maybeSingle()).data?.id;
-            if (!planIdForPending) {
-              console.error("[SUB-WEBHOOK] No subscription_plan found for pending subscription");
-              break;
-            }
-
             const subscriptionData = {
               user_id: pendingSub.user_id,
-              plan_id: planIdForPending,
               razorpay_subscription_id: razorpaySubscriptionId,
               product_id: pendingSub.product_id,
               variant_id: pendingSub.variant_id,
@@ -256,20 +259,12 @@ Deno.serve(async (req: Request) => {
           }
 
           if (!userId || !productId || !variantId) {
-            console.warn("[SUB-WEBHOOK] Cannot create user_subscription: missing user_id, product_id, or variant_id. plan_id:", razorpayPlanId);
-            break;
-          }
-
-          const { data: defaultPlan } = await supabaseAdmin.from("subscription_plans").select("id").eq("is_active", true).limit(1).maybeSingle();
-          const planId = defaultPlan?.id;
-          if (!planId) {
-            console.error("[SUB-WEBHOOK] No active subscription_plan found");
+            console.warn("[SUB-WEBHOOK] Cannot create user_subscription: missing user_id, product_id, or variant_id. razorpay_plan_id:", razorpayPlanId);
             break;
           }
 
           const subscriptionData = {
             user_id: userId,
-            plan_id: planId,
             razorpay_subscription_id: razorpaySubscriptionId,
             product_id: productId,
             variant_id: variantId,
@@ -328,12 +323,6 @@ Deno.serve(async (req: Request) => {
             .maybeSingle();
 
           if (pendingSub) {
-            const { data: defPlan } = await supabaseAdmin.from("subscription_plans").select("id").eq("is_active", true).limit(1).maybeSingle();
-            const planIdAct = defPlan?.id ?? (await supabaseAdmin.from("subscription_plans").select("id").limit(1).maybeSingle()).data?.id;
-            if (!planIdAct) {
-              console.error("[SUB-WEBHOOK] No subscription_plan for activation");
-              break;
-            }
             const calculateNextDeliveryDate = (dayOfMonth: number): string => {
               const now = new Date();
               const currentDay = now.getDate();
@@ -345,7 +334,6 @@ Deno.serve(async (req: Request) => {
             const subDay = pendingSub.preferred_delivery_date ?? 15;
             const subscriptionData = {
               user_id: pendingSub.user_id,
-              plan_id: planIdAct,
               razorpay_subscription_id: razorpaySubscriptionId,
               product_id: pendingSub.product_id,
               variant_id: pendingSub.variant_id,
@@ -392,6 +380,18 @@ Deno.serve(async (req: Request) => {
         if (!paymentId && !invoiceEntity?.subscription_id) {
           console.warn("[SUB-WEBHOOK] No payment_id or invoice.subscription_id, skipping");
           break;
+        }
+
+        if (paymentId) {
+          const { data: existingCharge } = await supabaseAdmin
+            .from("subscription_orders")
+            .select("id")
+            .eq("razorpay_payment_id", paymentId)
+            .maybeSingle();
+          if (existingCharge) {
+            console.log("[SUB-WEBHOOK] Charge already processed, skipping (idempotency):", paymentId);
+            break;
+          }
         }
 
         try {
