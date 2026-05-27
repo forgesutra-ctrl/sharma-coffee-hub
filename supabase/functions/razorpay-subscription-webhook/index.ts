@@ -410,6 +410,18 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
+        if (paymentId) {
+          const { data: existingCharge } = await supabaseAdmin
+            .from("subscription_orders")
+            .select("id")
+            .eq("razorpay_payment_id", paymentId)
+            .maybeSingle();
+          if (existingCharge) {
+            console.log("[SUB-WEBHOOK] Charge already processed, skipping (idempotency):", paymentId);
+            break;
+          }
+        }
+
         try {
           const { data: userSub, error: subErr } = await supabaseAdmin
             .from("user_subscriptions")
