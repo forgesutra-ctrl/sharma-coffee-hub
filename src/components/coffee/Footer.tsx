@@ -314,9 +314,20 @@ export default function Footer() {
       {/* Bottom Bar */}
       <div className="relative border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-white/40">
-            © {currentYear} Sharma Coffee Works. All rights reserved.
-          </p>
+          <div className="text-sm text-white/40 text-center md:text-left">
+            <p>© {currentYear} Sharma Coffee Works. All rights reserved.</p>
+            <p>
+              Designed by{' '}
+              <a
+                href="https://www.sutraforge.com"
+                target="_blank"
+                rel="noopener"
+                className="hover:text-coffee-gold transition-colors"
+              >
+                SutraForge
+              </a>
+            </p>
+          </div>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-white/40">
             <Link to="/privacy-policy" className="hover:text-coffee-gold transition-colors">Privacy Policy</Link>
             <Link to="/terms-of-service" className="hover:text-coffee-gold transition-colors">Terms of Service</Link>
