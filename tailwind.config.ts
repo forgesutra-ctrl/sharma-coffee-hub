@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
         sans: ['Inter', 'sans-serif'],
+        kannada: ['"Noto Sans Kannada"', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

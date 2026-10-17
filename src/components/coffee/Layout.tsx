@@ -4,6 +4,7 @@ import Footer from './Footer';
 import { ChatBot } from '../chat/ChatBot';
 import BackToTop from './BackToTop';
 import CookieConsent from './CookieConsent';
+import DasaraGreeting from './DasaraGreeting';
 
 interface LayoutProps {
   children: ReactNode;
@@ -69,6 +70,7 @@ const Layout = ({ children }: LayoutProps) => {
       <ChatBot />
       <BackToTop />
       <CookieConsent />
+      <DasaraGreeting />
     </div>
   );
 };
