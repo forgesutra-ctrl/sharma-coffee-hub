@@ -309,7 +309,7 @@ export default function About() {
               </Button>
             </Link>
             <Link to="/contact">
-              <Button size="lg" variant="outline" className="font-semibold border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+              <Button size="lg" variant="outline" className="font-semibold bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
                 Contact Us
               </Button>
             </Link>
