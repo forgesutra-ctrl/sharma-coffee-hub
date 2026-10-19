@@ -7,12 +7,14 @@ import { CinematicVideo } from '@/components/home-v2/CinematicVideo';
 import { FilmDialog, type Film } from '@/components/home-v2/FilmDialog';
 import { Brand, SiteNav } from '@/components/home-v2/SiteNav';
 import { CoffeeSection } from '@/components/home-v2/CoffeeSection';
-import { brewing, brewingPoster, estate, estatePoster, family, familyPoster } from '@/lib/site-media';
+import Footer from '@/components/coffee/Footer';
+import { brewing, brewingPoster, estate, estatePoster, family, familyPoster, roasting } from '@/lib/site-media';
 import '@/components/home-v2/home-v2.css';
 
 // Temporary route for the redesigned homepage, ported from the reference
-// (coorg-s-golden-roast, src/routes/index.tsx). So far: hero, promise strip, intro,
-// coffees. Sections 4-6 and the footer follow; the route replaces "/" once signed off.
+// (coorg-s-golden-roast, src/routes/index.tsx): hero, promise strip, intro, coffees,
+// story, films and roast, followed by our existing Footer (not the reference's).
+// The route replaces "/" once signed off.
 
 const films: [Film, Film, Film] = [
   { title: 'Where it all begins', subtitle: 'A cinematic impression of the coffee country of Coorg.', media: estate, poster: estatePoster.url, duration: '0:08' },
@@ -94,8 +96,64 @@ export default function HomeV2() {
 
         <CoffeeSection />
 
+        <section id="story" className="story-section">
+          <div className="story-portrait">
+            <CinematicVideo media={family} poster={familyPoster.url} label="Father and son, the family behind Sharma Coffee Works" controls />
+            <div className="portrait-caption"><span>ONE FAMILY. TWO GENERATIONS.</span><span>EST. 1987</span></div>
+          </div>
+          <div className="story-copy">
+            <p className="eyebrow">THE PEOPLE BEHIND YOUR CUP</p>
+            <h2>Not just a business.<br /><em>A bond.</em></h2>
+            <p>Before it was your morning coffee, it was our family’s calling. A father’s dedication. A son’s belief. And a shared promise to never lose the care that started it all.</p>
+            <p>Since 1987, Sharma Coffee Works has brought the taste of Coorg to coffee lovers. Hand-selected beans, slow roasts, and a little piece of home in every cup.</p>
+            <Button variant="text" className="story-watch" onClick={() => setActiveFilm(films[2])}>
+              <span className="small-play"><Play size={12} fill="currentColor" /></span> A legacy, living on <ArrowUpRight />
+            </Button>
+            <div className="story-signature">The Sharma family<span>MADIKERI, KARNATAKA</span></div>
+          </div>
+        </section>
+
+        <section id="films" className="films-section">
+          <div className="section-heading section-inner">
+            <div>
+              <p className="eyebrow">THE SHARMA JOURNAL · IN MOTION</p>
+              <h2>Take a moment.<br /><em>Stay a little longer.</em></h2>
+            </div>
+            <p className="section-note">The hills. The hands. The everyday rituals.<br />A few stories best told slowly.</p>
+          </div>
+          <div className="film-grid section-inner">
+            {films.map((film, i) => (
+              <Button key={film.title} variant="text" className={`film-tile film-tile-${i}`} onClick={() => setActiveFilm(film)} aria-label={`Watch ${film.title}`}>
+                <div className="film-tile-image">
+                  <img src={film.poster} alt={film.title} loading="lazy" />
+                  <span className="film-play"><Play fill="currentColor" /></span>
+                  <span className="film-duration">{film.duration}</span>
+                </div>
+                <div className="film-tile-caption">
+                  <span>0{i + 1} / {i === 0 ? 'THE ORIGIN' : i === 1 ? 'THE RITUAL' : 'THE FAMILY'}</span>
+                  <h3>{film.title}<ArrowUpRight /></h3>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="roast-section">
+          <img src={roasting.url} alt="Coffee beans being roasted" loading="lazy" />
+          <div className="roast-shade" />
+          <div className="roast-copy">
+            <p className="eyebrow">TIME IS OUR SECRET INGREDIENT</p>
+            <h2>Slow is not a method.<br />It’s a <em>way of life.</em></h2>
+            <p>Patiently roasted. Thoughtfully packed.<br />From our hands to your home, nothing is rushed.</p>
+            <Button asChild variant="hero"><Link to="/shop">Bring Coorg home <ArrowUpRight /></Link></Button>
+          </div>
+        </section>
+
         <FilmDialog film={activeFilm} onClose={() => setActiveFilm(null)} container={root} />
       </main>
+      {/* Our existing footer, kept outside .home-v2 so the scoped reference base rules
+          (weight-400 headings, a{color:inherit}) cannot restyle it. */}
+      <Footer />
     </>
   );
 }
