@@ -282,19 +282,22 @@
 
   .category-card .category-overlay {
     @apply absolute inset-0 transition-all duration-500;
-    /* Stops match the reference design's --bottom-gradient */
-    background: linear-gradient(
+    /* Heavier than the reference --bottom-gradient so titles stay legible
+       over light product photography */
+    background-image: linear-gradient(
       to top,
-      hsl(var(--forest) / 0.62),
-      transparent 45%
+      hsl(var(--forest) / 0.92) 0%,
+      hsl(var(--forest) / 0.62) 22%,
+      hsl(var(--forest) / 0) 58%
     );
   }
 
   .category-card:hover .category-overlay {
-    background: linear-gradient(
+    background-image: linear-gradient(
       to top,
-      hsl(var(--forest) / 0.72),
-      transparent 55%
+      hsl(var(--forest) / 0.96) 0%,
+      hsl(var(--forest) / 0.72) 27%,
+      hsl(var(--forest) / 0) 70%
     );
   }
 

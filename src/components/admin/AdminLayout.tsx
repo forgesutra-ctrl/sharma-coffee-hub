@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useAdminTheme } from '@/hooks/use-admin-theme';
 import { useNavigate } from 'react-router-dom';
 
 // All sidebar links with access control
@@ -77,13 +78,7 @@ export default function AdminLayout() {
     return () => observer.disconnect();
   }, []);
 
-  // Dialogs, popovers and toasts portal to <body>, outside the layout root,
-  // so the dark admin theme is also applied to <html> while admin is mounted.
-  useEffect(() => {
-    const html = document.documentElement;
-    html.classList.add('admin-theme');
-    return () => html.classList.remove('admin-theme');
-  }, []);
+  useAdminTheme();
 
   // Filter sidebar links based on role
   const sidebarLinks = allSidebarLinks.filter(link => {
