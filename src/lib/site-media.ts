@@ -52,9 +52,9 @@ export const logo: MediaAsset = { url: asset("scw-logo.webp") };
 /* ---------- Reference product stills ---------- */
 // Declared for completeness, but NOT used on the homepage. In the bucket, classic.png
 // and gold.png are byte-identical, and so are premium.jpg and speciality.jpg (same
-// size and ETag), so the reference showed the wrong photo on two of its four cards.
-// Section 3 uses products.image_url from Supabase instead, so the duplicates never
-// reach the page.
+// size and ETag). Section 3 uses products.image_url instead, but the same duplication
+// exists in the product images themselves (see CoffeeSection.tsx), so this alone
+// does not give the four cards distinct photos.
 
 export const classic: MediaAsset = { url: asset("classic.png") };
 export const gold: MediaAsset = { url: asset("gold.png") };

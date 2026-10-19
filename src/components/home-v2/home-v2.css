@@ -9,8 +9,7 @@
  *  - var(--x) colours            -> hsl(var(--x)); our tokens are bare HSL triplets.
  *  - color-mix(in oklch, X n%, transparent) -> hsl(var(--x) / n); mixing with
  *    transparent only sets alpha, so these are exact.
- *  - oklch(.12 .025 145) (gradients, dialog overlay) -> --forest. Not exact: the
- *    reference colour is rgb(2,8,2), --forest is rgb(14,31,18), so shades are lighter.
+ *  - oklch(.12 .025 145) (gradients, dialog overlay) -> --forest-deep, rgb(2,8,2).
  *  - Reference base-layer rules use :where(.home-v2) so utility classes still win,
  *    matching how @layer base behaves in the reference's Tailwind v4.
  *  - Type floor: nothing renders below 11px; body 13px -> 15px, eyebrows 9px -> 11px.
@@ -19,9 +18,10 @@
 
 .home-v2 {
   --hv2-bar-height: 40px; /* forest announcement bar, measured at 1280/1024/768/375 */
-  --hv2-hero-gradient: linear-gradient(90deg, hsl(var(--forest) / 0.62), hsl(var(--forest) / 0.13) 65%);
-  --hv2-bottom-gradient: linear-gradient(0deg, hsl(var(--forest) / 0.62), transparent 45%);
-  --hv2-overlay: hsl(var(--forest) / 0.9);
+  /* Scrims use --forest-deep, the reference's oklch(.12 .025 145). Surfaces stay --forest. */
+  --hv2-hero-gradient: linear-gradient(90deg, hsl(var(--forest-deep) / 0.62), hsl(var(--forest-deep) / 0.13) 65%);
+  --hv2-bottom-gradient: linear-gradient(0deg, hsl(var(--forest-deep) / 0.62), transparent 45%);
+  --hv2-overlay: hsl(var(--forest-deep) / 0.9);
   --hv2-dialog-shadow: 0 30px 100px hsl(0 0% 1% / 0.3);
 
   background: hsl(var(--background));
@@ -136,6 +136,12 @@
 .home-v2 .product-title h3 { font-size: 26px; }
 .home-v2 .product-title > span { font-size: 11px; /* was 10px */ }
 .home-v2 .product-detail { font-size: 11px; /* was 10px */ color: hsl(var(--muted-foreground)); margin-top: 7px; }
+/* Not in the reference: loading placeholders and the failed-fetch line for the live product data. */
+.home-v2 .product-item--loading .product-image { animation: hv2-pulse 1.4s ease-in-out infinite; }
+.home-v2 .coffee-fallback { font-size: 15px; line-height: 1.9; color: hsl(var(--foreground)); }
+.home-v2 .coffee-fallback a { display: inline-flex; align-items: center; gap: 6px; border-bottom: 1px solid hsl(var(--border)); }
+.home-v2 .coffee-fallback svg { width: 16px; height: 16px; }
+@keyframes hv2-pulse { 50% { opacity: 0.55; } }
 
 /* ---------- Section 4: story ---------- */
 .home-v2 .story-section { display: grid; grid-template-columns: 1fr 1fr; background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }

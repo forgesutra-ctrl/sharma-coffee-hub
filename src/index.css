@@ -42,6 +42,7 @@
 
     /* Reference-design extras */
     --forest: 133 37% 9%;
+    --forest-deep: 120 60% 2%; /* rgb(2,8,2) — the reference's gradient base; scrims only, not a surface */
     --hero-foreground: 48 69% 97%;
     --gold: 41 46% 65%;
 

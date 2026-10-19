@@ -26,6 +26,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         "hero-foreground": "hsl(var(--hero-foreground))",
         forest: "hsl(var(--forest))",
+        "forest-deep": "hsl(var(--forest-deep))",
         gold: "hsl(var(--gold))",
         primary: {
           DEFAULT: "hsl(var(--primary))",

@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUpRight, Coffee, Leaf, PackageCheck, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnnouncementStrip } from '@/components/home-v2/AnnouncementStrip';
 import { CinematicVideo } from '@/components/home-v2/CinematicVideo';
 import { FilmDialog, type Film } from '@/components/home-v2/FilmDialog';
-import { SiteNav } from '@/components/home-v2/SiteNav';
+import { Brand, SiteNav } from '@/components/home-v2/SiteNav';
+import { CoffeeSection } from '@/components/home-v2/CoffeeSection';
 import { brewing, brewingPoster, estate, estatePoster, family, familyPoster } from '@/lib/site-media';
 import '@/components/home-v2/home-v2.css';
 
 // Temporary route for the redesigned homepage, ported from the reference
-// (coorg-s-golden-roast, src/routes/index.tsx). Phase 3b-1: hero and promise strip.
-// Sections 2-6 and the footer follow; the route replaces "/" once signed off.
+// (coorg-s-golden-roast, src/routes/index.tsx). So far: hero, promise strip, intro,
+// coffees. Sections 4-6 and the footer follow; the route replaces "/" once signed off.
 
 const films: [Film, Film, Film] = [
   { title: 'Where it all begins', subtitle: 'A cinematic impression of the coffee country of Coorg.', media: estate, poster: estatePoster.url, duration: '0:08' },
@@ -79,6 +81,18 @@ export default function HomeV2() {
           <span><PackageCheck /> CARE IN EVERY DELIVERY</span><i>✦</i>
           <span>FAMILY-CRAFTED SINCE 1987</span>
         </div>
+
+        <section id="intro" className="intro-section section-inner">
+          <p className="eyebrow">A SMALL TOWN. A DEEP LOVE FOR COFFEE.</p>
+          <h2>From our hills.<br />To your <em>everyday.</em></h2>
+          <div className="intro-bottom">
+            <Brand editorial />
+            <p>Some things shouldn’t be hurried. The ripening of a coffee cherry. The warmth of a slow roast. The first sip of your morning. In Madikeri, we’ve built our lives around getting these little things right.</p>
+            <Link to="/about" className="arrow-link">Meet the family <ArrowUpRight /></Link>
+          </div>
+        </section>
+
+        <CoffeeSection />
 
         <FilmDialog film={activeFilm} onClose={() => setActiveFilm(null)} container={root} />
       </main>

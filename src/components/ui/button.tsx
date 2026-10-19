@@ -28,6 +28,14 @@ const buttonVariants = cva(
         icon: "h-10 w-10",
       },
     },
+    // The redesign variants use the reference's size scale (36px default, not our 40px).
+    // Size classes are emitted after variant classes, so the heights live here.
+    compoundVariants: [
+      { variant: ["editorial", "hero", "film", "text"], size: "default", className: "h-9" },
+      { variant: ["editorial", "hero", "film", "text"], size: "sm", className: "h-8" },
+      { variant: ["editorial", "hero", "film", "text"], size: "lg", className: "h-10" },
+      { variant: ["editorial", "hero", "film", "text"], size: "icon", className: "h-9 w-9" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
