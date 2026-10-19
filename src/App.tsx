@@ -10,6 +10,7 @@ import Layout from "./components/coffee/Layout";
 import ScrollToTop from "./components/coffee/ScrollToTop";
 import { setupFocusGuard } from "./lib/accessibility";
 import Homepage from "./pages/Homepage";
+import HomeV2 from "./pages/HomeV2";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -80,6 +81,8 @@ const App = () => {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Layout><Homepage /></Layout>} />
+                {/* Temporary: redesigned homepage under review. Replaces "/" once signed off. */}
+                <Route path="/home-v2" element={<HomeV2 />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />

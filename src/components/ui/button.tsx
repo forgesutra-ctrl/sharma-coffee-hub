@@ -15,6 +15,11 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Redesign variants, ported from the reference (text-[10px] raised to the 11px type floor).
+        editorial: "bg-primary text-primary-foreground rounded-none h-12 px-6 uppercase tracking-widest text-[11px] hover:bg-primary/90",
+        hero: "bg-hero-foreground text-forest rounded-none h-12 px-6 uppercase tracking-widest text-[11px] hover:bg-hero-foreground/90",
+        film: "rounded-full border border-hero-foreground/35 bg-forest/20 text-hero-foreground hover:bg-hero-foreground/15",
+        text: "rounded-none px-0 text-current uppercase tracking-widest text-[11px] hover:opacity-60",
       },
       size: {
         default: "h-10 px-4 py-2",

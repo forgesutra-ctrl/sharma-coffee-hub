@@ -48,3 +48,15 @@ export const familyPoster: MediaAsset = { url: asset("sharma_family.jpg") };
 
 export const roasting: MediaAsset = { url: asset("coffee_roasting.jpg") };
 export const logo: MediaAsset = { url: asset("scw-logo.webp") };
+
+/* ---------- Reference product stills ---------- */
+// Declared for completeness, but NOT used on the homepage. In the bucket, classic.png
+// and gold.png are byte-identical, and so are premium.jpg and speciality.jpg (same
+// size and ETag), so the reference showed the wrong photo on two of its four cards.
+// Section 3 uses products.image_url from Supabase instead, so the duplicates never
+// reach the page.
+
+export const classic: MediaAsset = { url: asset("classic.png") };
+export const gold: MediaAsset = { url: asset("gold.png") };
+export const premium: MediaAsset = { url: asset("premium.jpg") };
+export const speciality: MediaAsset = { url: asset("speciality.jpg") };
