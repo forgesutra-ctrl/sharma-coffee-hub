@@ -641,7 +641,7 @@ const ProductDetail = () => {
                           <span>
                             {variant.weight >= 1000 ? `${variant.weight / 1000} kg` : `${variant.weight} g`}
                           </span>
-                          <span className="text-xs text-muted-foreground">₹{variant.price}</span>
+                          <span className="text-xs text-foreground/80">₹{variant.price}</span>
                         </button>
                       ))}
                   </div>
@@ -748,7 +748,7 @@ const ProductDetail = () => {
                     {product.flavor_notes.map((note) => (
                       <span
                         key={note}
-                        className="px-3 py-1 bg-muted text-muted-foreground text-xs tracking-wider"
+                        className="px-3 py-1 bg-muted text-foreground/80 text-xs tracking-wider"
                       >
                         {note}
                       </span>

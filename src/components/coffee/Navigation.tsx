@@ -342,8 +342,8 @@ export default function Navigation() {
                 <Phone className="w-4 h-4" />
                 <span className="text-sm font-semibold">8762 988 145</span>
               </a>
-              <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="hidden md:block hover:text-green-600 transition" title="Chat on WhatsApp">
-                <MessageCircle className="w-5 h-5 text-green-600" />
+              <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="hidden md:block hover:text-green-700 transition" title="Chat on WhatsApp">
+                <MessageCircle className="w-5 h-5 text-green-700" />
               </a>
               <Link to="/brewing-guide" className="hidden sm:flex p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" aria-label="Wishlist">
                 <Heart className="w-5 h-5" />
@@ -594,7 +594,7 @@ export default function Navigation() {
                   href="https://wa.me/918762988145" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center gap-2 mt-2 text-green-600 hover:text-green-700"
+                  className="flex items-center gap-2 mt-2 text-primary hover:text-primary/80"
                   style={{ 
                     pointerEvents: 'auto',
                     touchAction: 'manipulation',

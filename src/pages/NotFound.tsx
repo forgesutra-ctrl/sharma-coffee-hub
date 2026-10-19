@@ -13,7 +13,7 @@ const NotFound = () => {
     <div className="flex min-h-screen items-center justify-center bg-muted">
       <div className="text-center max-w-md px-4">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
+        <p className="mb-4 text-xl text-foreground/80">Oops! Page not found</p>
         <a href="/" className="text-primary underline hover:text-primary/90 mb-6 inline-block">
           Return to Home
         </a>
@@ -22,13 +22,13 @@ const NotFound = () => {
           <p className="text-base font-semibold text-gray-800 mb-3">Can't find what you're looking for?</p>
           <p className="text-base">
             Contact us: 
-            <a href="tel:+918762988145" className="text-green-600 hover:text-green-900 underline font-bold ml-2 text-lg">
+            <a href="tel:+918762988145" className="text-primary hover:text-primary/80 underline font-bold ml-2 text-lg">
               +91 8762 988 145
             </a>
           </p>
           <p className="text-sm text-gray-600 mt-2">
             or message us on 
-            <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900 underline font-bold ml-1 inline-flex items-center gap-1">
+            <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline font-bold ml-1 inline-flex items-center gap-1">
               <MessageCircle className="w-4 h-4" />
               WhatsApp
             </a>

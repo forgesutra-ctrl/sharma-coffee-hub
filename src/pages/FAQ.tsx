@@ -125,7 +125,7 @@ export default function FAQ() {
             <h3 className="font-display text-xl font-semibold text-foreground mb-2">
               Still have questions?
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-foreground/80 mb-6">
               We're here to help. Reach out to our support team.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -139,7 +139,7 @@ export default function FAQ() {
                 href="https://wa.me/918762988145"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-700 text-white font-semibold rounded-lg hover:bg-green-800 transition-colors"
               >
                 WhatsApp Us
               </a>

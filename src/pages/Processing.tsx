@@ -114,7 +114,7 @@ export default function Processing() {
                 <h4 className="font-display text-lg font-semibold text-foreground mb-2">
                   Coorg Coffee Production
                 </h4>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-foreground/80 text-sm">
                   {heritageContent.britishEra.content}
                 </p>
               </div>
@@ -253,7 +253,7 @@ export default function Processing() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/shop">
-              <Button size="lg" variant="secondary" className="font-semibold">
+              <Button size="lg" variant="secondary" className="font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90">
                 Shop Our Coffee
               </Button>
             </Link>

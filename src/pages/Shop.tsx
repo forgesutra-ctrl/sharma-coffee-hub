@@ -234,7 +234,7 @@ const Shop = () => {
             >
               <Sparkles className="w-4 h-4" />
               <span className="font-medium">Find your perfect coffee</span>
-              <span className="text-muted-foreground">— Take our 1-minute taste profile quiz</span>
+              <span className="text-foreground/80">— Take our 1-minute taste profile quiz</span>
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>

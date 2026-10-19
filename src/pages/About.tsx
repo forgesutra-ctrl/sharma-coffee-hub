@@ -304,7 +304,7 @@ export default function About() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/shop">
-              <Button size="lg" variant="secondary" className="font-semibold">
+              <Button size="lg" variant="secondary" className="font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90">
                 Shop Now
               </Button>
             </Link>

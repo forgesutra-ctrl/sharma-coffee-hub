@@ -151,7 +151,7 @@ export default function Homepage() {
             <h2 className="font-display text-4xl md:text-5xl font-semibold mb-4">
               What Our Customers Say
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-foreground/80 max-w-2xl mx-auto">
               Read what our customers have to say about their experience with Sharma Coffee Works
             </p>
           </div>
