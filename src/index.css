@@ -53,8 +53,6 @@
     --coffee-cream: 38 45% 92%;
     --coffee-gold: 35 75% 55%;
     --coffee-bronze: 28 55% 42%;
-    --coffee-espresso: 18 35% 12%;
-    --coffee-mocha: 25 28% 22%;
 
     /* Sidebar */
     --sidebar-background: 44 30% 93%;
@@ -186,16 +184,6 @@
   }
 
   /* ===== HERO SECTION ===== */
-  /* Stops match the reference design's --hero-gradient */
-  .hero-overlay {
-    @apply absolute inset-0;
-    background: linear-gradient(
-      90deg,
-      hsl(var(--forest) / 0.62),
-      hsl(var(--forest) / 0.13) 65%
-    );
-  }
-
   .hero-overlay-subtle {
     @apply absolute inset-0;
     background: linear-gradient(
@@ -225,83 +213,6 @@
   .section-divider-short {
     @apply w-12 h-0.5;
     background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.3));
-  }
-
-  /* ===== PRODUCT CARDS ===== */
-  .product-card {
-    @apply relative overflow-hidden transition-all duration-700 ease-out bg-card border border-border/50;
-    @apply hover:border-primary/30;
-  }
-
-  .product-card::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-t from-forest via-transparent to-transparent opacity-0 transition-opacity duration-500;
-  }
-
-  .product-card:hover::before {
-    @apply opacity-100;
-  }
-
-  .product-card:hover {
-    @apply transform -translate-y-3;
-    box-shadow: 0 20px 50px hsl(var(--forest) / 0.12);
-  }
-
-  .product-card:hover .product-image {
-    @apply scale-110;
-  }
-
-  .product-image {
-    @apply transition-transform duration-700 ease-out;
-  }
-
-  .product-image-swap {
-    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
-  }
-
-  .product-card:hover .product-image-swap {
-    @apply opacity-100;
-  }
-
-  /* Only hide the primary photo when there is a swap image to show instead;
-     otherwise the card would go blank under the hover scrim. */
-  .product-card:has(.product-image-swap):hover .product-image-primary {
-    @apply opacity-0;
-  }
-
-  /* ===== CATEGORY CARDS ===== */
-  .category-card {
-    @apply relative overflow-hidden cursor-pointer;
-  }
-
-  .category-card .category-image {
-    @apply transition-all duration-1000 ease-out;
-  }
-
-  .category-card:hover .category-image {
-    @apply scale-110;
-    filter: brightness(0.8);
-  }
-
-  .category-card .category-overlay {
-    @apply absolute inset-0 transition-all duration-500;
-    /* Heavier than the reference --bottom-gradient so titles stay legible
-       over light product photography */
-    background-image: linear-gradient(
-      to top,
-      hsl(var(--forest) / 0.92) 0%,
-      hsl(var(--forest) / 0.62) 22%,
-      hsl(var(--forest) / 0) 58%
-    );
-  }
-
-  .category-card:hover .category-overlay {
-    background-image: linear-gradient(
-      to top,
-      hsl(var(--forest) / 0.96) 0%,
-      hsl(var(--forest) / 0.72) 27%,
-      hsl(var(--forest) / 0) 70%
-    );
   }
 
   /* ===== IMAGE EFFECTS ===== */
@@ -412,10 +323,6 @@
   /* ===== GLASS MORPHISM ===== */
   .glass {
     @apply bg-background/80 backdrop-blur-xl border border-border/30;
-  }
-
-  .glass-light {
-    @apply bg-background/60 backdrop-blur-2xl border border-border/20;
   }
 }
 
@@ -734,8 +641,7 @@ body.menu-open [data-menu-open="true"],
 @supports (-webkit-appearance: none) {
   /* Fix backdrop blur in Safari */
   .nav-glass,
-  .glass,
-  .glass-light {
+  .glass {
     -webkit-backdrop-filter: blur(40px);
   }
 
@@ -778,8 +684,6 @@ body.menu-open [data-menu-open="true"],
 }
 
 /* Fix transform performance */
-.product-card,
-.category-card,
 .hover-scale,
 .hover-lift {
   -webkit-transform: translateZ(0);

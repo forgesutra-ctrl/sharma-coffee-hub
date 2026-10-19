@@ -440,17 +440,6 @@ export function useProducts() {
   });
 }
 
-// Hook for featured products only
-export function useFeaturedProducts() {
-  const { data: products, ...rest } = useProducts();
-  
-  const featuredProducts = products
-    ? getUniqueProducts(products).filter(p => p.isFeatured)
-    : [];
-
-  return { data: featuredProducts, ...rest };
-}
-
 // Hook for products by category (using category slug)
 export function useProductsByCategory(category: string | null) {
   const { data: products, ...rest } = useProducts();

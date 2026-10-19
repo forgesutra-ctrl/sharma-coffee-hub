@@ -9,7 +9,6 @@ import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/coffee/Layout";
 import ScrollToTop from "./components/coffee/ScrollToTop";
 import { setupFocusGuard } from "./lib/accessibility";
-import Homepage from "./pages/Homepage";
 import HomeV2 from "./pages/HomeV2";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -81,8 +80,6 @@ const App = () => {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Layout variant="home"><HomeV2 /></Layout>} />
-                {/* Temporary: same page, kept for comparison until the cleanup step removes it. */}
-                <Route path="/home-v2" element={<Layout variant="home"><HomeV2 /></Layout>} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />

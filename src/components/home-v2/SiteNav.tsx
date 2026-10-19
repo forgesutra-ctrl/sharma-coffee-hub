@@ -9,7 +9,7 @@ import { logo } from '@/lib/site-media';
 //
 // On the homepage the first three links scroll to sections; elsewhere they go to the
 // matching pages. Subscribe and Shop are always routes.
-const HOME_PATHS = ['/', '/home-v2'];
+const HOME_PATHS = ['/'];
 
 type NavLink = { label: string; anchor: string; route: string };
 
