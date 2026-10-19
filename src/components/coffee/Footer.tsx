@@ -45,7 +45,7 @@ export default function Footer() {
     }
   };
   const currentYear = new Date().getFullYear();
-  return <footer className="bg-coffee-dark text-white relative overflow-hidden">
+  return <footer className="bg-forest text-hero-foreground relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -58,7 +58,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 py-16 md:py-20">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <p className="text-coffee-gold text-sm font-medium tracking-[0.2em] uppercase mb-3">
+              <p className="text-gold text-sm font-medium tracking-[0.2em] uppercase mb-3">
                 Stay Connected
               </p>
               <h3 className="font-serif text-3xl md:text-4xl lg:text-5xl font-semibold mb-4">
@@ -71,10 +71,10 @@ export default function Footer() {
             
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
-                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email address" className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-coffee-gold focus:ring-coffee-gold/30 focus:ring-2 pr-12 transition-all" required />
+                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email address" className="h-14 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-gold focus:ring-gold/30 focus:ring-2 pr-12 transition-all" required />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               </div>
-              <Button type="submit" disabled={isLoading} className="h-14 px-8 bg-coffee-gold hover:bg-coffee-gold/90 text-coffee-dark font-semibold group shadow-lg shadow-coffee-gold/20 hover:shadow-coffee-gold/30 transition-all">
+              <Button type="submit" disabled={isLoading} className="h-14 px-8 bg-gold hover:bg-gold/90 text-forest font-semibold group shadow-lg shadow-gold/20 hover:shadow-gold/30 transition-all">
                 Subscribe
                 <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
@@ -104,11 +104,11 @@ export default function Footer() {
             title: 'Made with Love',
             desc: 'Handcrafted blends'
           }].map(badge => <div key={badge.title} className="flex items-center gap-4 group">
-                <div className="w-12 h-12 rounded-full bg-coffee-gold/10 flex items-center justify-center group-hover:bg-coffee-gold/20 transition-colors">
-                  <badge.icon className="w-5 h-5 text-coffee-gold" />
+                <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
+                  <badge.icon className="w-5 h-5 text-gold" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">{badge.title}</p>
+                  <p className="font-semibold text-hero-foreground">{badge.title}</p>
                   <p className="text-sm text-white/50">{badge.desc}</p>
                 </div>
               </div>)}
@@ -145,7 +145,7 @@ export default function Footer() {
               icon: Youtube,
               label: 'YouTube',
               href: '#'
-            }].map(social => <a key={social.label} href={social.href} className="w-10 h-10 bg-white/10 hover:bg-coffee-gold hover:text-coffee-dark transition-all duration-300 rounded-full flex items-center justify-center group" aria-label={social.label}>
+            }].map(social => <a key={social.label} href={social.href} className="w-10 h-10 border border-hero-foreground/30 text-hero-foreground/70 hover:bg-gold hover:border-gold hover:text-forest transition-all duration-300 rounded-full flex items-center justify-center group" aria-label={social.label}>
                   <social.icon className="w-4 h-4" />
                 </a>)}
             </div>
@@ -153,7 +153,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-coffee-gold">
+            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
               Shop
             </h4>
             <ul className="space-y-3">
@@ -173,8 +173,8 @@ export default function Footer() {
               name: 'Instant Coffee',
               link: '/shop/instant-coffee-decoctions'
             }].map(item => <li key={item.name}>
-                  <Link to={item.link} className="text-white/60 hover:text-coffee-gold transition-colors text-sm inline-flex items-center gap-2 group">
-                    <span className="w-0 group-hover:w-2 h-px bg-coffee-gold transition-all duration-300" />
+                  <Link to={item.link} className="text-white/60 hover:text-gold transition-colors text-sm inline-flex items-center gap-2 group">
+                    <span className="w-0 group-hover:w-2 h-px bg-gold transition-all duration-300" />
                     {item.name}
                   </Link>
                 </li>)}
@@ -183,7 +183,7 @@ export default function Footer() {
 
           {/* Company Links */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-coffee-gold">
+            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
               Company
             </h4>
             <ul className="space-y-3">
@@ -203,8 +203,8 @@ export default function Footer() {
               name: 'Wholesale',
               link: '/wholesale'
             }].map(item => <li key={item.name}>
-                  <Link to={item.link} className="text-white/60 hover:text-coffee-gold transition-colors text-sm inline-flex items-center gap-2 group">
-                    <span className="w-0 group-hover:w-2 h-px bg-coffee-gold transition-all duration-300" />
+                  <Link to={item.link} className="text-white/60 hover:text-gold transition-colors text-sm inline-flex items-center gap-2 group">
+                    <span className="w-0 group-hover:w-2 h-px bg-gold transition-all duration-300" />
                     {item.name}
                   </Link>
                 </li>)}
@@ -213,7 +213,7 @@ export default function Footer() {
 
           {/* Customer Care */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-coffee-gold">
+            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
               Support
             </h4>
             <ul className="space-y-3">
@@ -233,8 +233,8 @@ export default function Footer() {
               name: 'Privacy Policy',
               link: '/privacy-policy'
             }].map(item => <li key={item.name}>
-                  <Link to={item.link} className="text-white/60 hover:text-coffee-gold transition-colors text-sm inline-flex items-center gap-2 group">
-                    <span className="w-0 group-hover:w-2 h-px bg-coffee-gold transition-all duration-300" />
+                  <Link to={item.link} className="text-white/60 hover:text-gold transition-colors text-sm inline-flex items-center gap-2 group">
+                    <span className="w-0 group-hover:w-2 h-px bg-gold transition-all duration-300" />
                     {item.name}
                   </Link>
                 </li>)}
@@ -243,23 +243,23 @@ export default function Footer() {
 
           {/* Contact */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-coffee-gold">
+            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
               Contact
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm text-white/60">
-                <MapPin className="w-4 h-4 text-coffee-gold flex-shrink-0 mt-1" />
+                <MapPin className="w-4 h-4 text-gold flex-shrink-0 mt-1" />
                 <span>Sharma Coffee Works, Near Bus Stand, Madikeri, Coorg, Karnataka 571201</span>
               </li>
               <li>
-                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors" href="tel:+918762988145">​<Phone className="w-4 h-4 text-coffee-gold flex-shrink-0" />
+                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-gold transition-colors" href="tel:+918762988145">​<Phone className="w-4 h-4 text-gold flex-shrink-0" />
                   
                   ​+91 8762 988 145
                 
                 </a>
               </li>
               <li>
-                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-coffee-gold transition-colors" href="mailto:ask@sharmacoffeeworks.com">​<Mail className="w-4 h-4 text-coffee-gold flex-shrink-0" />
+                <a className="flex items-center gap-3 text-sm text-white/60 hover:text-gold transition-colors" href="mailto:ask@sharmacoffeeworks.com">​<Mail className="w-4 h-4 text-gold flex-shrink-0" />
                   ask@sharmacoffeeworks.com
                 </a>
               </li>
@@ -271,8 +271,8 @@ export default function Footer() {
       {/* Contact Us Section */}
       <div className="relative border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="border-t border-amber-100 pt-6">
-            <h3 className="font-bold text-amber-900 mb-4 text-lg">CONTACT US</h3>
+          <div className="border-t border-hero-foreground/20 pt-6">
+            <h3 className="font-bold text-gold mb-4 text-lg">CONTACT US</h3>
             <div className="space-y-2 text-sm text-white/80">
               <p className="flex items-center gap-2">
                 <span>🔴</span>
@@ -322,17 +322,17 @@ export default function Footer() {
                 href="https://www.sutraforge.com"
                 target="_blank"
                 rel="noopener"
-                className="hover:text-coffee-gold transition-colors"
+                className="hover:text-gold transition-colors"
               >
                 SutraForge
               </a>
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-white/40">
-            <Link to="/privacy-policy" className="hover:text-coffee-gold transition-colors">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:text-coffee-gold transition-colors">Terms of Service</Link>
-            <Link to="/refund-policy" className="hover:text-coffee-gold transition-colors">Refund Policy</Link>
-            <Link to="/admin/login" className="hover:text-coffee-gold transition-colors">Admin</Link>
+            <Link to="/privacy-policy" className="hover:text-gold transition-colors">Privacy Policy</Link>
+            <Link to="/terms-of-service" className="hover:text-gold transition-colors">Terms of Service</Link>
+            <Link to="/refund-policy" className="hover:text-gold transition-colors">Refund Policy</Link>
+            <Link to="/admin/login" className="hover:text-gold transition-colors">Admin</Link>
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ const StorySection: React.FC<StorySectionProps> = ({
   return (
     <section className={cn(
       "py-20",
-      theme === 'dark' ? 'bg-background' : 'bg-cream'
+      theme === 'dark' && 'bg-background'
     )}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={cn(
@@ -59,7 +59,7 @@ const StorySection: React.FC<StorySectionProps> = ({
                   className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <div className="w-20 h-20 rounded-full bg-gold flex items-center justify-center transform group-hover:scale-110 transition-transform">
-                    <Play className="w-8 h-8 text-coffee-foreground ml-1" />
+                    <Play className="w-8 h-8 ml-1" />
                   </div>
                 </a>
               )}
@@ -82,7 +82,7 @@ const StorySection: React.FC<StorySectionProps> = ({
             )}
             <h2 className={cn(
               "font-serif text-4xl sm:text-5xl mt-4 mb-6",
-              theme === 'dark' ? 'text-foreground' : 'text-coffee-foreground'
+              theme === 'dark' && 'text-foreground'
             )}>
               {title}
             </h2>
@@ -92,7 +92,7 @@ const StorySection: React.FC<StorySectionProps> = ({
                 key={index}
                 className={cn(
                   "text-lg mb-6 leading-relaxed",
-                  theme === 'dark' ? 'text-muted-foreground' : 'text-coffee-foreground/70'
+                  theme === 'dark' && 'text-muted-foreground'
                 )}
               >
                 {paragraph}

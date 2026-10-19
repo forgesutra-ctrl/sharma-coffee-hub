@@ -307,14 +307,14 @@ export default function Homepage() {
 
       {/* CTA */}
       <section className="relative w-full py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-forest to-primary" />
         <div className="relative z-10 max-w-4xl mx-auto text-center px-4">
-          <h2 className="font-display text-5xl text-primary-foreground mb-6">
+          <h2 className="font-display text-5xl text-hero-foreground mb-6">
             Experience the Taste of Coorg
           </h2>
           <Link
             to="/shop"
-            className="inline-flex items-center gap-3 bg-background px-10 py-5 uppercase tracking-wide"
+            className="inline-flex items-center gap-3 bg-background text-primary px-10 py-5 uppercase tracking-wide"
           >
             Shop Now <ArrowRight className="w-4 h-4" />
           </Link>

@@ -241,17 +241,17 @@ export default function Navigation() {
       </CommandDialog>
 
       {/* Announcement Bar */}
-      <div className="bg-coffee-dark text-white py-2 relative overflow-hidden z-[200001]" style={{ pointerEvents: 'auto' }}>
+      <div className="bg-forest text-hero-foreground py-2 relative overflow-hidden z-[200001]" style={{ pointerEvents: 'auto' }}>
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           {/* Social Links - Left */}
           <div className="hidden md:flex items-center gap-4">
-            <a href="#" className="hover:text-coffee-gold transition-colors" aria-label="Instagram">
+            <a href="#" className="hover:text-gold transition-colors" aria-label="Instagram">
               <Instagram className="w-4 h-4" />
             </a>
-            <a href="#" className="hover:text-coffee-gold transition-colors" aria-label="Facebook">
+            <a href="#" className="hover:text-gold transition-colors" aria-label="Facebook">
               
             </a>
-            <a href="#" className="hover:text-coffee-gold transition-colors" aria-label="Twitter">
+            <a href="#" className="hover:text-gold transition-colors" aria-label="Twitter">
               
             </a>
           </div>
@@ -264,15 +264,15 @@ export default function Navigation() {
               {announcements.map((ann, idx) => <div key={idx} className={cn("h-6 flex items-center justify-center gap-2 text-xs sm:text-sm tracking-wider transition-opacity duration-300", idx === currentAnnouncement ? "opacity-100" : "opacity-0")} style={{
               display: idx === currentAnnouncement ? 'flex' : 'none'
             }}>
-                  <span className="font-bold text-coffee-gold">{ann.text}</span>
-                  <span className="text-white/80 hidden sm:inline">— {ann.highlight}</span>
+                  <span className="font-bold text-gold">{ann.text}</span>
+                  <span className="text-hero-foreground/80 hidden sm:inline">— {ann.highlight}</span>
                 </div>)}
             </div>
           </div>
 
           {/* Contact - Right */}
-          <div className="hidden md:flex items-center gap-3 text-xs text-white/70">
-            <a href="tel:+918762988145" className="flex items-center gap-1 hover:text-coffee-gold transition-colors">
+          <div className="hidden md:flex items-center gap-3 text-xs text-hero-foreground/70">
+            <a href="tel:+918762988145" className="flex items-center gap-1 hover:text-gold transition-colors">
               <Phone className="w-3 h-3" />
               <span>8762 988 145</span>
             </a>
