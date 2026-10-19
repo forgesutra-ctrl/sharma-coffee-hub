@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { Instagram, MessageCircle, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// The forest announcement bar, lifted out of Navigation.tsx so the redesigned
-// header can sit below it. Navigation.tsx keeps its own copy until Phase 4 retires
-// the old nav; keep the two in sync until then.
+// The forest announcement bar: the single component used by both Navigation (every
+// inner page) and Layout's `home` variant. Only the current message is rendered, so
+// all three show in turn. (The old inline copy in Navigation slid a wrapper up by
+// index × 100% while also hiding inactive messages, which pushed messages 2 and 3
+// out of view.)
 const announcements = [
   { text: 'FREE SHIPPING', highlight: 'Subscription Members Only' },
   { text: 'FARM TO CUP', highlight: 'Direct from Coorg since 1983' },
   { text: '100% AUTHENTIC', highlight: 'Premium South Indian coffee' },
 ];
 
-export function AnnouncementStrip() {
+export function AnnouncementStrip({ className }: { className?: string }) {
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function AnnouncementStrip() {
   }, []);
 
   return (
-    <div className="bg-forest text-hero-foreground py-2 relative overflow-hidden">
+    <div className={cn('bg-forest text-hero-foreground py-2 relative overflow-hidden', className)}>
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
         {/* Social Links - Left */}
         <div className="hidden md:flex items-center gap-4">

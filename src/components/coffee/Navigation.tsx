@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Menu, X, User, ChevronDown, Search, Instagram, Phone, Heart, MessageCircle, Home, Store, BookOpen, Coffee, FileText, Mail, HelpCircle, Layers } from 'lucide-react';
+import { ShoppingBag, Menu, X, User, ChevronDown, Search, Phone, Heart, MessageCircle, Home, Store, BookOpen, Coffee, FileText, Mail, HelpCircle, Layers } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts, getUniqueProducts } from '@/hooks/useProducts';
 import { cn } from '@/lib/utils';
 import { setInertSafely } from '@/lib/accessibility';
+import { AnnouncementStrip } from '@/components/home-v2/AnnouncementStrip';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
 import {
   CommandDialog,
@@ -16,17 +17,6 @@ import {
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command';
-const announcements = [{
-  text: 'FREE SHIPPING',
-  highlight: 'Subscription Members Only'
-}, {
-  text: 'FARM TO CUP',
-  highlight: 'Direct from Coorg since 1983'
-}, {
-  text: '100% AUTHENTIC',
-  highlight: 'Premium South Indian coffee'
-}];
-
 const searchPages = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Shop', href: '/shop', icon: Store },
@@ -43,7 +33,6 @@ export default function Navigation() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [currentAnnouncement, setCurrentAnnouncement] = useState(0);
   const [isMegaMenuHovered, setIsMegaMenuHovered] = useState(false);
   const {
     getCartCount
@@ -151,14 +140,6 @@ export default function Navigation() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Rotate announcements
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentAnnouncement(prev => (prev + 1) % announcements.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Close mobile menu on route change
   useEffect(() => {
     setIsOpen(false);
@@ -240,48 +221,8 @@ export default function Navigation() {
         </CommandList>
       </CommandDialog>
 
-      {/* Announcement Bar */}
-      <div className="bg-forest text-hero-foreground py-2 relative overflow-hidden z-[200001]" style={{ pointerEvents: 'auto' }}>
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          {/* Social Links - Left */}
-          <div className="hidden md:flex items-center gap-4">
-            <a href="#" className="hover:text-gold transition-colors" aria-label="Instagram">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="#" className="hover:text-gold transition-colors" aria-label="Facebook">
-              
-            </a>
-            <a href="#" className="hover:text-gold transition-colors" aria-label="Twitter">
-              
-            </a>
-          </div>
-
-          {/* Announcements - Center */}
-          <div className="flex-1 text-center overflow-hidden">
-            <div className="transition-all duration-500" style={{
-            transform: `translateY(-${currentAnnouncement * 100}%)`
-          }}>
-              {announcements.map((ann, idx) => <div key={idx} className={cn("h-6 flex items-center justify-center gap-2 text-xs sm:text-sm tracking-wider transition-opacity duration-300", idx === currentAnnouncement ? "opacity-100" : "opacity-0")} style={{
-              display: idx === currentAnnouncement ? 'flex' : 'none'
-            }}>
-                  <span className="font-bold text-gold">{ann.text}</span>
-                  <span className="text-hero-foreground/80 hidden sm:inline">— {ann.highlight}</span>
-                </div>)}
-            </div>
-          </div>
-
-          {/* Contact - Right */}
-          <div className="hidden md:flex items-center gap-3 text-xs text-hero-foreground/70">
-            <a href="tel:+918762988145" className="flex items-center gap-1 hover:text-gold transition-colors">
-              <Phone className="w-3 h-3" />
-              <span>8762 988 145</span>
-            </a>
-            <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors" title="Chat on WhatsApp">
-              <MessageCircle className="w-4 h-4 text-green-400" />
-            </a>
-          </div>
-        </div>
-      </div>
+      {/* Announcement Bar (shared with the homepage) */}
+      <AnnouncementStrip className="z-[200001]" />
 
       {/* Main Navigation */}
       <nav 

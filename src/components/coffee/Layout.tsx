@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import Navigation from './Navigation';
+import { AnnouncementStrip } from '../home-v2/AnnouncementStrip';
 import Footer from './Footer';
 import { ChatBot } from '../chat/ChatBot';
 import BackToTop from './BackToTop';
@@ -8,9 +9,15 @@ import DasaraGreeting from './DasaraGreeting';
 
 interface LayoutProps {
   children: ReactNode;
+  /**
+   * `home`: the redesigned homepage renders its own header (SiteNav) inside the hero,
+   * where it overlays the video, so Layout supplies only the announcement bar above it.
+   * Every other page uses the default `Navigation`.
+   */
+  variant?: 'default' | 'home';
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, variant = 'default' }: LayoutProps) => {
   // Root container ref so we can enforce safe aria-hidden behavior.
   // Some overlay libraries (including Radix-based components) may set
   // aria-hidden/data-aria-hidden on siblings when portals open. To prevent
@@ -62,7 +69,7 @@ const Layout = ({ children }: LayoutProps) => {
       >
         Skip to main content
       </a>
-      <Navigation />
+      {variant === 'home' ? <AnnouncementStrip /> : <Navigation />}
       <main id="main" className="flex-1 w-full" style={{ overflow: 'visible' }} tabIndex={-1}>
         {children}
       </main>

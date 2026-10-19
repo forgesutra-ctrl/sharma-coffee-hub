@@ -2,19 +2,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUpRight, Coffee, Leaf, PackageCheck, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AnnouncementStrip } from '@/components/home-v2/AnnouncementStrip';
 import { CinematicVideo } from '@/components/home-v2/CinematicVideo';
 import { FilmDialog, type Film } from '@/components/home-v2/FilmDialog';
 import { Brand, SiteNav } from '@/components/home-v2/SiteNav';
 import { CoffeeSection } from '@/components/home-v2/CoffeeSection';
-import Footer from '@/components/coffee/Footer';
 import { brewing, brewingPoster, estate, estatePoster, family, familyPoster, roasting } from '@/lib/site-media';
 import '@/components/home-v2/home-v2.css';
 
-// Temporary route for the redesigned homepage, ported from the reference
+// The site homepage (served at "/"), ported from the reference redesign
 // (coorg-s-golden-roast, src/routes/index.tsx): hero, promise strip, intro, coffees,
-// story, films and roast, followed by our existing Footer (not the reference's).
-// The route replaces "/" once signed off.
+// story, films and roast. Our existing Footer follows via Layout, not the reference's.
 
 const films: [Film, Film, Film] = [
   { title: 'Where it all begins', subtitle: 'A cinematic impression of the coffee country of Coorg.', media: estate, poster: estatePoster.url, duration: '0:08' },
@@ -29,10 +26,12 @@ export default function HomeV2() {
   const [root, setRoot] = useState<HTMLElement | null>(null);
   const hero = films[heroFilm] ?? films[0];
 
+  // Rendered inside <Layout variant="home">, which supplies the announcement bar above
+  // this and the shared Footer, ChatBot, back-to-top, cookie banner and Dasara popup.
+  // Layout's own <main> wraps this, hence a <div> here. The footer sits outside this
+  // .home-v2 wrapper, so the scoped reference base rules cannot restyle it.
   return (
-    <>
-      <AnnouncementStrip />
-      <main id="home" className="home-v2" ref={setRoot}>
+      <div id="home" className="home-v2" ref={setRoot}>
         <a href="#coffees" className="skip-link">Skip to our coffees</a>
 
         <section className="hero">
@@ -153,10 +152,6 @@ export default function HomeV2() {
         </section>
 
         <FilmDialog film={activeFilm} onClose={() => setActiveFilm(null)} container={root} />
-      </main>
-      {/* Our existing footer, kept outside .home-v2 so the scoped reference base rules
-          (weight-400 headings, a{color:inherit}) cannot restyle it. */}
-      <Footer />
-    </>
+      </div>
   );
 }

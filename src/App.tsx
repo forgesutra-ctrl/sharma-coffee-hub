@@ -80,9 +80,9 @@ const App = () => {
             <CartProvider>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/" element={<Layout><Homepage /></Layout>} />
-                {/* Temporary: redesigned homepage under review. Replaces "/" once signed off. */}
-                <Route path="/home-v2" element={<HomeV2 />} />
+                <Route path="/" element={<Layout variant="home"><HomeV2 /></Layout>} />
+                {/* Temporary: same page, kept for comparison until the cleanup step removes it. */}
+                <Route path="/home-v2" element={<Layout variant="home"><HomeV2 /></Layout>} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />
