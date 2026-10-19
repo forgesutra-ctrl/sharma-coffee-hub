@@ -76,7 +76,7 @@ const StorySection: React.FC<StorySectionProps> = ({
             layout === 'right' ? "lg:pr-8" : "lg:pl-8"
           )}>
             {subtitle && (
-              <span className="text-gold text-sm font-semibold tracking-widest uppercase">
+              <span className="text-primary text-sm font-semibold tracking-widest uppercase">
                 {subtitle}
               </span>
             )}

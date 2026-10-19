@@ -71,7 +71,7 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
           <div className="mt-12 pt-8 border-t border-border">
             <Link 
               to="/" 
-              className="inline-flex items-center gap-2 text-coffee-gold hover:text-coffee-gold/80 transition-colors font-medium"
+              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home

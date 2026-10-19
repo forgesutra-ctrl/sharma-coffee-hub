@@ -413,7 +413,7 @@
     @apply bg-background/80 backdrop-blur-xl border border-border/30;
   }
 
-  .glass-dark {
+  .glass-light {
     @apply bg-background/60 backdrop-blur-2xl border border-border/20;
   }
 }
@@ -734,7 +734,7 @@ body.menu-open [data-menu-open="true"],
   /* Fix backdrop blur in Safari */
   .nav-glass,
   .glass,
-  .glass-dark {
+  .glass-light {
     -webkit-backdrop-filter: blur(40px);
   }
 

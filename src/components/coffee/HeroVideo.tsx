@@ -146,14 +146,14 @@ export default function HeroVideo({
         <div className="absolute bottom-8 right-8 z-20 flex gap-3">
           <button
             onClick={togglePlay}
-            className="p-3 glass-dark rounded-sm hover:bg-foreground/10 transition-all duration-300"
+            className="p-3 glass-light rounded-sm hover:bg-foreground/10 transition-all duration-300"
             aria-label={isPlaying ? 'Pause video' : 'Play video'}
           >
             {isPlaying ? <Pause className="w-4 h-4 text-foreground/80" /> : <Play className="w-4 h-4 text-foreground/80" />}
           </button>
           <button
             onClick={toggleMute}
-            className="p-3 glass-dark rounded-sm hover:bg-foreground/10 transition-all duration-300"
+            className="p-3 glass-light rounded-sm hover:bg-foreground/10 transition-all duration-300"
             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-foreground/80" /> : <Volume2 className="w-4 h-4 text-foreground/80" />}
