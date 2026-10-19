@@ -125,7 +125,8 @@ export default function HomeV2() {
             {films.map((film, i) => (
               <Button key={film.title} variant="text" className={`film-tile film-tile-${i}`} onClick={() => setActiveFilm(film)} aria-label={`Watch ${film.title}`}>
                 <div className="film-tile-image">
-                  <img src={film.poster} alt={film.title} loading="lazy" />
+                  {/* Decorative: the button's aria-label already says "Watch {title}". */}
+                  <img src={film.poster} alt="" loading="lazy" />
                   <span className="film-play"><Play fill="currentColor" /></span>
                   <span className="film-duration">{film.duration}</span>
                 </div>
