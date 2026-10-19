@@ -262,7 +262,9 @@
     @apply opacity-100;
   }
 
-  .product-card:hover .product-image-primary {
+  /* Only hide the primary photo when there is a swap image to show instead;
+     otherwise the card would go blank under the hover scrim. */
+  .product-card:has(.product-image-swap):hover .product-image-primary {
     @apply opacity-0;
   }
 
