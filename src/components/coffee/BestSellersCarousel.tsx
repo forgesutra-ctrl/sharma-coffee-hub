@@ -133,8 +133,8 @@ export default function BestSellersCarousel({
                     )}
 
                     {/* View Product Overlay */}
-                    <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                      <span className="text-sm font-medium tracking-[0.2em] uppercase text-foreground">
+                    <div className="absolute inset-0 bg-forest/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                      <span className="text-sm font-medium tracking-[0.2em] uppercase text-hero-foreground">
                         View Product
                       </span>
                     </div>

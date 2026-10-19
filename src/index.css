@@ -234,7 +234,7 @@
 
   .product-card::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-0 transition-opacity duration-500;
+    @apply absolute inset-0 bg-gradient-to-t from-forest via-transparent to-transparent opacity-0 transition-opacity duration-500;
   }
 
   .product-card:hover::before {
