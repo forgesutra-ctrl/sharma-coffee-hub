@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { CHILD_PRICING_SELECT, getFromPrice, type PricingChild } from '@/lib/from-price';
 
 export interface ProductVariant {
   id: string;
@@ -48,6 +49,8 @@ export interface DatabaseProduct {
   product_variants: ProductVariant[];
   product_images?: ProductImage[];
   child_products?: DatabaseProduct[];
+  /** Minimal child data for the listing from-price; see lib/from-price.ts. */
+  child_pricing?: PricingChild[] | null;
   categories?: CategoryInfo | null;
 }
 
@@ -121,7 +124,8 @@ async function fetchProducts(): Promise<DatabaseProduct[]> {
           image_url,
           is_primary,
           sort_order
-        )
+        ),
+        ${CHILD_PRICING_SELECT}
       `)
       .eq('is_active', true)
       .is('parent_product_id', null)
@@ -298,7 +302,8 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
           image_url,
           is_primary,
           sort_order
-        )
+        ),
+        ${CHILD_PRICING_SELECT}
       `)
       .eq('category_id', categoryId)
       .eq('is_active', true)
@@ -314,7 +319,10 @@ async function fetchProductsByCategoryId(categoryId: string): Promise<DatabasePr
   }
 }
 
-// Get unique products (one entry per product, using lowest price variant)
+// Get unique products (one entry per product, using lowest price variant).
+// `price` is the advertised from-price (lib/from-price.ts), which for products with
+// child blends comes from the children. variantId/weight/comparePrice still describe
+// the product's own cheapest variant; nothing outside this file reads them.
 export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
   return products.map(product => {
     // Get the variant with lowest price (or first if no variants)
@@ -329,7 +337,7 @@ export function getUniqueProducts(products: DatabaseProduct[]): FlatProduct[] {
       variantId: lowestPriceVariant?.id || product.id,
       name: product.name,
       slug: product.slug,
-      price: lowestPriceVariant?.price || 0,
+      price: getFromPrice(product)?.price ?? 0,
       comparePrice: lowestPriceVariant?.compare_at_price || null,
       image: product.image_url || '/placeholder.svg',
       category: product.categories?.name || product.category,

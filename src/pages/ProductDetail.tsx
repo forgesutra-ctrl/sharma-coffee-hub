@@ -14,6 +14,7 @@ import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { validateSubscriptionPlan } from '@/lib/subscription-validation';
 import { isSubscriptionEligible, getSubscriptionEligibilityError, isCoffeePowderProduct } from '@/lib/subscription-eligibility';
 import { addRecentlyViewed, getRecentlyViewedSlugs } from '@/lib/recently-viewed';
+import { getFromPrice } from '@/lib/from-price';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -769,9 +770,7 @@ const ProductDetail = () => {
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {recentlyViewedProducts.map((related) => {
-                  const relatedLowestPrice = related.product_variants?.length > 0
-                    ? Math.min(...related.product_variants.map(v => v.price))
-                    : 0;
+                  const relatedLowestPrice = getFromPrice(related)?.price ?? 0;
                   return (
                     <Link
                       key={related.id}
@@ -808,9 +807,7 @@ const ProductDetail = () => {
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map((related) => {
-                  const relatedLowestPrice = related.product_variants?.length > 0
-                    ? Math.min(...related.product_variants.map(v => v.price))
-                    : 0;
+                  const relatedLowestPrice = getFromPrice(related)?.price ?? 0;
 
                   return (
                     <Link

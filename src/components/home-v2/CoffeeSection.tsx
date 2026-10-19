@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { CHILD_PRICING_SELECT, getFromPrice, type PricingSource } from '@/lib/from-price';
 
 // Section 3, "A coffee for your kind of morning." Ported from the reference, which
 // hardcoded four products linking to the old external shop. Facts (image, slug,
@@ -29,20 +30,21 @@ const FEATURED: { slug: string; title: string; eyebrow: string; detail: string }
 
 type FeaturedProduct = { slug: string; image: string | null; fromPrice: number | null };
 
-/** "from ₹X" uses the product's lowest variant price, matching /shop (getUniqueProducts). */
-function lowestPrice(variants: { price: number }[] | null): number | null {
-  if (!variants?.length) return null;
-  return Math.min(...variants.map((v) => v.price));
-}
+type FeaturedRow = { slug: string; image_url: string | null } & PricingSource;
 
 async function fetchFeatured(): Promise<FeaturedProduct[]> {
   const { data, error } = await supabase
     .from('products')
-    .select('slug, image_url, product_variants(price)')
+    .select(`slug, image_url, product_variants(price, stock_quantity), ${CHILD_PRICING_SELECT}`)
     .in('slug', FEATURED.map((p) => p.slug))
     .eq('is_active', true);
   if (error) throw error;
-  return (data ?? []).map((p) => ({ slug: p.slug, image: p.image_url, fromPrice: lowestPrice(p.product_variants) }));
+  // "from ₹X" follows the shared rule in lib/from-price.ts, the same as /shop.
+  return ((data ?? []) as unknown as FeaturedRow[]).map((p) => ({
+    slug: p.slug,
+    image: p.image_url,
+    fromPrice: getFromPrice(p)?.price ?? null,
+  }));
 }
 
 export function CoffeeSection() {
