@@ -329,6 +329,10 @@
   .home-v2 .film-tile-2 img { object-position: center 26%; }
   .home-v2 .film-tile-caption h3 { font-size: 27px; }
   .home-v2 .roast-section { height: 460px; }
+  /* Not in the reference: once the column narrows, the copy sits in the lightest part of
+     the left-to-right gradient (21.6% of paragraph samples were below 4.5:1 at 375px).
+     A bottom-up layer behind the copy fixes that; the desktop shade is unchanged. */
+  .home-v2 .roast-shade { background: linear-gradient(0deg, hsl(var(--forest-deep) / 0.55), hsl(var(--forest-deep) / 0.2)), var(--hv2-hero-gradient); }
   .home-v2 .roast-copy { padding-top: 75px; margin-left: 27px; }
   .home-v2 .roast-copy h2 { font-size: 47px; }
   .home-v2 .roast-copy .eyebrow { font-size: 11px; /* was 7px */ }

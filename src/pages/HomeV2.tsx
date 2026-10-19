@@ -139,7 +139,9 @@ export default function HomeV2() {
         </section>
 
         <section className="roast-section">
-          <img src={roasting.url} alt="Coffee beans being roasted" loading="lazy" />
+          {/* The file is named coffee_roasting.jpg but shows ripening cherries on the plant;
+              the reference's "Coffee beans being roasted" alt text was wrong. */}
+          <img src={roasting.url} alt="A coffee plant's branches heavy with red, orange and yellow cherries ripening in the sun" loading="lazy" />
           <div className="roast-shade" />
           <div className="roast-copy">
             <p className="eyebrow">TIME IS OUR SECRET INGREDIENT</p>
