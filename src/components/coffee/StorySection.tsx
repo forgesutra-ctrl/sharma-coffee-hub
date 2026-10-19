@@ -81,7 +81,7 @@ const StorySection: React.FC<StorySectionProps> = ({
               </span>
             )}
             <h2 className={cn(
-              "font-serif text-4xl sm:text-5xl mt-4 mb-6",
+              "font-display text-4xl sm:text-5xl mt-4 mb-6",
               theme === 'dark' && 'text-foreground'
             )}>
               {title}

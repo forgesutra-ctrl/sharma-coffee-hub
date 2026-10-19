@@ -113,7 +113,7 @@ const ForgotPassword = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <Coffee className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-foreground">Sharma Coffee Works</h1>
+          <h1 className="text-2xl font-display font-bold text-foreground">Sharma Coffee Works</h1>
           <p className="text-muted-foreground text-sm mt-1">Est. 1987 • Coorg, Karnataka</p>
         </div>
 

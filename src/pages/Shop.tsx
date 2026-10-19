@@ -211,7 +211,7 @@ const Shop = () => {
 
         {/* Page Title */}
         <div className="border-b border-border/50 py-12 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl font-semibold text-foreground">
+          <h1 className="font-display text-4xl md:text-5xl font-semibold text-foreground">
             {searchQuery ? `Search results for "${searchParams.get('q')?.trim() ?? ''}"` : activeCategoryName}
           </h1>
           {searchQuery && (

@@ -202,7 +202,7 @@ const ProductDetail = () => {
     return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="font-serif text-2xl mb-4">Error loading product</h1>
+            <h1 className="font-display text-2xl mb-4">Error loading product</h1>
             <Link to="/shop" className="text-primary hover:underline">
               Return to shop
             </Link>
@@ -216,7 +216,7 @@ const ProductDetail = () => {
     return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="font-serif text-2xl mb-4">Product not found</h1>
+            <h1 className="font-display text-2xl mb-4">Product not found</h1>
             <Link to="/shop" className="text-primary hover:underline">
               Return to shop
             </Link>
@@ -408,7 +408,7 @@ const ProductDetail = () => {
                 <p className="text-sm text-primary font-medium tracking-wider uppercase mb-2">
                   {product.categories?.name || product.category}
                 </p>
-                <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mb-4">
+                <h1 className="font-display text-3xl md:text-4xl font-semibold text-foreground mb-4">
                   {product.name}
                 </h1>
                 <p className="text-2xl font-medium text-foreground">
@@ -764,7 +764,7 @@ const ProductDetail = () => {
         {recentlyViewedProducts.length > 0 && (
           <div className="border-t border-border/50 py-12 lg:py-16">
             <div className="container mx-auto px-4">
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold text-center mb-8">
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-center mb-8">
                 Recently Viewed
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
@@ -803,7 +803,7 @@ const ProductDetail = () => {
         {relatedProducts.length > 0 && (
           <div className="border-t border-border/50 py-12 lg:py-16">
             <div className="container mx-auto px-4">
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold text-center mb-8">
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-center mb-8">
                 You May Also Like
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">

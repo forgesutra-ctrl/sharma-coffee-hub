@@ -125,7 +125,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Manrope', sans-serif;
+    font-family: theme('fontFamily.sans');
   }
 
   /* Admin keeps its original body font. `.admin-theme body` covers <html>
@@ -136,7 +136,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: theme('fontFamily.display');
     @apply font-semibold tracking-wide;
   }
 }

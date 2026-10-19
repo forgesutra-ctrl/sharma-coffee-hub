@@ -478,7 +478,7 @@ export default function Navigation() {
             {navLinks.map(link => <div key={link.name} className="border-b border-border/30 last:border-0">
                 {link.children ? <>
                     <button 
-                      className="flex items-center justify-between w-full py-4 text-lg font-serif font-medium text-foreground" 
+                      className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground"
                       onClick={() => setActiveDropdown(activeDropdown === link.name ? null : link.name)}
                       style={{ 
                         pointerEvents: 'auto',
@@ -521,7 +521,7 @@ export default function Navigation() {
                   </> : <Link 
                     to={link.href} 
                     className={cn(
-                      "block py-4 text-lg font-serif font-medium transition-colors",
+                      "block py-4 text-lg font-medium transition-colors",
                       location.pathname === link.href ? "text-primary" : "text-foreground"
                     )} 
                     onClick={() => {

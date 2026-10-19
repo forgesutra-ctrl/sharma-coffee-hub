@@ -27,7 +27,7 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>
-            <h1 className="font-serif text-3xl md:text-4xl font-semibold">{title}</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-semibold">{title}</h1>
             <p className="text-white/60 mt-2">Last updated: {lastUpdated}</p>
           </div>
         </div>
@@ -37,7 +37,7 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
           <div className="prose prose-lg max-w-none">
             {sections.map((section, index) => (
               <div key={index} className="mb-10">
-                <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-4">
+                <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-4">
                   {section.heading}
                 </h2>
                 

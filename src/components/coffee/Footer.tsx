@@ -61,7 +61,7 @@ export default function Footer() {
               <p className="text-gold text-sm font-medium tracking-[0.2em] uppercase mb-3">
                 Stay Connected
               </p>
-              <h3 className="font-serif text-3xl md:text-4xl lg:text-5xl font-semibold mb-4">
+              <h3 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold mb-4">
                 Join the Coffee Circle
               </h3>
               <p className="text-white/60 max-w-md">
@@ -153,7 +153,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
+            <h4 className="font-display text-lg font-semibold mb-6 text-gold">
               Shop
             </h4>
             <ul className="space-y-3">
@@ -183,7 +183,7 @@ export default function Footer() {
 
           {/* Company Links */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
+            <h4 className="font-display text-lg font-semibold mb-6 text-gold">
               Company
             </h4>
             <ul className="space-y-3">
@@ -213,7 +213,7 @@ export default function Footer() {
 
           {/* Customer Care */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
+            <h4 className="font-display text-lg font-semibold mb-6 text-gold">
               Support
             </h4>
             <ul className="space-y-3">
@@ -243,7 +243,7 @@ export default function Footer() {
 
           {/* Contact */}
           <div className="lg:col-span-2">
-            <h4 className="font-serif text-lg font-semibold mb-6 text-gold">
+            <h4 className="font-display text-lg font-semibold mb-6 text-gold">
               Contact
             </h4>
             <ul className="space-y-4">

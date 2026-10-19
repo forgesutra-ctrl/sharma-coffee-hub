@@ -37,7 +37,7 @@ export default function FAQ() {
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>
-            <h1 className="font-serif text-3xl md:text-4xl font-semibold">{faqContent.title}</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-semibold">{faqContent.title}</h1>
             <p className="text-white/60 mt-2">Find answers to common questions</p>
           </div>
         </div>
@@ -72,7 +72,7 @@ export default function FAQ() {
             <div className="space-y-10">
               {filteredCategories.map((category, catIndex) => (
                 <div key={catIndex}>
-                  <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-6 pb-3 border-b border-border">
+                  <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-6 pb-3 border-b border-border">
                     {category.name}
                   </h2>
                   
@@ -122,7 +122,7 @@ export default function FAQ() {
 
           {/* Contact Section */}
           <div className="mt-16 p-8 bg-coffee-dark/5 rounded-2xl text-center">
-            <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
+            <h3 className="font-display text-xl font-semibold text-foreground mb-2">
               Still have questions?
             </h3>
             <p className="text-muted-foreground mb-6">

@@ -404,7 +404,7 @@ const Checkout = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
             <Package className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">
             Your cart is empty
           </h1>
           <p className="text-muted-foreground mb-6">
@@ -428,7 +428,7 @@ const Checkout = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
             <MapPin className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">
             Delivery location not set
           </h1>
           <p className="text-muted-foreground mb-6">

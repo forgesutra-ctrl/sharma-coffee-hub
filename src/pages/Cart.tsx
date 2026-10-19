@@ -326,7 +326,7 @@ const handlePincodeValidated = (
           {/* Customers also bought */}
           {recommendations.length > 0 && (
             <div className="mt-12 pt-12 border-t border-border/50">
-              <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-6">
+              <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-6">
                 Customers also bought
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
