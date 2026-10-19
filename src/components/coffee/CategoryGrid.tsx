@@ -58,11 +58,11 @@ export default function CategoryGrid({
 
               {/* Content */}
               <div className="absolute inset-0 flex flex-col justify-end p-5 z-10">
-                <h3 className="font-display text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors duration-300">
+                <h3 className="font-display text-lg md:text-xl font-semibold text-hero-foreground group-hover:text-coffee-gold transition-colors duration-300">
                   {category.title}
                 </h3>
                 
-                <div className="mt-3 flex items-center gap-2 text-primary text-xs font-medium tracking-[0.15em] uppercase opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-400">
+                <div className="mt-3 flex items-center gap-2 text-hero-foreground text-xs font-medium tracking-[0.15em] uppercase opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-400">
                   Shop Now
                   <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
                 </div>

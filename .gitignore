@@ -33,3 +33,5 @@ supabase/.temp/
 
 # Local notes with credentials — NEVER commit
 DTDC_WORKING_CONFIG.md
+# Claude Code local settings
+.claude/settings.local.json

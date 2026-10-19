@@ -109,13 +109,13 @@ export default function HeroVideo({
         centered ? 'text-center' : 'text-left'
       )}>
         {/* Title */}
-        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-foreground mb-6 fade-in-up tracking-[0.02em] text-glow leading-[0.9]">
+        <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-hero-foreground mb-6 fade-in-up tracking-[0.02em] text-glow leading-[0.9]">
           {title}
         </h1>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-lg sm:text-xl md:text-2xl text-foreground/70 mb-14 fade-in-up delay-300 font-light tracking-[0.3em] uppercase">
+          <p className="text-lg sm:text-xl md:text-2xl text-hero-foreground/70 mb-14 fade-in-up delay-300 font-light tracking-[0.3em] uppercase">
             {subtitle}
           </p>
         )}
@@ -134,7 +134,7 @@ export default function HeroVideo({
           </Link>
           
           {secondaryCtaText && secondaryCtaLink && (
-            <Link to={secondaryCtaLink} className="btn-premium">
+            <Link to={secondaryCtaLink} className="btn-premium border-hero-foreground text-hero-foreground">
               <span>{secondaryCtaText}</span>
             </Link>
           )}
@@ -168,9 +168,9 @@ export default function HeroVideo({
           className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 group cursor-pointer"
           aria-label="Scroll to content"
         >
-          <div className="flex flex-col items-center gap-3 text-foreground/50 hover:text-primary transition-colors duration-300">
+          <div className="flex flex-col items-center gap-3 text-hero-foreground/60 hover:text-hero-foreground transition-colors duration-300">
             <span className="text-xs uppercase tracking-[0.3em] font-medium">Scroll</span>
-            <div className="w-8 h-14 border-2 border-current rounded-full flex justify-center pt-3 group-hover:border-primary transition-colors duration-300">
+            <div className="w-8 h-14 border-2 border-current rounded-full flex justify-center pt-3 group-hover:border-hero-foreground transition-colors duration-300">
               <ChevronDown className="w-4 h-4 animate-bounce" />
             </div>
           </div>

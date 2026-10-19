@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +9,68 @@
 
 @layer base {
   :root {
-    /* Warm coffee-inspired palette - richer, more inviting */
+    /* Light palette - warm parchment ground, deep forest ink */
+    --background: 44 41% 96%;
+    --foreground: 132 26% 14%;
+
+    --card: 44 45% 98%;
+    --card-foreground: 132 26% 14%;
+
+    --popover: 44 45% 98%;
+    --popover-foreground: 132 26% 14%;
+
+    --primary: 133 30% 15%;
+    --primary-foreground: 48 50% 96%;
+
+    --secondary: 44 24% 91%;
+    --secondary-foreground: 132 26% 14%;
+
+    --muted: 44 24% 91%;
+    --muted-foreground: 92 5% 42%;
+
+    --accent: 52 19% 88%;
+    --accent-foreground: 133 30% 15%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 48 50% 96%;
+
+    --border: 64 12% 79%;
+    --input: 64 12% 79%;
+    --ring: 133 30% 15%;
+
+    --radius: 0.25rem;
+
+    /* Reference-design extras */
+    --forest: 133 37% 9%;
+    --hero-foreground: 48 69% 97%;
+    --gold: 41 46% 65%;
+
+    /* Extended coffee palette */
+    --coffee-dark: 20 30% 8%;
+    --coffee-medium: 25 35% 18%;
+    --coffee-light: 30 30% 30%;
+    --coffee-cream: 38 45% 92%;
+    --coffee-gold: 35 75% 55%;
+    --coffee-bronze: 28 55% 42%;
+    --coffee-espresso: 18 35% 12%;
+    --coffee-mocha: 25 28% 22%;
+
+    /* Sidebar */
+    --sidebar-background: 44 30% 93%;
+    --sidebar-foreground: 132 26% 14%;
+    --sidebar-primary: 133 30% 15%;
+    --sidebar-primary-foreground: 48 50% 96%;
+    --sidebar-accent: 52 19% 88%;
+    --sidebar-accent-foreground: 133 30% 15%;
+    --sidebar-border: 64 12% 79%;
+    --sidebar-ring: 133 30% 15%;
+  }
+
+  /* Admin panel keeps the original dark theme. Applied to the AdminLayout
+     root and to <html> while /admin is mounted, so portalled dialogs,
+     popovers and toasts pick it up too. */
+  :root.admin-theme,
+  .admin-theme {
     --background: 20 12% 4%;
     --foreground: 40 30% 95%;
 
@@ -19,7 +80,6 @@
     --popover: 22 15% 10%;
     --popover-foreground: 40 30% 95%;
 
-    /* Warm gold accent - coffee crema inspired */
     --primary: 35 75% 55%;
     --primary-foreground: 20 15% 8%;
 
@@ -39,19 +99,6 @@
     --input: 25 18% 14%;
     --ring: 35 75% 55%;
 
-    --radius: 0.25rem;
-
-    /* Extended coffee palette */
-    --coffee-dark: 20 30% 8%;
-    --coffee-medium: 25 35% 18%;
-    --coffee-light: 30 30% 30%;
-    --coffee-cream: 38 45% 92%;
-    --coffee-gold: 35 75% 55%;
-    --coffee-bronze: 28 55% 42%;
-    --coffee-espresso: 18 35% 12%;
-    --coffee-mocha: 25 28% 22%;
-
-    /* Sidebar */
     --sidebar-background: 20 18% 6%;
     --sidebar-foreground: 40 30% 95%;
     --sidebar-primary: 35 75% 55%;
@@ -78,6 +125,13 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Manrope', sans-serif;
+  }
+
+  /* Admin keeps its original body font. `.admin-theme body` covers <html>
+     carrying the class, so portalled dialogs and toasts inherit Inter too. */
+  .admin-theme,
+  .admin-theme body {
     font-family: 'Inter', sans-serif;
   }
 
@@ -114,12 +168,14 @@
   .btn-premium-solid {
     @apply relative overflow-hidden px-10 py-4 text-sm font-medium uppercase tracking-[0.25em] transition-all duration-300;
     @apply bg-primary text-primary-foreground;
-    @apply hover:bg-accent hover:scale-[1.02];
+    @apply hover:scale-[1.02];
     box-shadow: 0 4px 20px hsl(var(--primary) / 0.3);
   }
 
   .btn-premium-solid:hover {
-    box-shadow: 0 8px 30px hsl(var(--primary) / 0.4);
+    background-color: hsl(var(--forest));
+    color: hsl(var(--hero-foreground));
+    box-shadow: 0 8px 30px hsl(var(--forest) / 0.4);
   }
 
   .btn-ghost {
@@ -129,14 +185,13 @@
   }
 
   /* ===== HERO SECTION ===== */
+  /* Stops match the reference design's --hero-gradient */
   .hero-overlay {
     @apply absolute inset-0;
     background: linear-gradient(
-      to bottom,
-      hsl(var(--background) / 0.4) 0%,
-      hsl(var(--background) / 0.2) 30%,
-      hsl(var(--background) / 0.4) 70%,
-      hsl(var(--background) / 0.95) 100%
+      90deg,
+      hsl(var(--forest) / 0.62),
+      hsl(var(--forest) / 0.13) 65%
     );
   }
 
@@ -153,7 +208,7 @@
   /* ===== NAVIGATION ===== */
   .nav-glass {
     @apply bg-background/90 backdrop-blur-xl border-b border-border/50;
-    box-shadow: 0 4px 30px hsl(var(--background) / 0.3);
+    box-shadow: 0 4px 30px hsl(var(--forest) / 0.06);
   }
 
   .nav-transparent {
@@ -188,7 +243,7 @@
 
   .product-card:hover {
     @apply transform -translate-y-3;
-    box-shadow: 0 20px 50px hsl(var(--background) / 0.8);
+    box-shadow: 0 20px 50px hsl(var(--forest) / 0.12);
   }
 
   .product-card:hover .product-image {
@@ -227,20 +282,19 @@
 
   .category-card .category-overlay {
     @apply absolute inset-0 transition-all duration-500;
+    /* Stops match the reference design's --bottom-gradient */
     background: linear-gradient(
       to top,
-      hsl(var(--background) / 0.95) 0%,
-      hsl(var(--background) / 0.6) 40%,
-      hsl(var(--background) / 0.2) 100%
+      hsl(var(--forest) / 0.62),
+      transparent 45%
     );
   }
 
   .category-card:hover .category-overlay {
     background: linear-gradient(
       to top,
-      hsl(var(--background) / 0.98) 0%,
-      hsl(var(--background) / 0.7) 50%,
-      hsl(var(--background) / 0.3) 100%
+      hsl(var(--forest) / 0.72),
+      transparent 55%
     );
   }
 
@@ -480,7 +534,7 @@
   /* ===== GRADIENT TEXT ===== */
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--coffee-bronze)));
   }
 
   .text-gradient-gold {
@@ -510,7 +564,7 @@
 
   .hover-lift:hover {
     @apply -translate-y-2;
-    box-shadow: 0 20px 40px hsl(var(--background) / 0.5);
+    box-shadow: 0 20px 40px hsl(var(--forest) / 0.1);
   }
 
   /* ===== PARALLAX PLACEHOLDER ===== */

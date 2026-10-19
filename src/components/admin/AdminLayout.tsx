@@ -77,6 +77,14 @@ export default function AdminLayout() {
     return () => observer.disconnect();
   }, []);
 
+  // Dialogs, popovers and toasts portal to <body>, outside the layout root,
+  // so the dark admin theme is also applied to <html> while admin is mounted.
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add('admin-theme');
+    return () => html.classList.remove('admin-theme');
+  }, []);
+
   // Filter sidebar links based on role
   const sidebarLinks = allSidebarLinks.filter(link => {
     if (isSuperAdmin) return true; // Super admin sees all
@@ -109,7 +117,7 @@ export default function AdminLayout() {
   // Show loading while checking roles
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="admin-theme min-h-screen bg-muted/30 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -121,7 +129,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div ref={rootRef} className="min-h-screen bg-muted/30 flex">
+    <div ref={rootRef} className="admin-theme min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-background border-r hidden md:flex flex-col">
         {/* Logo */}
