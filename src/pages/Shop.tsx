@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Sparkles } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import ProductCard from '@/components/coffee/ProductCard';
-import { cn } from '@/lib/utils';
-import { useProducts, getUniqueProducts, useProductsByCategoryId } from '@/hooks/useProducts';
+import { ArrowLeft, ArrowUpRight, MessageCircle, PackageCheck, Repeat, Sparkles, Truck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useProducts, getUniqueProducts, useProductsByCategoryId, type FlatProduct } from '@/hooks/useProducts';
 import { useCategoriesWithCount, useCategoryBySlug } from '@/hooks/useCategories';
+import { PHONE_TEL, WHATSAPP_URL } from '@/components/nav/commerce';
 import {
   Select,
   SelectContent,
@@ -14,21 +12,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import '@/components/home-v2/home-v2.css';
+
+// The shop listing, in the reference redesign's language (coorg-s-golden-roast,
+// src/components/shop-page.tsx): intro, category pills, card grid and call band.
+// Unlike the reference, cards show a "from ₹X" price and link to the product page,
+// where the blend and size are chosen; and sort, stock and price filters stay.
+
+const priceRanges = [
+  { value: 'all', label: 'All prices' },
+  { value: '0-300', label: '₹0 – ₹300' },
+  { value: '300-500', label: '₹300 – ₹500' },
+  { value: '500-800', label: '₹500 – ₹800' },
+  { value: '800-2000', label: '₹800+' },
+];
+
+const sortOptions = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'name-az', label: 'Alphabetically, A–Z' },
+  { value: 'name-za', label: 'Alphabetically, Z–A' },
+  { value: 'price-low', label: 'Price, low to high' },
+  { value: 'price-high', label: 'Price, high to low' },
+];
+
+/** The card's one-line tagline: the description's first sentence, else the flavour notes. */
+function tagline(product: FlatProduct) {
+  const first = product.description.split(/(?<=[.!?])\s/)[0]?.trim();
+  return first || product.flavorNotes.join(' · ');
+}
+
+function ShopCard({ product, index }: { product: FlatProduct; index: number }) {
+  const [imageError, setImageError] = useState(false);
+  const discount = product.subscription_eligible ? product.subscription_discount_percentage : undefined;
+  return (
+    <Link to={`/product/${product.slug}`} className="shop-card product-item">
+      <div className="product-image shop-card-image">
+        <span className="product-number">{String(index + 1).padStart(2, '0')}</span>
+        {!product.inStock && <span className="product-label shop-card-sold-out">SOLD OUT</span>}
+        <img
+          src={imageError ? '/placeholder.svg' : product.image}
+          alt={product.name}
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
+      </div>
+      <p className="eyebrow product-category">{product.category}</p>
+      <h3 className="shop-card-name">{product.name}</h3>
+      <p className="shop-card-tagline">{tagline(product)}</p>
+      <div className="shop-card-footer">
+        <div className="shop-price">
+          {product.inStock ? (
+            <span className="shop-price-value">from ₹{product.price.toLocaleString('en-IN')}</span>
+          ) : (
+            <span className="shop-price-value shop-price-value--sold-out">Sold Out</span>
+          )}
+          {product.inStock && discount ? (
+            <span className="shop-price-note"><Repeat /> Subscribe &amp; save {discount}%</span>
+          ) : null}
+        </div>
+        <span className="shop-card-view" aria-hidden>View <ArrowUpRight /></span>
+      </div>
+    </Link>
+  );
+}
 
 const Shop = () => {
   const { categorySlug } = useParams<{ categorySlug?: string }>();
@@ -41,7 +87,6 @@ const Shop = () => {
     const s = searchParams.get('stock');
     return s === null || s === '' ? true : s === '1' || s === 'true';
   });
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Sync filters to URL
   const updateUrlFilters = (updates: { sort?: string; price?: string; stock?: boolean }) => {
@@ -78,7 +123,7 @@ const Shop = () => {
     setInStockOnly(stockVal);
   }, [searchParams]);
 
-  const { data: dbCategories, isLoading: loadingCategories } = useCategoriesWithCount();
+  const { data: dbCategories } = useCategoriesWithCount();
   const { data: currentCategory } = useCategoryBySlug(categorySlug);
 
   const { data: rawProducts, isLoading: loadingAllProducts, error: errorAllProducts } = useProducts();
@@ -93,14 +138,18 @@ const Shop = () => {
     return productsToUse ? getUniqueProducts(productsToUse) : [];
   }, [rawProducts, categoryProducts, categorySlug]);
 
+  // Pill counts come from the same listed products the grid shows. The categories'
+  // product_count also counts child products (e.g. Gold blend 1/2/3), which are never
+  // listed, so it overstated categories with blends (Coffee Powders: 19 vs 7 shown).
   const categories = useMemo(() => {
+    const listed = rawProducts ? getUniqueProducts(rawProducts) : [];
     return [
-      { id: null, slug: null, name: 'All Products', count: rawProducts ? getUniqueProducts(rawProducts).length : 0 },
+      { id: null, slug: null, name: 'All', count: listed.length },
       ...(dbCategories?.map(cat => ({
         id: cat.id,
         slug: cat.slug,
         name: cat.name,
-        count: cat.product_count || 0,
+        count: listed.filter((p) => p.categorySlug === cat.slug).length,
       })) || []),
     ];
   }, [dbCategories, rawProducts]);
@@ -125,7 +174,7 @@ const Shop = () => {
   // Sort products
   const sortedProducts = useMemo(() => {
     const products = [...priceFilteredProducts];
-    
+
     switch (sortBy) {
       case 'price-low':
         return products.sort((a, b) => a.price - b.price);
@@ -145,18 +194,8 @@ const Shop = () => {
     }
   }, [priceFilteredProducts, sortBy]);
 
-  const priceRanges = [
-    { value: 'all', label: 'All Prices' },
-    { value: '0-300', label: '₹0 - ₹300' },
-    { value: '300-500', label: '₹300 - ₹500' },
-    { value: '500-800', label: '₹500 - ₹800' },
-    { value: '800-2000', label: '₹800+' },
-  ];
-
-  const activeCategoryName = currentCategory?.name || 'All Products';
-
   // Filter by URL search query (?q=) so header search can send users to shop with a query
-  const searchFilteredProducts = useMemo(() => {
+  const displayProducts = useMemo(() => {
     if (!searchQuery) return sortedProducts;
     return sortedProducts.filter(
       (p) =>
@@ -166,405 +205,128 @@ const Shop = () => {
     );
   }, [sortedProducts, searchQuery]);
 
-  // Transform products for ProductCard
-  const displayProducts = searchFilteredProducts.map(product => ({
-    id: product.productId,
-    name: product.name,
-    slug: product.slug,
-    price: product.price,
-    image: product.image,
-    secondaryImage: undefined,
-    category: product.category,
-    categorySlug: product.categorySlug || product.category.toLowerCase().replace(/\s+/g, '-'),
-    description: product.description,
-    flavorNotes: product.flavorNotes,
-    inStock: product.inStock,
-  }));
+  const rawQuery = searchParams.get('q')?.trim() ?? '';
+  const activeCount = categories.find((c) => c.slug === (categorySlug ?? null))?.count ?? 0;
+  const inStockCount = allProducts.filter(p => p.inStock).length;
 
   return (
-      <div className="min-h-screen bg-background">
-        {/* Announcement Bar Style Header */}
-        <div className="bg-primary text-primary-foreground py-2.5 text-center text-xs font-medium tracking-[0.2em] uppercase">
-          Free Shipping — A Privilege Extended Only to Our Subscription Members
+    <div className="home-v2 shop-page">
+      <section className="shop-hero section-inner">
+        <Link to="/" className="shop-back"><ArrowLeft size={14} /> Back to our story</Link>
+        <p className="eyebrow">
+          {['THE SHARMA PANTRY', currentCategory?.name.toUpperCase(), activeCount ? `${activeCount} ${activeCount === 1 ? 'PRODUCT' : 'PRODUCTS'}` : null]
+            .filter(Boolean).join(' · ')}
+        </p>
+        <h1>
+          {searchQuery
+            ? <>Search results<br /><em>for “{rawQuery}”.</em></>
+            : <>{currentCategory ? `${currentCategory.name}.` : 'Everything we make.'}<br /><em>From our hills to you.</em></>}
+        </h1>
+        {searchQuery ? (
+          <p className="shop-hero-note">
+            {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'} found ·{' '}
+            <Link to={categorySlug ? `/shop/${categorySlug}` : '/shop'} className="shop-hero-link">Clear search</Link>
+          </p>
+        ) : (
+          <p className="shop-hero-note">
+            Coffee powders, liquid decoctions, fusion jams and more — hand-selected, slow-roasted,
+            and packed with care in Madikeri. Choose a product to pick your blend and size.
+          </p>
+        )}
+        <div className="shop-perks">
+          <span><PackageCheck /> Freshly roasted to order</span>
+          <span><Truck /> Standard shipping rates apply</span>
+          <span><Repeat /> Want free shipping? <Link to="/subscriptions">Subscribe instead</Link></span>
         </div>
+      </section>
 
-        {/* Breadcrumb */}
-        <div className="border-b border-border/50">
-          <div className="container mx-auto px-4 py-4">
-            <nav className="flex items-center gap-2 text-sm">
-              <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                Home
-              </Link>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <Link to="/shop" className="text-muted-foreground hover:text-primary transition-colors">
-                Shop
-              </Link>
-              {categorySlug && currentCategory && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground">{activeCategoryName}</span>
-                </>
-              )}
-            </nav>
-          </div>
-        </div>
-
-        {/* Page Title */}
-        <div className="border-b border-border/50 py-12 text-center">
-          <h1 className="font-display text-4xl md:text-5xl font-semibold text-foreground">
-            {searchQuery ? `Search results for "${searchParams.get('q')?.trim() ?? ''}"` : activeCategoryName}
-          </h1>
-          {searchQuery && (
-            <p className="mt-2 text-muted-foreground">
-              {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'} found
-              {' · '}
-              <Link to={categorySlug ? `/shop/${categorySlug}` : '/shop'} className="text-primary hover:underline">
-                Clear search
-              </Link>
-            </p>
-          )}
-        </div>
-
-        {/* Taste Profile Quiz CTA */}
-        <div className="border-b border-border/50 bg-primary/5">
-          <div className="container mx-auto px-4 py-4">
+      {/* Category pills are links, so a pill and a direct visit to /shop/{slug} are the same state. */}
+      <nav className="shop-filters section-inner" aria-label="Filter by category">
+        {categories.map((cat) => {
+          const active = (categorySlug ?? null) === cat.slug;
+          return (
             <Link
-              to="/quiz"
-              className="flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+              key={cat.id ?? 'all'}
+              to={cat.slug ? `/shop/${cat.slug}` : '/shop'}
+              className={`shop-filter ${active ? 'is-active' : ''}`}
+              aria-current={active ? 'page' : undefined}
             >
-              <Sparkles className="w-4 h-4" />
-              <span className="font-medium">Find your perfect coffee</span>
-              <span className="text-foreground/80">— Take our 1-minute taste profile quiz</span>
-              <ChevronRight className="w-4 h-4" />
+              {cat.name} <span className="shop-filter-count">{cat.count}</span>
             </Link>
-          </div>
-        </div>
+          );
+        })}
+      </nav>
 
-        {/* Main Content */}
-        <div className="container mx-auto px-4 py-8">
-          {isLoading ? (
-            <div className="flex flex-col lg:flex-row gap-8">
-              <aside className="hidden lg:block w-64 flex-shrink-0">
-                <div className="sticky top-24 space-y-6">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-32 w-full" />
-                  <Skeleton className="h-48 w-full" />
-                </div>
-              </aside>
-              <main className="flex-1">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50">
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-9 w-32" />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="space-y-4">
-                      <Skeleton className="aspect-square w-full rounded-lg" />
-                      <Skeleton className="h-5 w-3/4 mx-auto" />
-                      <Skeleton className="h-4 w-1/2 mx-auto" />
-                    </div>
-                  ))}
-                </div>
-              </main>
-            </div>
-          ) : error ? (
-            <div className="text-center py-20">
-              <p className="text-destructive mb-4">Failed to load products</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="text-primary hover:underline"
-              >
-                Try again
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Sidebar Filters - Desktop */}
-              <aside className="hidden lg:block w-64 flex-shrink-0">
-                <div className="sticky top-24 space-y-6">
-                  {/* Availability */}
-                  <Accordion type="single" collapsible defaultValue="availability" className="border-b border-border/50">
-                    <AccordionItem value="availability" className="border-none">
-                      <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                        Availability
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
-                            <input 
-                              type="checkbox" 
-                              className="w-4 h-4 rounded border-border" 
-                              checked={inStockOnly}
-                              onChange={(e) => handleStockChange(e.target.checked)}
-                            />
-                            <span>In Stock</span>
-                            <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
-                          </label>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-
-                  {/* Price */}
-                  <Accordion type="single" collapsible defaultValue="price" className="border-b border-border/50">
-                    <AccordionItem value="price" className="border-none">
-                      <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                        Price
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <div className="space-y-2">
-                          {priceRanges.map(range => (
-                            <label
-                              key={range.value}
-                              className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              <input
-                                type="radio"
-                                name="price"
-                                checked={priceRange === range.value}
-                                onChange={() => handlePriceChange(range.value)}
-                                className="w-4 h-4 border-border"
-                              />
-                              <span>{range.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-
-                  {/* Categories */}
-                  <Accordion type="single" collapsible defaultValue="categories" className="border-b border-border/50">
-                    <AccordionItem value="categories" className="border-none">
-                      <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                        Categories
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <div className="space-y-2">
-                          {categories.map(cat => (
-                            <Link
-                              key={cat.id || 'all'}
-                              to={cat.slug ? `/shop/${cat.slug}` : '/shop'}
-                              className={cn(
-                                'flex items-center justify-between w-full text-left py-1.5 text-sm transition-colors',
-                                (categorySlug === cat.slug || (!categorySlug && !cat.slug))
-                                  ? 'text-primary font-medium'
-                                  : 'text-muted-foreground hover:text-foreground'
-                              )}
-                            >
-                              <span>{cat.name}</span>
-                              <span className="text-xs">({cat.count})</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-              </aside>
-
-              {/* Products Grid */}
-              <main className="flex-1">
-                {/* Toolbar */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50 gap-4">
-                  <p className="text-sm text-muted-foreground flex-shrink-0">
-                    {sortedProducts.length} {sortedProducts.length === 1 ? 'product' : 'products'}
-                  </p>
-
-                  <div className="flex items-center gap-2 flex-1 justify-end">
-                    {/* Mobile Filters Button */}
-                    <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-                      <SheetTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="lg:hidden"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setMobileFiltersOpen(true);
-                          }}
-                          onTouchStart={(e) => {
-                            e.stopPropagation();
-                          }}
-                          style={{ 
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <Filter className="w-4 h-4 mr-2" />
-                          Filters
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
-                        <SheetHeader>
-                          <SheetTitle>Filters</SheetTitle>
-                        </SheetHeader>
-                        <div className="mt-6 space-y-6">
-                          {/* Availability */}
-                          <Accordion type="single" collapsible defaultValue="availability" className="border-b border-border/50">
-                            <AccordionItem value="availability" className="border-none">
-                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                                Availability
-                              </AccordionTrigger>
-                              <AccordionContent className="pb-4">
-                                <div className="space-y-2">
-                                  <label className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                    <input 
-                                      type="checkbox" 
-                                      className="w-4 h-4 rounded border-border" 
-                                      checked={inStockOnly}
-                                      onChange={(e) => handleStockChange(e.target.checked)}
-                                    />
-                                    <span>In Stock</span>
-                                    <span className="ml-auto text-xs">({allProducts.filter(p => p.inStock).length})</span>
-                                  </label>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-
-                          {/* Price */}
-                          <Accordion type="single" collapsible defaultValue="price" className="border-b border-border/50">
-                            <AccordionItem value="price" className="border-none">
-                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                                Price
-                              </AccordionTrigger>
-                              <AccordionContent className="pb-4">
-                                <div className="space-y-2">
-                                  {priceRanges.map(range => (
-                                    <label
-                                      key={range.value}
-                                      className="flex items-center gap-3 cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                      <input
-                                        type="radio"
-                                        name="price"
-                                        checked={priceRange === range.value}
-                                        onChange={() => handlePriceChange(range.value)}
-                                        className="w-4 h-4 border-border"
-                                      />
-                                      <span>{range.label}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-
-                          {/* Categories */}
-                          <Accordion type="single" collapsible defaultValue="categories" className="border-b border-border/50">
-                            <AccordionItem value="categories" className="border-none">
-                              <AccordionTrigger className="py-4 text-sm font-medium tracking-[0.15em] uppercase hover:no-underline">
-                                Categories
-                              </AccordionTrigger>
-                              <AccordionContent className="pb-4">
-                                <div className="space-y-2">
-                                  {categories.map(cat => (
-                                    <Link
-                                      key={cat.id || 'all'}
-                                      to={cat.slug ? `/shop/${cat.slug}` : '/shop'}
-                                      className={cn(
-                                        'flex items-center justify-between w-full text-left py-1.5 text-sm transition-colors',
-                                        (categorySlug === cat.slug || (!categorySlug && !cat.slug))
-                                          ? 'text-primary font-medium'
-                                          : 'text-muted-foreground hover:text-foreground'
-                                      )}
-                                      onClick={() => setMobileFiltersOpen(false)}
-                                    >
-                                      <span>{cat.name}</span>
-                                      <span className="text-xs">({cat.count})</span>
-                                    </Link>
-                                  ))}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
-
-                    {/* Mobile Category Selector */}
-                    <div className="lg:hidden">
-                      <Select
-                        value={categorySlug || 'all'}
-                        onValueChange={(val) => {
-                          if (val === 'all') {
-                            window.location.href = '/shop';
-                          } else {
-                            window.location.href = `/shop/${val}`;
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-[140px] bg-transparent border-border/50" style={{ pointerEvents: 'auto' }}>
-                          <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[100000]">
-                          {categories.map(cat => (
-                            <SelectItem key={cat.id || 'all'} value={cat.slug || 'all'}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Sort */}
-                    <Select value={sortBy} onValueChange={handleSortChange}>
-                      <SelectTrigger className="w-[140px] lg:w-[180px] bg-transparent border-border/50" style={{ pointerEvents: 'auto' }}>
-                        <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[100000]">
-                        <SelectItem value="featured">Featured</SelectItem>
-                        <SelectItem value="name-az">Alphabetically, A-Z</SelectItem>
-                        <SelectItem value="name-za">Alphabetically, Z-A</SelectItem>
-                        <SelectItem value="price-low">Price, low to high</SelectItem>
-                        <SelectItem value="price-high">Price, high to low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Products */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={categorySlug || 'all'}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
-                  >
-                    {displayProducts.map((product, index) => (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: index * 0.05 }}
-                      >
-                        <ProductCard product={product} />
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                </AnimatePresence>
-
-                {sortedProducts.length === 0 && (
-                  <div className="text-center py-16">
-                    <p className="text-muted-foreground mb-4">No products found in this category.</p>
-                    <Link
-                      to="/shop"
-                      onClick={() => handlePriceChange('all')}
-                      className="text-primary hover:underline"
-                    >
-                      View all products
-                    </Link>
-                  </div>
-                )}
-              </main>
-            </div>
-          )}
+      <div className="shop-toolbar section-inner">
+        <p className="shop-toolbar-count">
+          {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'}
+        </p>
+        <div className="shop-toolbar-controls">
+          <button
+            type="button"
+            className={`shop-control shop-toggle ${inStockOnly ? 'is-active' : ''}`}
+            aria-pressed={inStockOnly}
+            onClick={() => handleStockChange(!inStockOnly)}
+          >
+            In stock only <span className="shop-filter-count">{inStockCount}</span>
+          </button>
+          <Select value={priceRange} onValueChange={handlePriceChange}>
+            <SelectTrigger className="shop-control shop-select" aria-label="Price">
+              <SelectValue placeholder="Price" />
+            </SelectTrigger>
+            <SelectContent className="rounded-none z-[100000]">
+              {priceRanges.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="shop-control shop-select" aria-label="Sort by">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent className="rounded-none z-[100000]">
+              {sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
+
+      {isLoading ? (
+        <section className="shop-grid section-inner" aria-label="Loading products" aria-busy="true">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="shop-card product-item--loading">
+              <div className="product-image shop-card-image" />
+            </div>
+          ))}
+        </section>
+      ) : error ? (
+        <div className="shop-empty section-inner">
+          <p>Failed to load products</p>
+          <button type="button" onClick={() => window.location.reload()} className="shop-hero-link">Try again</button>
+        </div>
+      ) : displayProducts.length === 0 ? (
+        <div className="shop-empty section-inner">
+          <p>No products found{searchQuery ? ' for this search' : ' in this category'}.</p>
+          <Link to="/shop" onClick={() => handlePriceChange('all')} className="shop-hero-link">View all products</Link>
+        </div>
+      ) : (
+        <section className="shop-grid section-inner" aria-label="Products">
+          {displayProducts.map((p, i) => <ShopCard key={p.productId} product={p} index={i} />)}
+        </section>
+      )}
+
+      <section className="shop-footer-cta">
+        <p className="eyebrow">CAN'T DECIDE?</p>
+        <h2>Call us. We know our coffee.</h2>
+        <div className="shop-footer-actions">
+          <Button asChild variant="hero"><a href={PHONE_TEL}>+91 8762 988 145</a></Button>
+          <Button asChild variant="film">
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"><MessageCircle /> Chat on WhatsApp <ArrowUpRight /></a>
+          </Button>
+        </div>
+        <Link to="/quiz" className="shop-footer-quiz">
+          <Sparkles /> Or take our 1-minute taste profile quiz <ArrowUpRight />
+        </Link>
+      </section>
+    </div>
   );
 };
 
