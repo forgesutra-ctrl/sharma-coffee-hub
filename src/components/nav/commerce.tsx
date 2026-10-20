@@ -1,6 +1,6 @@
-import { useMemo, type ComponentProps } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Coffee, FileText, HelpCircle, Home, Layers, Mail, MessageCircle, Phone, ShoppingBag, Store, User } from 'lucide-react';
+import { BookOpen, Coffee, FileText, HelpCircle, Home, Layers, Mail, MessageCircle, Phone, Search, ShoppingBag, Store, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
@@ -38,22 +38,45 @@ export function SearchPalette({ open, onOpenChange }: { open: boolean; onOpenCha
   const { data: categories } = useCategories();
   const { data: productsData } = useProducts();
   const products = useMemo(() => (productsData ? getUniqueProducts(productsData) : []), [productsData]);
+  const [query, setQuery] = useState('');
+  const trimmed = query.trim();
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setQuery('');
+    onOpenChange(next);
+  };
 
   const handleSearchSelect = (href: string) => {
-    onOpenChange(false);
+    handleOpenChange(false);
     navigate(href);
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={handleOpenChange}>
       <CommandInput
         placeholder="Type what you're looking for — product, category, or page"
         className="placeholder:text-muted-foreground"
+        value={query}
+        onValueChange={setQuery}
       />
       <CommandList>
         <CommandEmpty>
           <span className="text-muted-foreground">No matches. Try a product name, category (e.g. coffee, tea), or page name.</span>
         </CommandEmpty>
+        {/* Always offered once something is typed, first in the list: hands the query to
+            /shop, which filters by name, category and description (?q=). */}
+        {trimmed && (
+          <CommandGroup heading="Search" forceMount>
+            <CommandItem
+              forceMount
+              value={`search-all ${trimmed}`}
+              onSelect={() => handleSearchSelect(`/shop?q=${encodeURIComponent(trimmed)}`)}
+            >
+              <Search className="mr-2 h-4 w-4 shrink-0" />
+              <span>Search all products for “{trimmed}”</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
         <CommandGroup heading="Products">
           {products.map((product) => (
             <CommandItem
