@@ -2,14 +2,11 @@ import { useEffect, useState } from 'react';
 import { Instagram, MessageCircle, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// The forest announcement bar: the single component used by both Navigation (every
-// inner page) and Layout's `home` variant. Only the current message is rendered, so
-// all three show in turn. (The old inline copy in Navigation slid a wrapper up by
-// index × 100% while also hiding inactive messages, which pushed messages 2 and 3
-// out of view.)
+// The forest announcement bar, rendered once by Layout above the site header on every
+// storefront page. Only the current message is rendered, so all three show in turn.
 const announcements = [
   { text: 'FREE SHIPPING', highlight: 'Subscription Members Only' },
-  { text: 'FARM TO CUP', highlight: 'Direct from Coorg since 1983' },
+  { text: 'FARM TO CUP', highlight: 'Direct from Coorg since 1987' },
   { text: '100% AUTHENTIC', highlight: 'Premium South Indian coffee' },
 ];
 

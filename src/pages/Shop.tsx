@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, MessageCircle, PackageCheck, Repeat, Sparkles, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, MessageCircle, PackageCheck, Repeat, Search, Sparkles, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProducts, getUniqueProducts, useProductsByCategoryId, type FlatProduct } from '@/hooks/useProducts';
 import { useCategoriesWithCount, useCategoryBySlug } from '@/hooks/useCategories';
@@ -39,6 +39,52 @@ const sortOptions = [
 function tagline(product: FlatProduct) {
   const first = product.description.split(/(?<=[.!?])\s/)[0]?.trim();
   return first || product.flavorNotes.join(' · ');
+}
+
+/** "liquid-coffee" -> "liquid coffee": the term an unknown category slug most likely meant. */
+function deslug(slug: string) {
+  let decoded = slug;
+  try { decoded = decodeURIComponent(slug); } catch { /* keep the raw slug */ }
+  return decoded.replace(/[-_+]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Asks search engines not to index the page while it is mounted. */
+function useNoIndex(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex';
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, [active]);
+}
+
+/**
+ * One scrolling row of pills: keeps the active pill in view, and marks which edges have
+ * more pills beyond them so the CSS can fade only those edges.
+ */
+function usePillStrip(activeKey: string) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const strip = ref.current;
+    if (!strip) return;
+    const update = () => {
+      const max = strip.scrollWidth - strip.clientWidth;
+      strip.classList.toggle('can-scroll-left', strip.scrollLeft > 1);
+      strip.classList.toggle('can-scroll-right', strip.scrollLeft < max - 1);
+    };
+    const active = strip.querySelector<HTMLElement>('.is-active');
+    if (active) {
+      strip.scrollLeft = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+    }
+    update();
+    strip.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(strip);
+    return () => { strip.removeEventListener('scroll', update); observer.disconnect(); };
+  }, [activeKey]);
+  return ref;
 }
 
 function ShopCard({ product, index }: { product: FlatProduct; index: number }) {
@@ -124,17 +170,23 @@ const Shop = () => {
   }, [searchParams]);
 
   const { data: dbCategories } = useCategoriesWithCount();
-  const { data: currentCategory } = useCategoryBySlug(categorySlug);
+  const { data: currentCategory, isFetched: categoryFetched } = useCategoryBySlug(categorySlug);
+  // /shop/{slug} for a slug that is not an active category: say so, rather than
+  // falling back to every product as though they all matched.
+  const unknownCategory = !!categorySlug && categoryFetched && !currentCategory;
+  useNoIndex(unknownCategory);
 
   const { data: rawProducts, isLoading: loadingAllProducts, error: errorAllProducts } = useProducts();
   const { data: categoryProducts, isLoading: loadingCategoryProducts, error: errorCategoryProducts } = useProductsByCategoryId(currentCategory?.id);
 
-  const isLoading = categorySlug ? loadingCategoryProducts : loadingAllProducts;
+  // On a category route, wait for the category lookup too: until it lands there is no id
+  // to load products by, and showing every product meanwhile would flash the wrong list.
+  const isLoading = categorySlug ? !categoryFetched || loadingCategoryProducts : loadingAllProducts;
   const error = categorySlug ? errorCategoryProducts : errorAllProducts;
 
   // Get unique products (one per product, not per variant)
   const allProducts = useMemo(() => {
-    const productsToUse = categorySlug && categoryProducts ? categoryProducts : rawProducts;
+    const productsToUse = categorySlug ? categoryProducts : rawProducts;
     return productsToUse ? getUniqueProducts(productsToUse) : [];
   }, [rawProducts, categoryProducts, categorySlug]);
 
@@ -206,6 +258,29 @@ const Shop = () => {
   }, [sortedProducts, searchQuery]);
 
   const rawQuery = searchParams.get('q')?.trim() ?? '';
+  const matchesSearch = (p: FlatProduct) =>
+    !searchQuery ||
+    p.name.toLowerCase().includes(searchQuery) ||
+    (p.category?.toLowerCase().includes(searchQuery) ?? false) ||
+    (p.description?.toLowerCase().includes(searchQuery) ?? false);
+  // Why the grid is empty, if it is: the filters hid everything that otherwise matches,
+  // the search matched nothing at all, or the category simply has no products.
+  const hiddenByFilters = allProducts.filter(matchesSearch).length;
+  const emptyReason = displayProducts.length > 0 ? null
+    : hiddenByFilters > 0 ? 'filters'
+    : searchQuery ? 'search'
+    : 'category';
+  const clearFilters = () => {
+    setPriceRange('all');
+    setInStockOnly(false);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('price');
+      next.set('stock', '0');
+      return next;
+    }, { replace: true });
+  };
+  const pillStrip = usePillStrip(`${categorySlug ?? ''}|${categories.length}`);
   const activeCount = categories.find((c) => c.slug === (categorySlug ?? null))?.count ?? 0;
   const inStockCount = allProducts.filter(p => p.inStock).length;
 
@@ -218,11 +293,18 @@ const Shop = () => {
             .filter(Boolean).join(' · ')}
         </p>
         <h1>
-          {searchQuery
+          {unknownCategory
+            ? <>No such category.<br /><em>Not one of ours, yet.</em></>
+            : searchQuery
             ? <>Search results<br /><em>for “{rawQuery}”.</em></>
             : <>{currentCategory ? `${currentCategory.name}.` : 'Everything we make.'}<br /><em>From our hills to you.</em></>}
         </h1>
-        {searchQuery ? (
+        {unknownCategory ? (
+          <p className="shop-hero-note">
+            We couldn’t find a category called “{deslug(categorySlug ?? '')}”. Search for it below, or
+            browse everything we make.
+          </p>
+        ) : searchQuery ? (
           <p className="shop-hero-note">
             {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'} found ·{' '}
             <Link to={categorySlug ? `/shop/${categorySlug}` : '/shop'} className="shop-hero-link">Clear search</Link>
@@ -241,7 +323,7 @@ const Shop = () => {
       </section>
 
       {/* Category pills are links, so a pill and a direct visit to /shop/{slug} are the same state. */}
-      <nav className="shop-filters section-inner" aria-label="Filter by category">
+      <nav ref={pillStrip} className="shop-filters" aria-label="Filter by category">
         {categories.map((cat) => {
           const active = (categorySlug ?? null) === cat.slug;
           return (
@@ -257,6 +339,18 @@ const Shop = () => {
         })}
       </nav>
 
+      {unknownCategory ? (
+        <div className="shop-empty section-inner">
+          <h2>Nothing filed under “{deslug(categorySlug ?? '')}”.</h2>
+          <p>The link may be old, or the category may have been renamed.</p>
+          <div className="shop-empty-actions">
+            <Link to={`/shop?q=${encodeURIComponent(deslug(categorySlug ?? ''))}`} className="shop-empty-primary">
+              <Search /> Search for “{deslug(categorySlug ?? '')}”
+            </Link>
+            <Link to="/shop" className="shop-empty-secondary">Browse all products <ArrowUpRight /></Link>
+          </div>
+        </div>
+      ) : (<>
       <div className="shop-toolbar section-inner">
         <p className="shop-toolbar-count">
           {displayProducts.length} {displayProducts.length === 1 ? 'product' : 'products'}
@@ -302,16 +396,42 @@ const Shop = () => {
           <p>Failed to load products</p>
           <button type="button" onClick={() => window.location.reload()} className="shop-hero-link">Try again</button>
         </div>
-      ) : displayProducts.length === 0 ? (
+      ) : emptyReason === 'filters' ? (
         <div className="shop-empty section-inner">
-          <p>No products found{searchQuery ? ' for this search' : ' in this category'}.</p>
-          <Link to="/shop" onClick={() => handlePriceChange('all')} className="shop-hero-link">View all products</Link>
+          <h2>No products match these filters.</h2>
+          <p>
+            {hiddenByFilters} {hiddenByFilters === 1 ? 'product' : 'products'}
+            {searchQuery ? ` matching “${rawQuery}”` : ''} {hiddenByFilters === 1 ? 'is' : 'are'} hidden
+            by {[inStockOnly && '“In stock only”', priceRange !== 'all' && 'the price band'].filter(Boolean).join(' and ')}.
+          </p>
+          <div className="shop-empty-actions">
+            <button type="button" onClick={clearFilters} className="shop-empty-primary">Clear filters</button>
+            <Link to="/shop" className="shop-empty-secondary">Browse all products <ArrowUpRight /></Link>
+          </div>
+        </div>
+      ) : emptyReason === 'search' ? (
+        <div className="shop-empty section-inner">
+          <h2>Nothing matched “{rawQuery}”.</h2>
+          <p>Try a shorter word, or a flavour like “hazelnut” or “filter”. Or let us help you choose.</p>
+          <div className="shop-empty-actions">
+            <Link to="/shop" className="shop-empty-primary">Browse all products</Link>
+            <Link to="/quiz" className="shop-empty-secondary"><Sparkles /> Take the taste quiz <ArrowUpRight /></Link>
+          </div>
+        </div>
+      ) : emptyReason === 'category' ? (
+        <div className="shop-empty section-inner">
+          <h2>Nothing in {currentCategory?.name ?? 'this category'} just now.</h2>
+          <p>New batches arrive often. Meanwhile, everything else we make is a tap away.</p>
+          <div className="shop-empty-actions">
+            <Link to="/shop" className="shop-empty-primary">Browse all products</Link>
+          </div>
         </div>
       ) : (
         <section className="shop-grid section-inner" aria-label="Products">
           {displayProducts.map((p, i) => <ShopCard key={p.productId} product={p} index={i} />)}
         </section>
       )}
+      </>)}
 
       <section className="shop-footer-cta">
         <p className="eyebrow">CAN'T DECIDE?</p>

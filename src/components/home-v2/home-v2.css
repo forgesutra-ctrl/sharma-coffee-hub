@@ -445,8 +445,15 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .shop-perks svg { width: 15px; height: 15px; stroke-width: 1.4; color: hsl(var(--primary)); }
 .home-v2 .shop-perks a { text-decoration: underline; text-underline-offset: 3px; }
 
-.home-v2 .shop-filters { display: flex; flex-wrap: wrap; gap: 10px; padding-block: 10px 20px; }
-.home-v2 .shop-filter { display: inline-flex; align-items: center; gap: 8px; border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--foreground)); padding: 10px 18px; font-size: 11px; /* was 9px */ letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+.home-v2 .shop-filters { --shop-gutter: max(56px, calc((100% - 1440px) / 2)); display: flex; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 10px var(--shop-gutter) 20px; position: relative; }
+/* Not in the reference (its pills wrap): one scrolling row, edge to edge, aligned with
+   the page gutter. Only an edge with more pills beyond it fades (set by usePillStrip). */
+.home-v2 .shop-filters::-webkit-scrollbar { display: none; }
+.home-v2 .shop-filters.can-scroll-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.home-v2 .shop-filters.can-scroll-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.home-v2 .shop-filters.can-scroll-left.can-scroll-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+.home-v2 .shop-filter:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -4px; }
+.home-v2 .shop-filter { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--foreground)); padding: 10px 18px; font-size: 11px; /* was 9px */ letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
 .home-v2 .shop-filter:hover { border-color: hsl(var(--forest)); }
 .home-v2 .shop-filter.is-active { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); border-color: hsl(var(--forest)); }
 /* Not in the reference: the counts, set in the display face so they read as numbers, not caps. */
@@ -460,6 +467,8 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .shop-control:hover { border-color: hsl(var(--forest)); }
 .home-v2 .shop-control:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 .home-v2 .shop-select { width: 190px; }
+/* One focus treatment for the row: drop shadcn's ring (which also shows on mouse focus) for the outline above. */
+.home-v2 .shop-select:focus { box-shadow: none; }
 .home-v2 .shop-toggle::before { content: ''; width: 11px; height: 11px; border: 1px solid currentColor; flex: none; }
 .home-v2 .shop-toggle.is-active::before { background: hsl(var(--forest)); border-color: hsl(var(--forest)); box-shadow: inset 0 0 0 2px hsl(var(--background)); }
 
@@ -481,8 +490,20 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .shop-card-view svg { width: 14px; height: 14px; }
 .home-v2 .shop-card:hover .shop-card-view { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); border-color: hsl(var(--forest)); }
 .home-v2 .shop-empty { padding-block: 40px 80px; text-align: center; color: hsl(var(--muted-foreground)); display: grid; gap: 14px; justify-items: center; }
+.home-v2 .shop-empty h2 { font-size: 36px; color: hsl(var(--foreground)); }
+.home-v2 .shop-empty p { font-size: 13px; line-height: 1.9; max-width: 520px; }
+.home-v2 .shop-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 12px; }
+.home-v2 .shop-empty-primary,
+.home-v2 .shop-empty-secondary { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 22px; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; border: 1px solid hsl(var(--forest)); cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.home-v2 .shop-empty-primary { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }
+.home-v2 .shop-empty-primary:hover { background: hsl(var(--forest) / 0.88); }
+.home-v2 .shop-empty-secondary { background: transparent; color: hsl(var(--foreground)); }
+.home-v2 .shop-empty-secondary:hover { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }
+.home-v2 .shop-empty-primary:focus-visible,
+.home-v2 .shop-empty-secondary:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+.home-v2 .shop-empty svg { width: 14px; height: 14px; }
 
-.home-v2 .shop-footer-cta { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); text-align: center; padding: 70px 22px; }
+.home-v2 .shop-footer-cta { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); text-align: center; padding: 70px 22px; margin-bottom: 80px; /* page background between the band and the forest footer */ }
 .home-v2 .shop-footer-cta h2 { font-size: 44px; margin: 16px 0 30px; }
 .home-v2 .shop-footer-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
 .home-v2 .shop-footer-actions a { border-radius: 0 !important; font-size: 11px !important; /* was 10px */ padding: 14px 22px !important; height: 44px !important; }
@@ -492,6 +513,7 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .shop-footer-quiz svg { width: 14px; height: 14px; }
 
 @media (max-width: 1050px) {
+  .home-v2 .shop-filters { --shop-gutter: 32px; }
   .home-v2 .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 34px 14px; }
   .home-v2 .shop-hero h1 { font-size: 52px; }
 }
@@ -499,7 +521,10 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .shop-hero { padding-block: 45px 30px; }
   .home-v2 .shop-hero h1 { font-size: 42px; }
   .home-v2 .shop-perks { gap: 12px 20px; font-size: 11px; /* was 8px */ }
+  .home-v2 .shop-filters { --shop-gutter: 22px; }
   .home-v2 .shop-filter { padding: 9px 13px; }
+  .home-v2 .shop-empty h2 { font-size: 28px; }
+  .home-v2 .shop-footer-cta { margin-bottom: 55px; }
   .home-v2 .shop-toolbar-controls { width: 100%; }
   .home-v2 .shop-select { flex: 1; width: auto; min-width: 140px; }
   .home-v2 .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 12px; padding-bottom: 55px; }
