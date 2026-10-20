@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useProducts } from '@/hooks/useProducts';
+import { getFromPrice } from '@/lib/from-price';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -326,14 +327,12 @@ const handlePincodeValidated = (
           {/* Customers also bought */}
           {recommendations.length > 0 && (
             <div className="mt-12 pt-12 border-t border-border/50">
-              <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-6">
+              <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-6">
                 Customers also bought
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {recommendations.map((p) => {
-                  const price = p.product_variants?.length
-                    ? Math.min(...p.product_variants.map((v) => v.price))
-                    : 0;
+                  const price = getFromPrice(p)?.price ?? 0;
                   return (
                     <Link
                       key={p.id}

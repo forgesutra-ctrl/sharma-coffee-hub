@@ -15,10 +15,12 @@ import {
   Tag,
   BookOpen,
   BarChart3,
-  Repeat
+  Repeat,
+  Inbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useAdminTheme } from '@/hooks/use-admin-theme';
 import { useNavigate } from 'react-router-dom';
 
 // All sidebar links with access control
@@ -27,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 const allSidebarLinks = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, superAdminOnly: true, staffAllowed: false },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: true },
+  { name: 'Enquiries', href: '/admin/enquiries', icon: Inbox, superAdminOnly: true, staffAllowed: false },
   { name: 'Subscriptions', href: '/admin/subscriptions', icon: Repeat, superAdminOnly: true, staffAllowed: true },
   { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
   { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },
@@ -77,6 +80,8 @@ export default function AdminLayout() {
     return () => observer.disconnect();
   }, []);
 
+  useAdminTheme();
+
   // Filter sidebar links based on role
   const sidebarLinks = allSidebarLinks.filter(link => {
     if (isSuperAdmin) return true; // Super admin sees all
@@ -109,7 +114,7 @@ export default function AdminLayout() {
   // Show loading while checking roles
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="admin-theme min-h-screen bg-muted/30 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -121,7 +126,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div ref={rootRef} className="min-h-screen bg-muted/30 flex">
+    <div ref={rootRef} className="admin-theme min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-background border-r hidden md:flex flex-col">
         {/* Logo */}

@@ -88,6 +88,48 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_messages: {
+        Row: {
+          alerted_at: string | null
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          status: string
+          subject: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          alerted_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          alerted_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       customer_addresses: {
         Row: {
           address_line1: string

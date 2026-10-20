@@ -87,7 +87,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* View Product Overlay */}
         <div className={cn(
           "absolute inset-0 flex items-center justify-center",
-          "bg-background/20 backdrop-blur-[2px]",
+          "bg-forest/20 backdrop-blur-[2px]",
           "transition-all duration-300",
           "opacity-0 group-hover:opacity-100"
         )}>
@@ -115,7 +115,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           to={productUrl}
           className="block"
         >
-          <h3 className="font-serif text-base md:text-lg font-medium text-foreground line-clamp-2 hover:text-primary transition-colors">
+          <h3 className="font-display text-base md:text-lg font-medium text-foreground line-clamp-2 hover:text-primary transition-colors">
             {product.name}
           </h3>
         </Link>

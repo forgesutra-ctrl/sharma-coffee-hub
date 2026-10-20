@@ -41,22 +41,6 @@ function isRazorpayElement(element: Element | null): boolean {
 }
 
 /**
- * Safely set inert on an element, excluding Razorpay elements.
- * Prefer inert over aria-hidden for disabling background interaction.
- */
-export function setInertSafely(element: HTMLElement | null, inert: boolean): void {
-  if (!element || isRazorpayElement(element)) {
-    return;
-  }
-  
-  if (inert) {
-    element.setAttribute('inert', '');
-  } else {
-    element.removeAttribute('inert');
-  }
-}
-
-/**
  * Safely set aria-hidden on an element, excluding Razorpay elements.
  * WARNING: Only use when inert is not available. Prefer conditional rendering
  * or hidden attribute when possible.

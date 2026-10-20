@@ -483,7 +483,7 @@ const SubscriptionConfirmation = () => {
             
             <p className="border-t border-green-200 pt-3 mt-3">
               <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" 
-                 className="text-lg font-bold text-green-600 hover:text-green-800 underline flex items-center gap-2">
+                 className="text-lg font-bold text-primary hover:text-primary/80 underline flex items-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 💬 Chat on WhatsApp (Best Option)
               </a>

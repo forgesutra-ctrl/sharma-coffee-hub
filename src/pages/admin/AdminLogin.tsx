@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminTheme } from '@/hooks/use-admin-theme';
 import { Shield, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const AdminLogin = () => {
@@ -15,6 +16,7 @@ const AdminLogin = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  useAdminTheme();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +113,7 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+    <div className="admin-theme min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">

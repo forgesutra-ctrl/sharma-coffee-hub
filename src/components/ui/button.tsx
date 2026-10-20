@@ -15,6 +15,11 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Redesign variants, ported from the reference (text-[10px] raised to the 11px type floor).
+        editorial: "bg-primary text-primary-foreground rounded-none h-12 px-6 uppercase tracking-widest text-[11px] hover:bg-primary/90",
+        hero: "bg-hero-foreground text-forest rounded-none h-12 px-6 uppercase tracking-widest text-[11px] hover:bg-hero-foreground/90",
+        film: "rounded-full border border-hero-foreground/35 bg-forest/20 text-hero-foreground hover:bg-hero-foreground/15",
+        text: "rounded-none px-0 text-current uppercase tracking-widest text-[11px] hover:opacity-60",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -23,6 +28,14 @@ const buttonVariants = cva(
         icon: "h-10 w-10",
       },
     },
+    // The redesign variants use the reference's size scale (36px default, not our 40px).
+    // Size classes are emitted after variant classes, so the heights live here.
+    compoundVariants: [
+      { variant: ["editorial", "hero", "film", "text"], size: "default", className: "h-9" },
+      { variant: ["editorial", "hero", "film", "text"], size: "sm", className: "h-8" },
+      { variant: ["editorial", "hero", "film", "text"], size: "lg", className: "h-10" },
+      { variant: ["editorial", "hero", "film", "text"], size: "icon", className: "h-9 w-9" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

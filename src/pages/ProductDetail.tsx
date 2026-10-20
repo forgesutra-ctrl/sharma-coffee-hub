@@ -14,6 +14,7 @@ import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { validateSubscriptionPlan } from '@/lib/subscription-validation';
 import { isSubscriptionEligible, getSubscriptionEligibilityError, isCoffeePowderProduct } from '@/lib/subscription-eligibility';
 import { addRecentlyViewed, getRecentlyViewedSlugs } from '@/lib/recently-viewed';
+import { getFromPrice } from '@/lib/from-price';
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug?: string }>();
@@ -202,7 +203,7 @@ const ProductDetail = () => {
     return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="font-serif text-2xl mb-4">Error loading product</h1>
+            <h1 className="font-display text-2xl mb-4">Error loading product</h1>
             <Link to="/shop" className="text-primary hover:underline">
               Return to shop
             </Link>
@@ -216,7 +217,7 @@ const ProductDetail = () => {
     return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="font-serif text-2xl mb-4">Product not found</h1>
+            <h1 className="font-display text-2xl mb-4">Product not found</h1>
             <Link to="/shop" className="text-primary hover:underline">
               Return to shop
             </Link>
@@ -408,7 +409,7 @@ const ProductDetail = () => {
                 <p className="text-sm text-primary font-medium tracking-wider uppercase mb-2">
                   {product.categories?.name || product.category}
                 </p>
-                <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mb-4">
+                <h1 className="font-display text-3xl md:text-4xl font-semibold text-foreground mb-4">
                   {product.name}
                 </h1>
                 <p className="text-2xl font-medium text-foreground">
@@ -641,7 +642,7 @@ const ProductDetail = () => {
                           <span>
                             {variant.weight >= 1000 ? `${variant.weight / 1000} kg` : `${variant.weight} g`}
                           </span>
-                          <span className="text-xs text-muted-foreground">₹{variant.price}</span>
+                          <span className="text-xs text-foreground/80">₹{variant.price}</span>
                         </button>
                       ))}
                   </div>
@@ -748,7 +749,7 @@ const ProductDetail = () => {
                     {product.flavor_notes.map((note) => (
                       <span
                         key={note}
-                        className="px-3 py-1 bg-muted text-muted-foreground text-xs tracking-wider"
+                        className="px-3 py-1 bg-muted text-foreground/80 text-xs tracking-wider"
                       >
                         {note}
                       </span>
@@ -764,14 +765,12 @@ const ProductDetail = () => {
         {recentlyViewedProducts.length > 0 && (
           <div className="border-t border-border/50 py-12 lg:py-16">
             <div className="container mx-auto px-4">
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold text-center mb-8">
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-center mb-8">
                 Recently Viewed
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {recentlyViewedProducts.map((related) => {
-                  const relatedLowestPrice = related.product_variants?.length > 0
-                    ? Math.min(...related.product_variants.map(v => v.price))
-                    : 0;
+                  const relatedLowestPrice = getFromPrice(related)?.price ?? 0;
                   return (
                     <Link
                       key={related.id}
@@ -803,14 +802,12 @@ const ProductDetail = () => {
         {relatedProducts.length > 0 && (
           <div className="border-t border-border/50 py-12 lg:py-16">
             <div className="container mx-auto px-4">
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold text-center mb-8">
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-center mb-8">
                 You May Also Like
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map((related) => {
-                  const relatedLowestPrice = related.product_variants?.length > 0
-                    ? Math.min(...related.product_variants.map(v => v.price))
-                    : 0;
+                  const relatedLowestPrice = getFromPrice(related)?.price ?? 0;
 
                   return (
                     <Link

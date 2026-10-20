@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { Phone, MessageCircle } from "lucide-react";
+import { ArrowUpRight, MessageCircle } from "lucide-react";
+import "@/components/home-v2/home-v2.css";
 
 const NotFound = () => {
   const location = useLocation();
@@ -10,25 +11,28 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center max-w-md px-4">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/90 mb-6 inline-block">
-          Return to Home
+    <div className="home-v2 page">
+      <div className="page-intro section-inner">
+        <h1>404</h1>
+        <p className="page-lede">Oops! Page not found</p>
+        <a href="/" className="arrow-link mt-6">
+          Return to Home <ArrowUpRight />
         </a>
-        
-        <div className="mt-6 p-4 bg-green-50 rounded border-2 border-green-300">
-          <p className="text-base font-semibold text-gray-800 mb-3">Can't find what you're looking for?</p>
-          <p className="text-base">
-            Contact us: 
-            <a href="tel:+918762988145" className="text-green-600 hover:text-green-900 underline font-bold ml-2 text-lg">
+      </div>
+
+      <div className="page-section section-inner">
+        <hr className="page-rule" />
+        <div className="page-copy mt-8">
+          <p className="text-foreground">Can't find what you're looking for?</p>
+          <p>
+            Contact us:
+            <a href="tel:+918762988145" className="text-primary hover:text-primary/80 underline ml-2">
               +91 8762 988 145
             </a>
           </p>
-          <p className="text-sm text-gray-600 mt-2">
-            or message us on 
-            <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900 underline font-bold ml-1 inline-flex items-center gap-1">
+          <p>
+            or message us on
+            <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline ml-1 inline-flex items-center gap-1">
               <MessageCircle className="w-4 h-4" />
               WhatsApp
             </a>

@@ -9,7 +9,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/coffee/Layout";
 import ScrollToTop from "./components/coffee/ScrollToTop";
 import { setupFocusGuard } from "./lib/accessibility";
-import Homepage from "./pages/Homepage";
+import HomeV2 from "./pages/HomeV2";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -43,6 +43,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
 import OrdersPage from "./pages/admin/OrdersPage";
+import EnquiriesPage from "./pages/admin/EnquiriesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CustomersPage from "./pages/admin/CustomersPage";
@@ -79,7 +80,7 @@ const App = () => {
             <CartProvider>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/" element={<Layout><Homepage /></Layout>} />
+                <Route path="/" element={<Layout variant="home"><HomeV2 /></Layout>} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />
@@ -145,6 +146,7 @@ const App = () => {
                 }>
                   <Route index element={<AdminDashboard />} />
                   <Route path="orders" element={<OrdersPage />} />
+                  <Route path="enquiries" element={<EnquiriesPage />} />
                   <Route path="subscriptions" element={<SubscriptionsPage />} />
                   <Route path="products" element={<ProductsPage />} />
                   <Route path="categories" element={<CategoriesPage />} />

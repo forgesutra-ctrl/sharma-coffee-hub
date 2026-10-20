@@ -27,3 +27,5 @@ verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
+[functions.notify-contact-message]
+verify_jwt = false

@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import '@/components/home-v2/home-v2.css';
+
+// The four policy pages, built from the shared inner-page vocabulary in home-v2.css:
+// a page intro, then each section as a ruled item set in long-form prose (16px).
 
 interface Section {
   heading: string;
@@ -16,37 +20,31 @@ interface LegalPageLayoutProps {
 
 export default function LegalPageLayout({ title, lastUpdated, sections }: LegalPageLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="home-v2 page">
         {/* Header */}
-        <div className="bg-coffee-dark text-white py-12 md:py-16">
-          <div className="max-w-4xl mx-auto px-4">
-            <Link 
-              to="/" 
-              className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </Link>
-            <h1 className="font-serif text-3xl md:text-4xl font-semibold">{title}</h1>
-            <p className="text-white/60 mt-2">Last updated: {lastUpdated}</p>
-          </div>
+        <div className="page-intro section-inner">
+          <Link to="/" className="page-back">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
+          <h1>{title}</h1>
+          <p className="section-note">Last updated: {lastUpdated}</p>
         </div>
 
         {/* Content */}
-        <div className="max-w-4xl mx-auto px-4 py-12 md:py-16">
-          <div className="prose prose-lg max-w-none">
+        <div className="page-section section-inner">
+          <div className="page-prose"><div className="page-stack">
             {sections.map((section, index) => (
-              <div key={index} className="mb-10">
-                <h2 className="font-serif text-xl md:text-2xl font-semibold text-foreground mb-4">
-                  {section.heading}
-                </h2>
-                
+              <div key={index} className="page-item">
+                <h2>{section.heading}</h2>
+
                 {section.content && (
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
+                  <p className="text-muted-foreground whitespace-pre-line">
                     {section.content}
                   </p>
                 )}
-                
+
+                {/* Kept from the previous design: no equivalent in the vocabulary. */}
                 {section.list && (
                   <ul className="mt-4 space-y-2">
                     {section.list.map((item, i) => (
@@ -57,7 +55,7 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
                     ))}
                   </ul>
                 )}
-                
+
                 {section.footer && (
                   <p className="mt-4 text-muted-foreground italic">
                     {section.footer}
@@ -65,14 +63,11 @@ export default function LegalPageLayout({ title, lastUpdated, sections }: LegalP
                 )}
               </div>
             ))}
-          </div>
+          </div></div>
 
           {/* Back Link */}
           <div className="mt-12 pt-8 border-t border-border">
-            <Link 
-              to="/" 
-              className="inline-flex items-center gap-2 text-coffee-gold hover:text-coffee-gold/80 transition-colors font-medium"
-            >
+            <Link to="/" className="page-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>

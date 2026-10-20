@@ -140,7 +140,7 @@ const TasteProfileQuiz = () => {
                   <Coffee className="w-3.5 h-3.5" />
                   Question {step + 1} of {QUIZ_QUESTIONS.length}
                 </div>
-                <h2 className="font-serif text-2xl md:text-3xl font-semibold text-foreground">
+                <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground">
                   {currentQuestion?.question}
                 </h2>
               </div>
@@ -200,7 +200,7 @@ const TasteProfileQuiz = () => {
                   <Sparkles className="w-4 h-4" />
                   <span className="font-medium">Your taste profile</span>
                 </div>
-                <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground">
+                <h1 className="font-display text-3xl md:text-4xl font-semibold text-foreground">
                   Coffees you'll love
                 </h1>
                 <p className="text-muted-foreground max-w-md mx-auto">

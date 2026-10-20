@@ -13,7 +13,6 @@ export const brandInfo = {
   tagline: "The Taste of Coorg",
   establishedYear: 1987,
   establishedText: "Since 1987",
-  logo: "@/assets/sharma-coffee-logo.png",
   rating: 4.8,
   ratingSource: "JustDial",
   

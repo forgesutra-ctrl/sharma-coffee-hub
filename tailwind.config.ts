@@ -15,7 +15,7 @@ export default {
     extend: {
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
         kannada: ['"Noto Sans Kannada"', 'sans-serif'],
       },
       colors: {
@@ -24,6 +24,10 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "hero-foreground": "hsl(var(--hero-foreground))",
+        forest: "hsl(var(--forest))",
+        "forest-deep": "hsl(var(--forest-deep))",
+        gold: "hsl(var(--gold))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

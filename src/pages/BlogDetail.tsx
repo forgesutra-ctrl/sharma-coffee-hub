@@ -88,7 +88,7 @@ export default function BlogDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="font-serif text-2xl mb-4">Blog not found</h1>
+          <h1 className="font-display text-2xl mb-4">Blog not found</h1>
           <Link to="/blogs" className="text-primary hover:underline">
             Return to blogs
           </Link>
@@ -172,7 +172,7 @@ export default function BlogDetail() {
         <div className="max-w-4xl mx-auto px-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="prose prose-lg max-w-none">
+              <div className="page-prose">
                 {renderContent(blog.content)}
               </div>
             </CardContent>
