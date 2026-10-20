@@ -161,17 +161,19 @@ export default function Footer() {
               name: 'All Products',
               link: '/shop'
             }, {
+              // A real category. The other three are products, not categories, so they
+              // search the shop (the DB spells it "Speciality").
               name: 'Filter Coffee',
-              link: '/shop/gold-blend'
+              link: '/shop/coffee-powders'
             }, {
               name: 'Specialty Blends',
-              link: '/shop/specialty-blends'
+              link: '/shop?q=speciality'
             }, {
               name: 'Royal Caffeine',
-              link: '/shop/royal-caffeine'
+              link: '/shop?q=royal%20caffeine'
             }, {
               name: 'Instant Coffee',
-              link: '/shop/instant-coffee-decoctions'
+              link: '/shop?q=instant'
             }].map(item => <li key={item.name}>
                   <Link to={item.link} className="text-hero-foreground/60 hover:text-gold transition-colors text-sm inline-flex items-center gap-2 group">
                     <span className="w-0 group-hover:w-2 h-px bg-gold transition-all duration-300" />

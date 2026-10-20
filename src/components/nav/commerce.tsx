@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts, getUniqueProducts } from '@/hooks/useProducts';
+import { defaultFilter } from 'cmdk';
 import {
   CommandDialog,
   CommandInput,
@@ -32,6 +33,23 @@ const searchPages = [
   { name: 'FAQ', href: '/faq', icon: HelpCircle },
 ];
 
+const SEARCH_ALL = 'search-all ';
+
+/**
+ * Palette scoring. Normal cmdk fuzzy scoring on each item's value (name + category),
+ * plus a plain substring match on the product description passed as a keyword, which
+ * is how /shop?q= matches; description-only hits rank below name matches. The
+ * "Search all products" row always scores lowest, so it sits last and Enter still
+ * opens the best match.
+ */
+function paletteFilter(value: string, search: string, keywords?: string[]) {
+  if (value.startsWith(SEARCH_ALL)) return 0.000001;
+  const score = defaultFilter(value, search);
+  if (score > 0) return score;
+  const needle = search.trim().toLowerCase();
+  return needle && keywords?.some((k) => k.toLowerCase().includes(needle)) ? 0.01 : 0;
+}
+
 /** Search dialog — type what you need, go to product or section. */
 export function SearchPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const navigate = useNavigate();
@@ -52,7 +70,7 @@ export function SearchPalette({ open, onOpenChange }: { open: boolean; onOpenCha
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={handleOpenChange}>
+    <CommandDialog open={open} onOpenChange={handleOpenChange} filter={paletteFilter}>
       <CommandInput
         placeholder="Type what you're looking for — product, category, or page"
         className="placeholder:text-muted-foreground"
@@ -63,25 +81,12 @@ export function SearchPalette({ open, onOpenChange }: { open: boolean; onOpenCha
         <CommandEmpty>
           <span className="text-muted-foreground">No matches. Try a product name, category (e.g. coffee, tea), or page name.</span>
         </CommandEmpty>
-        {/* Always offered once something is typed, first in the list: hands the query to
-            /shop, which filters by name, category and description (?q=). */}
-        {trimmed && (
-          <CommandGroup heading="Search" forceMount>
-            <CommandItem
-              forceMount
-              value={`search-all ${trimmed}`}
-              onSelect={() => handleSearchSelect(`/shop?q=${encodeURIComponent(trimmed)}`)}
-            >
-              <Search className="mr-2 h-4 w-4 shrink-0" />
-              <span>Search all products for “{trimmed}”</span>
-            </CommandItem>
-          </CommandGroup>
-        )}
         <CommandGroup heading="Products">
           {products.map((product) => (
             <CommandItem
               key={product.productId}
               value={`${product.name} ${product.category ?? ''}`}
+              keywords={product.description ? [product.description] : undefined}
               onSelect={() => handleSearchSelect(`/product/${product.slug}`)}
             >
               <Store className="mr-2 h-4 w-4 shrink-0" />
@@ -118,6 +123,19 @@ export function SearchPalette({ open, onOpenChange }: { open: boolean; onOpenCha
             </CommandItem>
           ))}
         </CommandGroup>
+        {/* Last, by score (see paletteFilter): Enter opens the best match; arrow down to
+            here to hand the query to /shop, which filters by name, category and description. */}
+        {trimmed && (
+          <CommandGroup heading="Search">
+            <CommandItem
+              value={`${SEARCH_ALL}${trimmed}`}
+              onSelect={() => handleSearchSelect(`/shop?q=${encodeURIComponent(trimmed)}`)}
+            >
+              <Search className="mr-2 h-4 w-4 shrink-0" />
+              <span>Search all products for “{trimmed}”</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );

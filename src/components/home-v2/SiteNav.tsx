@@ -103,7 +103,13 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    // Hides the floating ChatBot launcher, which would otherwise sit over the panel's
+    // corner at phone widths (see .site-menu-open in home-v2.css).
+    document.body.classList.add('site-menu-open');
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.classList.remove('site-menu-open');
+    };
   }, [menuOpen]);
 
   return (

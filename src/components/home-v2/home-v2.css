@@ -105,6 +105,10 @@
 .home-v2 .header-phone .header-icon-svg { width: 16px; height: 16px; }
 .home-v2 .header-cart-count { position: absolute; top: 0; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: hsl(var(--gold)); color: hsl(var(--forest)); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 
+/* While SiteNav's mobile menu is open, hide the floating ChatBot launcher (it lives
+   outside .home-v2, so this rule is deliberately unscoped). */
+body.site-menu-open .chat-launcher { display: none; }
+
 /* Mobile menu panel (shown at ≤1023px; see the breakpoint below). */
 .home-v2 .mobile-nav-row { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 18px 0; font-family: theme('fontFamily.display'); font-size: 25px; text-align: left; background: none; border: 0; border-bottom: 1px solid hsl(var(--hero-foreground) / 0.2); color: inherit; cursor: pointer; }
 .home-v2 .mobile-nav-row svg { width: 18px; transition: transform 0.2s; }

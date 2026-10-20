@@ -524,7 +524,7 @@ export function ChatBot() {
       <button
         onClick={() => setIsOpen((o) => !o)}
         aria-label={isOpen ? 'Close coffee chat assistant' : 'Open coffee chat assistant'}
-        className="fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50 hover:scale-105 transition-transform"
+        className="chat-launcher fixed bottom-6 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-50 hover:scale-105 transition-transform"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Coffee className="w-6 h-6" />}
       </button>
