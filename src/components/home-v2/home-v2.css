@@ -204,7 +204,7 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .product-arrow svg { width: 15px; }
 .home-v2 .product-category { font-size: 11px; /* was 7px */ margin-top: 22px; letter-spacing: 1.6px; }
 .home-v2 .product-title { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; gap: 8px; }
-.home-v2 .product-title h3, .home-v2 .page-item h3 { font-size: 26px; }
+.home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 26px; }
 .home-v2 .product-title > span { font-size: 11px; /* was 10px */ }
 .home-v2 .product-detail { font-size: 11px; /* was 10px */ color: hsl(var(--muted-foreground)); margin-top: 7px; }
 /* Not in the reference: loading placeholders and the failed-fetch line for the live product data. */
@@ -314,7 +314,7 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .story-copy h2 { font-size: 48px; }
   .home-v2 .story-portrait { min-height: 640px; }
   .home-v2 .intro-bottom { gap: 25px; }
-  .home-v2 .product-title h3, .home-v2 .page-item h3 { font-size: 23px; }
+  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 23px; }
   .home-v2 .product-grid, .home-v2 .page-grid { gap: 14px; }
   .home-v2 .footer-top { gap: 25px; }
   .home-v2 .promise-strip { letter-spacing: 1px; font-size: 11px; /* was 7px */ }
@@ -369,7 +369,7 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .section-heading > .arrow-link { margin-top: 15px; }
   .home-v2 .product-grid, .home-v2 .page-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 27px 12px; }
   .home-v2 .product-image img { padding: 27px 13px; }
-  .home-v2 .product-title h3, .home-v2 .page-item h3 { font-size: 22px; }
+  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 22px; }
   .home-v2 .product-title > span { font-size: 11px; /* was 9px */ }
   .home-v2 .product-category { font-size: 11px; /* was 5px */ letter-spacing: 1px; margin-top: 15px; }
   .home-v2 .product-detail { font-size: 11px; /* was 8px */ line-height: 1.5; }
@@ -435,10 +435,10 @@ body.site-menu-open .chat-launcher { display: none; }
    Sold Out badge, and the quiz link in the call band. */
 .home-v2.shop-page { min-height: 100svh; }
 .home-v2 .shop-hero, .home-v2 .page-intro { padding-block: 70px 40px; }
-.home-v2 .shop-back { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; /* was 9px */ letter-spacing: 1.4px; text-transform: uppercase; color: hsl(var(--muted-foreground)); margin-bottom: 35px; }
-.home-v2 .shop-back:hover { color: hsl(var(--foreground)); }
+.home-v2 .shop-back, .home-v2 .page-back { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; /* was 9px */ letter-spacing: 1.4px; text-transform: uppercase; color: hsl(var(--muted-foreground)); margin-bottom: 35px; }
+.home-v2 .shop-back:hover, .home-v2 .page-back:hover { color: hsl(var(--foreground)); }
 .home-v2 .shop-hero h1, .home-v2 .page-intro h1 { font-size: 64px; line-height: 1.05; margin: 18px 0 24px; max-width: 700px; }
-.home-v2 .shop-hero-note, .home-v2 .page-lede, .home-v2 .page-copy > p { font-size: 12px; line-height: 2; color: hsl(var(--muted-foreground)); max-width: 560px; }
+.home-v2 .shop-hero-note, .home-v2 .page-lede, .home-v2 .page-copy > p { font-size: 15px; /* was 12px: the site body size; the reference's 12px suits two-line landing blocks, not reading */ line-height: 2; color: hsl(var(--muted-foreground)); max-width: 560px; }
 .home-v2 .shop-hero-link { text-decoration: underline; text-underline-offset: 3px; color: hsl(var(--foreground)); }
 .home-v2 .shop-perks, .home-v2 .page-credentials { display: flex; flex-wrap: wrap; gap: 14px 34px; margin-top: 32px; padding-top: 26px; border-top: 1px solid hsl(var(--border)); font-size: 11px; /* was 9px */ letter-spacing: 1.4px; text-transform: uppercase; }
 .home-v2 .shop-perks span, .home-v2 .page-credentials > span { display: flex; align-items: center; gap: 10px; }
@@ -545,9 +545,12 @@ body.site-menu-open .chat-launcher { display: none; }
                       -> sizes shared with .shop-hero / .shop-hero-note
      section heading  .page-heading (h2)         -> shared with .section-heading h2
      item heading     .page-item h3              -> shared with .product-title h3
-     body copy        .page-copy > p             -> shared with .shop-hero-note
+     body copy        .page-copy > p             -> shared with .shop-hero-note (15px)
+     long-form prose  .page-prose                -> 16px / 1.75, legal pages and blog articles
      credential row   .page-credentials          -> shared with .shop-perks
      arrow link       .arrow-link                -> used as is
+     back link        .page-back                 -> shared with .shop-back
+     note / caption   .section-note              -> used as is
      forest band      .page-band, .page-band-actions -> shared with .shop-footer-cta
      item grid        .page-grid                 -> shared with .product-grid
    New here: section rhythm, the two-column split, items, the ruled list, the rule. */
@@ -555,7 +558,10 @@ body.site-menu-open .chat-launcher { display: none; }
 /* The reference writes its eyebrows in capitals; content pages keep their copy as written. */
 .home-v2.page .eyebrow { text-transform: uppercase; }
 .home-v2 .page-section { padding-block: 83px; }
-.home-v2 .page-section--tint { background: hsl(var(--secondary)); --muted-foreground: 92 5% 38%; /* 42% is 4.26:1 on --secondary at 12px; 38% clears 4.5:1 */ }
+.home-v2 .page-section--tint { background: hsl(var(--secondary)); }
+/* Every --secondary surface: muted text at 42% is 4.26:1 on it; 38% clears 4.5:1. */
+.home-v2 .page-section--tint,
+.home-v2 .coffee-section { --muted-foreground: 92 5% 38%; }
 .home-v2 .page-intro + .page-section { padding-top: 40px; }
 .home-v2 .page-heading { margin-bottom: 26px; }
 .home-v2 .page-copy { max-width: 560px; }
@@ -571,9 +577,10 @@ body.site-menu-open .chat-launcher { display: none; }
 /* Items: a quiet rule above, an optional icon, an h3 and body copy. */
 .home-v2 .page-item { border-top: 1px solid hsl(var(--border)); padding-top: 22px; }
 .home-v2 .page-item > svg { width: 22px; height: 22px; stroke-width: 1.4; color: hsl(var(--primary)); margin-bottom: 16px; }
-.home-v2 .page-item h3 { margin-bottom: 10px; }
+.home-v2 .page-item h3, .home-v2 .page-item h2 { margin-bottom: 10px; }
 .home-v2 .page-item p { font-size: 12px; line-height: 2; color: hsl(var(--muted-foreground)); }
 .home-v2 .page-item p.eyebrow { font-size: 11px; line-height: 1.8; color: hsl(var(--primary)); margin-bottom: 6px; }
+.home-v2 .page-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .home-v2 .page-stack { display: grid; gap: 40px; max-width: 760px; }
 
 /* Ruled list: a display-face marker beside each entry (Our Story's timeline). */
@@ -586,6 +593,15 @@ body.site-menu-open .chat-launcher { display: none; }
 /* Credential row variant with a figure: "22 COUNTRIES SERVED". */
 .home-v2 .page-credentials strong { font-family: theme('fontFamily.display'); font-size: 26px; font-weight: 400; letter-spacing: 0; line-height: 1; }
 
+/* Long-form reading (policies, articles): larger than body copy, the same 560px measure.
+   Unscoped because the blog article body is not yet inside a .home-v2 page; the class
+   name is unique, so nothing else picks it up. */
+.page-prose { font-size: 16px; line-height: 1.75; max-width: 560px; }
+/* Inside long-form, item text keeps the prose size rather than the 12px item size. */
+.home-v2 .page-prose .page-item p,
+.home-v2 .page-prose .page-item li { font-size: inherit; line-height: inherit; }
+.home-v2 .page-band .page-credentials { justify-content: center; margin-top: 0; border-top-color: hsl(var(--hero-foreground) / 0.28); }
+.home-v2 .page-band .page-credentials svg { color: hsl(var(--gold)); }
 .home-v2 .page-band h2 + p { font-size: 12px; line-height: 1.9; opacity: 0.8; max-width: 560px; margin: -12px auto 30px; }
 
 @media (max-width: 1050px) {
@@ -597,11 +613,12 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .page-split { grid-template-columns: 1fr; }
   .home-v2 .page-split--reverse > :first-child { order: 0; }
   .home-v2 .page-grid { gap: 30px 14px; }
+  .home-v2 .page-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-v2 .page-list > li { grid-template-columns: 1fr; gap: 6px; }
   .home-v2 .page-list-marker { font-size: 22px; }
 }
 @media (max-width: 420px) {
-  .home-v2 .page-grid { grid-template-columns: 1fr; }
+  .home-v2 .page-grid, .home-v2 .page-grid--3 { grid-template-columns: 1fr; }
 }
 
 /* ---------- Reduced motion ---------- */

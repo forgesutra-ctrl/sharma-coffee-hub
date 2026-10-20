@@ -44,13 +44,8 @@ export default function About() {
   return (
     <div className="home-v2 page">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Kept from the previous design: no equivalent in the vocabulary. */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-10"
-          style={{ backgroundImage: `url(${coffeeSelectionImg})` }}
-        />
-        <div className="page-intro section-inner relative">
+      <section>
+        <div className="page-intro section-inner">
           <p className="eyebrow">{aboutContent.headline}</p>
           <h1>Our Story</h1>
           <p className="page-lede">
@@ -73,11 +68,6 @@ export default function About() {
           </div>
           <div className="page-split-media">
             <img src={coffeeSelectionImg} alt="Coorg Coffee Selection" />
-            {/* Kept from the previous design: no equivalent in the vocabulary. */}
-            <div className="absolute -bottom-6 -left-6 bg-primary text-primary-foreground p-6 rounded-lg shadow-xl">
-              <div className="text-4xl font-display font-bold">40+</div>
-              <div className="text-sm opacity-90">Years of Excellence</div>
-            </div>
           </div>
         </div>
       </section>
@@ -97,11 +87,6 @@ export default function About() {
           </div>
           <div className="page-split-media">
             <img src={foundersImg} alt="Sharma Coffee Founders - Building a Legacy Together" />
-            {/* Kept from the previous design: no equivalent in the vocabulary. */}
-            <div className="absolute -bottom-6 -right-6 bg-card border border-border p-6 rounded-lg shadow-xl">
-              <div className="text-4xl font-display font-bold text-primary">{aboutContent.founder.year}</div>
-              <div className="text-sm text-muted-foreground">Founded in Madikeri</div>
-            </div>
           </div>
         </div>
       </section>

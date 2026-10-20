@@ -4,6 +4,9 @@ import { CheckCircle2 } from 'lucide-react';
 import { processingContent, heritageContent } from '@/data/brandContent';
 import coffeeSelectionImg from '@/assets/coffee-selection.jpg';
 import coffeeRoastingImg from '@/assets/coffee-beans-roasting.jpg';
+import '@/components/home-v2/home-v2.css';
+
+// The Slow Ritual, built from the shared inner-page vocabulary in home-v2.css.
 
 const processStages = [
   {
@@ -72,104 +75,62 @@ const processStages = [
 
 export default function Processing() {
   return (
-    <>
+    <div className="home-v2 page">
       {/* Hero Section */}
-      <section className="relative py-24 md:py-32 bg-gradient-to-b from-muted/50 to-background overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-10"
-          style={{ backgroundImage: `url(${coffeeRoastingImg})` }}
-        />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-primary text-sm font-medium tracking-[0.3em] uppercase mb-4">
-              From Bean to Cup
-            </p>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              {processingContent.headline}
-            </h1>
-            <div className="section-divider mb-8" />
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-              {processingContent.introduction}
-            </p>
-          </div>
+      <section>
+        <div className="page-intro section-inner">
+          <p className="eyebrow">From Bean to Cup</p>
+          <h1>{processingContent.headline}</h1>
+          <p className="page-lede">{processingContent.introduction}</p>
         </div>
       </section>
 
       {/* Origin Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-2">
-                {heritageContent.location.subtitle}
-              </p>
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                {heritageContent.location.title}
-              </h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>{heritageContent.location.description}</p>
-                <p>{heritageContent.mythologicalOrigin.content}</p>
-              </div>
-              <div className="mt-8 p-6 bg-muted/50 rounded-lg border border-border">
-                <h4 className="font-display text-lg font-semibold text-foreground mb-2">
-                  Coorg Coffee Production
-                </h4>
-                <p className="text-foreground/80 text-sm">
-                  {heritageContent.britishEra.content}
-                </p>
-              </div>
+      <section className="page-section">
+        <div className="page-split section-inner">
+          <div>
+            <p className="eyebrow">{heritageContent.location.subtitle}</p>
+            <h2 className="page-heading">{heritageContent.location.title}</h2>
+            <div className="page-copy">
+              <p>{heritageContent.location.description}</p>
+              <p>{heritageContent.mythologicalOrigin.content}</p>
             </div>
-            <div className="relative">
-              <div className="aspect-square rounded-lg overflow-hidden image-shine">
-                <img 
-                  src={coffeeSelectionImg} 
-                  alt="Coorg Coffee Plantations" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-6 -left-6 bg-primary text-primary-foreground p-6 rounded-lg shadow-xl">
-                <div className="text-4xl font-display font-bold">40%</div>
-                <div className="text-sm opacity-90">of Karnataka's Coffee Production</div>
-              </div>
+            <div className="page-item mt-8">
+              <h3>Coorg Coffee Production</h3>
+              <p>{heritageContent.britishEra.content}</p>
+            </div>
+          </div>
+          <div className="page-split-media">
+            <img src={coffeeSelectionImg} alt="Coorg Coffee Plantations" />
+            {/* Kept from the previous design: no equivalent in the vocabulary. */}
+            <div className="absolute -bottom-6 -left-6 bg-primary text-primary-foreground p-6 rounded-lg shadow-xl">
+              <div className="text-4xl font-display font-bold">40%</div>
+              <div className="text-sm opacity-90">of Karnataka's Coffee Production</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Process Stages */}
-      <section className="py-16 md:py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-2">
-              Our Craft
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              The 5 Stages of Perfection
-            </h2>
-            <div className="section-divider" />
-          </div>
+      <section className="page-section page-section--tint">
+        <div className="section-inner">
+          <p className="eyebrow">Our Craft</p>
+          <h2 className="page-heading">The 5 Stages of Perfection</h2>
 
-          <div className="space-y-24">
+          <div className="space-y-20">
             {processStages.map((stage, index) => (
-              <div 
-                key={stage.id} 
-                className={`grid lg:grid-cols-2 gap-12 items-center ${
-                  index % 2 === 1 ? 'lg:flex-row-reverse' : ''
-                }`}
+              <div
+                key={stage.id}
+                className={`page-split ${index % 2 === 1 ? 'page-split--reverse' : ''}`}
               >
-                <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-display text-xl font-bold">
-                      {index + 1}
-                    </div>
-                    <h3 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                      {stage.title}
-                    </h3>
+                <div>
+                  <span className="page-list-marker">{String(index + 1).padStart(2, '0')}</span>
+                  <h3 className="page-heading">{stage.title}</h3>
+                  <div className="page-copy">
+                    <p>{stage.content}</p>
                   </div>
-                  <p className="text-muted-foreground mb-6 leading-relaxed">
-                    {stage.content}
-                  </p>
-                  <ul className="space-y-3">
+                  {/* Kept from the previous design: no equivalent in the vocabulary. */}
+                  <ul className="space-y-3 mt-6">
                     {stage.highlights.map((highlight, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
@@ -178,28 +139,14 @@ export default function Processing() {
                     ))}
                   </ul>
                   {stage.equipment && (
-                    <div className="mt-6 p-4 bg-card border border-border rounded-lg">
-                      <p className="text-sm">
-                        <span className="text-muted-foreground">Equipment: </span>
-                        <span className="text-primary font-medium">{stage.equipment}</span>
-                      </p>
-                      {stage.locations && (
-                        <p className="text-sm mt-1">
-                          <span className="text-muted-foreground">Facilities: </span>
-                          <span className="text-foreground">{stage.locations.join(' & ')}</span>
-                        </p>
-                      )}
+                    <div className="page-credentials">
+                      <span>Equipment: {stage.equipment}</span>
+                      {stage.locations && <span>Facilities: {stage.locations.join(' & ')}</span>}
                     </div>
                   )}
                 </div>
-                <div className={index % 2 === 1 ? 'lg:order-1' : ''}>
-                  <div className="aspect-square rounded-lg overflow-hidden image-shine">
-                    <img 
-                      src={stage.image} 
-                      alt={stage.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                <div className="page-split-media">
+                  <img src={stage.image} alt={stage.title} />
                 </div>
               </div>
             ))}
@@ -208,63 +155,35 @@ export default function Processing() {
       </section>
 
       {/* Quality Promise */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-2">
-              Our Promise
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-              Quality at Every Step
-            </h2>
-            <div className="section-divider mb-8" />
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              From the moment our beans are selected from the finest Coorg estates to the final 
-              packaging, every step is handled with care and expertise. Our commitment to quality 
-              ensures that every cup of Sharma Coffee delivers the authentic taste of South Indian 
+      <section className="page-section">
+        <div className="section-inner">
+          <p className="eyebrow">Our Promise</p>
+          <h2 className="page-heading">Quality at Every Step</h2>
+          <div className="page-copy">
+            <p>
+              From the moment our beans are selected from the finest Coorg estates to the final
+              packaging, every step is handled with care and expertise. Our commitment to quality
+              ensures that every cup of Sharma Coffee delivers the authentic taste of South Indian
               filter coffee tradition.
             </p>
-            <div className="grid sm:grid-cols-3 gap-6">
-              <div className="p-6 bg-card border border-border rounded-lg">
-                <div className="text-4xl font-display font-bold text-primary mb-2">100%</div>
-                <p className="text-sm text-muted-foreground">Premium Coorg Beans</p>
-              </div>
-              <div className="p-6 bg-card border border-border rounded-lg">
-                <div className="text-4xl font-display font-bold text-primary mb-2">40+</div>
-                <p className="text-sm text-muted-foreground">Years of Expertise</p>
-              </div>
-              <div className="p-6 bg-card border border-border rounded-lg">
-                <div className="text-4xl font-display font-bold text-primary mb-2">22</div>
-                <p className="text-sm text-muted-foreground">Countries Served</p>
-              </div>
-            </div>
+          </div>
+          <div className="page-credentials">
+            <span><strong>100%</strong> Premium Coorg Beans</span>
+            <span><strong>40+</strong> Years of Expertise</span>
+            <span><strong>22</strong> Countries Served</span>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Experience the Difference
-          </h2>
-          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-            Taste the result of our meticulous processing. From Coorg's finest beans to your cup.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/shop">
-              <Button size="lg" variant="secondary" className="font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                Shop Our Coffee
-              </Button>
-            </Link>
-            <Link to="/brewing-guide">
-              <Button size="lg" variant="outline" className="font-semibold bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                Learn to Brew
-              </Button>
-            </Link>
-          </div>
+      <section className="page-band">
+        <h2>Experience the Difference</h2>
+        <p>Taste the result of our meticulous processing. From Coorg's finest beans to your cup.</p>
+        <div className="page-band-actions">
+          <Button asChild variant="hero"><Link to="/shop">Shop Our Coffee</Link></Button>
+          <Button asChild variant="film"><Link to="/brewing-guide">Learn to Brew</Link></Button>
         </div>
       </section>
-    </>
+    </div>
   );
 }

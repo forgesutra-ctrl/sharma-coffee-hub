@@ -172,7 +172,7 @@ export default function BlogDetail() {
         <div className="max-w-4xl mx-auto px-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="prose prose-lg max-w-none">
+              <div className="page-prose">
                 {renderContent(blog.content)}
               </div>
             </CardContent>

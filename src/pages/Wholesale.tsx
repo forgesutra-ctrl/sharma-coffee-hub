@@ -1,6 +1,9 @@
 import WholesaleInquiryForm from '@/components/wholesale/WholesaleInquiryForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { Package, Truck, BadgePercent, HeadphonesIcon, Clock, Shield } from 'lucide-react';
+import '@/components/home-v2/home-v2.css';
+
+// Wholesale, built from the shared inner-page vocabulary in home-v2.css.
 
 const benefits = [
   {
@@ -37,90 +40,61 @@ const benefits = [
 
 export default function Wholesale() {
   return (
-    <>
+    <div className="home-v2 page">
       {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-b from-muted/50 to-background">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-primary text-sm font-medium tracking-[0.2em] uppercase mb-4">
-              B2B Partnership
-            </p>
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Wholesale Inquiries
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Partner with Sharma Coffee Works for your café, restaurant, retail store, or corporate needs. 
-              Enjoy premium Coorg coffee at competitive wholesale prices.
-            </p>
-          </div>
+      <section>
+        <div className="page-intro section-inner">
+          <p className="eyebrow">B2B Partnership</p>
+          <h1>Wholesale Inquiries</h1>
+          <p className="page-lede">
+            Partner with Sharma Coffee Works for your café, restaurant, retail store, or corporate needs.
+            Enjoy premium Coorg coffee at competitive wholesale prices.
+          </p>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="py-12 md:py-16 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <h2 className="font-display text-2xl md:text-3xl font-bold text-center mb-10">
-            Why Partner With Us?
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section className="page-section page-section--tint">
+        <div className="section-inner">
+          <h2 className="page-heading">Why Partner With Us?</h2>
+          <div className="page-grid page-grid--3">
             {benefits.map((benefit) => (
-              <Card key={benefit.title} className="bg-card/50 border-border/50">
-                <CardContent className="p-6">
-                  <benefit.icon className="w-10 h-10 text-primary mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">{benefit.title}</h3>
-                  <p className="text-sm text-muted-foreground">{benefit.description}</p>
-                </CardContent>
-              </Card>
+              <div key={benefit.title} className="page-item">
+                <benefit.icon />
+                <h3>{benefit.title}</h3>
+                <p>{benefit.description}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Form Section */}
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="font-display text-2xl md:text-3xl font-bold mb-4">
-                Get in Touch
-              </h2>
-              <p className="text-muted-foreground">
-                Fill out the form below and our wholesale team will contact you within 12 hours.
-              </p>
-            </div>
-            
-            <Card className="bg-card border-border/50">
-              <CardContent className="p-6 md:p-8">
-                <WholesaleInquiryForm />
-              </CardContent>
-            </Card>
+      <section className="page-section">
+        <div className="section-inner">
+          <h2 className="page-heading">Get in Touch</h2>
+          <div className="page-copy">
+            <p>Fill out the form below and our wholesale team will contact you within 12 hours.</p>
           </div>
+
+          {/* Kept from the previous design: forms are not in the vocabulary yet. */}
+          <Card className="bg-card border-border/50 max-w-3xl mt-10">
+            <CardContent className="p-6 md:p-8">
+              <WholesaleInquiryForm />
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 md:py-16 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <p className="text-4xl md:text-5xl font-display font-bold mb-2">40+</p>
-              <p className="text-sm opacity-80">Years of Excellence</p>
-            </div>
-            <div>
-              <p className="text-4xl md:text-5xl font-display font-bold mb-2">22</p>
-              <p className="text-sm opacity-80">Countries Served</p>
-            </div>
-            <div>
-              <p className="text-4xl md:text-5xl font-display font-bold mb-2">500+</p>
-              <p className="text-sm opacity-80">B2B Partners</p>
-            </div>
-            <div>
-              <p className="text-4xl md:text-5xl font-display font-bold mb-2">100%</p>
-              <p className="text-sm opacity-80">Coorg Origin</p>
-            </div>
-          </div>
+      <section className="page-band">
+        <div className="page-credentials">
+          <span><strong>40+</strong> Years of Excellence</span>
+          <span><strong>22</strong> Countries Served</span>
+          <span><strong>500+</strong> B2B Partners</span>
+          <span><strong>100%</strong> Coorg Origin</span>
         </div>
       </section>
-    </>
+    </div>
   );
 }
