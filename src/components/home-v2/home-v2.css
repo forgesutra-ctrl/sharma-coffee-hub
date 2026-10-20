@@ -204,7 +204,7 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .product-arrow svg { width: 15px; }
 .home-v2 .product-category { font-size: 11px; /* was 7px */ margin-top: 22px; letter-spacing: 1.6px; }
 .home-v2 .product-title { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; gap: 8px; }
-.home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 26px; }
+.home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2, .home-v2 .page-item h4 { font-size: 26px; }
 .home-v2 .product-title > span { font-size: 11px; /* was 10px */ }
 .home-v2 .product-detail { font-size: 11px; /* was 10px */ color: hsl(var(--muted-foreground)); margin-top: 7px; }
 /* Not in the reference: loading placeholders and the failed-fetch line for the live product data. */
@@ -314,7 +314,7 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .story-copy h2 { font-size: 48px; }
   .home-v2 .story-portrait { min-height: 640px; }
   .home-v2 .intro-bottom { gap: 25px; }
-  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 23px; }
+  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2, .home-v2 .page-item h4 { font-size: 23px; }
   .home-v2 .product-grid, .home-v2 .page-grid { gap: 14px; }
   .home-v2 .footer-top { gap: 25px; }
   .home-v2 .promise-strip { letter-spacing: 1px; font-size: 11px; /* was 7px */ }
@@ -369,7 +369,7 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .section-heading > .arrow-link { margin-top: 15px; }
   .home-v2 .product-grid, .home-v2 .page-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 27px 12px; }
   .home-v2 .product-image img { padding: 27px 13px; }
-  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2 { font-size: 22px; }
+  .home-v2 .product-title h3, .home-v2 .page-item h3, .home-v2 .page-item h2, .home-v2 .page-item h4 { font-size: 22px; }
   .home-v2 .product-title > span { font-size: 11px; /* was 9px */ }
   .home-v2 .product-category { font-size: 11px; /* was 5px */ letter-spacing: 1px; margin-top: 15px; }
   .home-v2 .product-detail { font-size: 11px; /* was 8px */ line-height: 1.5; }
@@ -494,12 +494,14 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .shop-empty p { font-size: 13px; line-height: 1.9; max-width: 520px; }
 .home-v2 .shop-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 12px; }
 .home-v2 .shop-empty-primary,
+.home-v2 .form-submit,
 .home-v2 .shop-empty-secondary { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 22px; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; border: 1px solid hsl(var(--forest)); cursor: pointer; transition: background-color 0.2s, color 0.2s; }
-.home-v2 .shop-empty-primary { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }
-.home-v2 .shop-empty-primary:hover { background: hsl(var(--forest) / 0.88); }
+.home-v2 .shop-empty-primary, .home-v2 .form-submit { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }
+.home-v2 .shop-empty-primary:hover, .home-v2 .form-submit:hover:not(:disabled) { background: hsl(var(--forest) / 0.88); }
 .home-v2 .shop-empty-secondary { background: transparent; color: hsl(var(--foreground)); }
 .home-v2 .shop-empty-secondary:hover { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); }
 .home-v2 .shop-empty-primary:focus-visible,
+.home-v2 .form-submit:focus-visible,
 .home-v2 .shop-empty-secondary:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
 .home-v2 .shop-empty svg { width: 14px; height: 14px; }
 
@@ -551,12 +553,19 @@ body.site-menu-open .chat-launcher { display: none; }
      arrow link       .arrow-link                -> used as is
      back link        .page-back                 -> shared with .shop-back
      note / caption   .section-note              -> used as is
+     form fields      .form-field, .form-label, .form-input, .form-help, .form-error,
+                      .form-check, .form-submit (-> shared with .shop-empty-primary)
+     accordion        .page-accordion (Radix Accordion: item, trigger, panel)
      forest band      .page-band, .page-band-actions -> shared with .shop-footer-cta
      item grid        .page-grid                 -> shared with .product-grid
    New here: section rhythm, the two-column split, items, the ruled list, the rule. */
 .home-v2.page { min-height: 100svh; }
 /* The reference writes its eyebrows in capitals; content pages keep their copy as written. */
 .home-v2.page .eyebrow { text-transform: uppercase; }
+/* One keyboard ring for every link and button on content pages (the /shop controls'
+   ring); component rules may adjust the offset. On the forest band it turns cream. */
+:where(.home-v2.page) :is(a, button, [role="button"], summary):focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.home-v2 .page-band :focus-visible { outline-color: hsl(var(--hero-foreground)) !important; }
 .home-v2 .page-section { padding-block: 83px; }
 .home-v2 .page-section--tint { background: hsl(var(--secondary)); }
 /* Every --secondary surface: muted text at 42% is 4.26:1 on it; 38% clears 4.5:1. */
@@ -571,13 +580,14 @@ body.site-menu-open .chat-launcher { display: none; }
 /* Copy beside an image, as the homepage story section; --reverse puts the image first. */
 .home-v2 .page-split { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
 .home-v2 .page-split--reverse > :first-child { order: 2; }
+.home-v2 .page-split--top { align-items: start; }
 .home-v2 .page-split-media { position: relative; }
 .home-v2 .page-split-media img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
 
 /* Items: a quiet rule above, an optional icon, an h3 and body copy. */
 .home-v2 .page-item { border-top: 1px solid hsl(var(--border)); padding-top: 22px; }
 .home-v2 .page-item > svg { width: 22px; height: 22px; stroke-width: 1.4; color: hsl(var(--primary)); margin-bottom: 16px; }
-.home-v2 .page-item h3, .home-v2 .page-item h2 { margin-bottom: 10px; }
+.home-v2 .page-item h3, .home-v2 .page-item h2, .home-v2 .page-item h4 { margin-bottom: 10px; }
 .home-v2 .page-item p { font-size: 12px; line-height: 2; color: hsl(var(--muted-foreground)); }
 .home-v2 .page-item p.eyebrow { font-size: 11px; line-height: 1.8; color: hsl(var(--primary)); margin-bottom: 6px; }
 .home-v2 .page-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -592,6 +602,46 @@ body.site-menu-open .chat-launcher { display: none; }
 
 /* Credential row variant with a figure: "22 COUNTRIES SERVED". */
 .home-v2 .page-credentials strong { font-family: theme('fontFamily.display'); font-size: 26px; font-weight: 400; letter-spacing: 0; line-height: 1; }
+
+/* ---------- Form fields ---------- */
+/* Not in the reference (it has no forms): square, thin-ruled fields in its language.
+   The field border is darker than --border: --border is 1.3:1 on cream, and a field's
+   edge needs 3:1 (WCAG 1.4.11) to be findable. Text is 16px so iOS does not zoom on
+   focus. Focus is the same 2px forest outline as the /shop controls. */
+.home-v2 .form-field { display: grid; gap: 8px; align-content: start; }
+.home-v2 .form-label { font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: hsl(var(--foreground)); line-height: 1.4; }
+.home-v2 .form-input { min-height: 48px; width: 100%; border: 1px solid hsl(var(--muted-foreground)); border-radius: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 16px; padding: 12px 14px; box-shadow: none; }
+.home-v2 textarea.form-input { min-height: 140px; line-height: 1.6; resize: vertical; }
+.home-v2 .form-input::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
+.home-v2 .form-input:hover { border-color: hsl(var(--forest)); }
+.home-v2 .form-input:focus-visible,
+.home-v2 .form-input:focus { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; box-shadow: none; }
+.home-v2 .form-input[aria-invalid="true"] { border-color: hsl(var(--destructive)); border-width: 2px; padding: 11px 13px; }
+.home-v2 .form-input-wrap { position: relative; }
+.home-v2 .form-input-wrap > svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: hsl(var(--muted-foreground)); pointer-events: none; }
+.home-v2 .form-input-wrap > .form-input { padding-left: 40px; }
+.home-v2 .form-help { font-size: 12px; line-height: 1.7; color: hsl(var(--muted-foreground)); }
+/* Errors say what is wrong in words, with an icon: never colour alone. */
+.home-v2 .form-error { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; font-weight: 500; line-height: 1.5; color: hsl(var(--destructive)); }
+.home-v2 .form-error svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+.home-v2 .form-check { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid hsl(var(--border)); cursor: pointer; font-size: 15px; transition: border-color 0.2s; }
+.home-v2 .form-check:hover { border-color: hsl(var(--forest)); }
+.home-v2 .form-check > button { width: 18px; height: 18px; border-radius: 0; border-color: hsl(var(--forest)); }
+.home-v2 .form-check > button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; box-shadow: none; }
+.home-v2 .form-submit { height: 48px; }
+.home-v2 .form-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.home-v2 .form-submit svg { width: 15px; height: 15px; }
+
+/* ---------- Accordion ---------- */
+/* Not in the reference: rows between quiet rules, the question in the item-heading face,
+   a chevron that turns when open. Answers use the 15px body size. */
+.home-v2 .page-accordion { max-width: 760px; border-bottom: 1px solid hsl(var(--border)); }
+.home-v2 .page-accordion-item { border-top: 1px solid hsl(var(--border)); border-bottom: 0; }
+.home-v2 .page-accordion-trigger { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 20px; min-height: 64px; padding: 18px 0; text-align: left; font-family: theme('fontFamily.display'); font-size: 23px; font-weight: 400; line-height: 1.25; color: hsl(var(--foreground)); text-decoration: none; transition: color 0.2s; /* not shadcn's transition-all, which animated the focus ring in */ }
+.home-v2 .page-accordion-trigger:hover { text-decoration: none; color: hsl(var(--primary)); }
+.home-v2 .page-accordion-trigger:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.home-v2 .page-accordion-trigger > svg { width: 18px; height: 18px; color: hsl(var(--foreground)); }
+.home-v2 .page-accordion-panel { font-size: 15px; line-height: 2; color: hsl(var(--muted-foreground)); max-width: 640px; padding: 0 0 24px; }
 
 /* Long-form reading (policies, articles): larger than body copy, the same 560px measure.
    Unscoped because the blog article body is not yet inside a .home-v2 page; the class
@@ -616,6 +666,7 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .page-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-v2 .page-list > li { grid-template-columns: 1fr; gap: 6px; }
   .home-v2 .page-list-marker { font-size: 22px; }
+  .home-v2 .page-accordion-trigger { font-size: 20px; }
 }
 @media (max-width: 420px) {
   .home-v2 .page-grid, .home-v2 .page-grid--3 { grid-template-columns: 1fr; }

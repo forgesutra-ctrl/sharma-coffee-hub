@@ -102,11 +102,6 @@ export default function Processing() {
           </div>
           <div className="page-split-media">
             <img src={coffeeSelectionImg} alt="Coorg Coffee Plantations" />
-            {/* Kept from the previous design: no equivalent in the vocabulary. */}
-            <div className="absolute -bottom-6 -left-6 bg-primary text-primary-foreground p-6 rounded-lg shadow-xl">
-              <div className="text-4xl font-display font-bold">40%</div>
-              <div className="text-sm opacity-90">of Karnataka's Coffee Production</div>
-            </div>
           </div>
         </div>
       </section>
@@ -171,6 +166,7 @@ export default function Processing() {
             <span><strong>100%</strong> Premium Coorg Beans</span>
             <span><strong>40+</strong> Years of Expertise</span>
             <span><strong>22</strong> Countries Served</span>
+            <span><strong>40%</strong> of Karnataka's Coffee Production</span>
           </div>
         </div>
       </section>

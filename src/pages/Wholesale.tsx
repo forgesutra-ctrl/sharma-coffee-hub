@@ -1,5 +1,4 @@
 import WholesaleInquiryForm from '@/components/wholesale/WholesaleInquiryForm';
-import { Card, CardContent } from '@/components/ui/card';
 import { Package, Truck, BadgePercent, HeadphonesIcon, Clock, Shield } from 'lucide-react';
 import '@/components/home-v2/home-v2.css';
 
@@ -77,12 +76,9 @@ export default function Wholesale() {
             <p>Fill out the form below and our wholesale team will contact you within 12 hours.</p>
           </div>
 
-          {/* Kept from the previous design: forms are not in the vocabulary yet. */}
-          <Card className="bg-card border-border/50 max-w-3xl mt-10">
-            <CardContent className="p-6 md:p-8">
-              <WholesaleInquiryForm />
-            </CardContent>
-          </Card>
+          <div className="max-w-3xl mt-10">
+            <WholesaleInquiryForm />
+          </div>
         </div>
       </section>
 
