@@ -18,8 +18,8 @@ import {
 
 // The redesigned site header, in the reference's language with our commerce kept:
 // logo badge left, five links centred, search / account / cart right.
-// `overlay` sits transparent over the homepage hero; `solid` is the forest bar for
-// pages without a hero. Search, cart and account are the same components the old
+// `overlay` sits transparent over the homepage hero and frosts past it; `solid` is the
+// forest bar for pages without a hero. Search, cart and account are the same components the old
 // Navigation uses (components/nav/commerce.tsx).
 const HOME_PATHS = ['/'];
 
@@ -99,16 +99,27 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
   const [searchOpen, setSearchOpen] = useState(false);
   const close = () => { setMenuOpen(false); setShopOpen(false); };
 
-  // Solid variant is sticky (Layout) and frosts once the page scrolls, as the old
-  // Navigation did: the store needs the cart reachable without scrolling back up.
+  // Both variants are sticky (Layout) so the cart stays reachable mid-page. Solid frosts
+  // once the page scrolls; overlay stays transparent while the hero ([data-header-overlay])
+  // is behind it, then takes on the same frost.
+  const headerRef = useRef<HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    if (variant !== 'solid') return;
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    const onScroll = () => {
+      if (variant === 'solid') return setScrolled(window.scrollY > 50);
+      const hero = document.querySelector('[data-header-overlay]');
+      const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+      setScrolled(!hero || hero.getBoundingClientRect().bottom <= headerBottom);
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [variant]);
+  const solid = variant === 'solid' || scrolled;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -124,9 +135,9 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
   }, [menuOpen]);
 
   return (
-    <div className={`site-nav ${variant === 'solid' ? 'site-nav--solid' : ''}`}>
+    <div className={`site-nav site-nav--${variant} ${scrolled ? 'is-scrolled' : ''}`}>
       <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
-      <header className={`site-header ${variant === 'solid' ? 'site-header--solid' : ''} ${scrolled ? 'is-scrolled' : ''}`}>
+      <header ref={headerRef} className={`site-header ${solid ? 'site-header--solid' : ''} ${scrolled ? 'is-scrolled' : ''}`}>
         <Brand onHome={onHome} />
 
         <nav className="desktop-nav" aria-label="Main navigation">

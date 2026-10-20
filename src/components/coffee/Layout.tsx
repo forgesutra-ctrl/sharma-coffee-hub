@@ -11,9 +11,9 @@ import DasaraGreeting from './DasaraGreeting';
 interface LayoutProps {
   children: ReactNode;
   /**
-   * `home`: the homepage renders SiteNav itself, inside the hero, where it overlays the
-   * video, so Layout supplies only the announcement bar above it.
-   * Every other page gets SiteNav's solid variant here, sticky under the bar.
+   * `home`: SiteNav's overlay variant, transparent over the homepage hero (the section
+   * marked data-header-overlay) and frosted past it.
+   * Every other page gets SiteNav's solid variant. Both are sticky under the bar.
    */
   variant?: 'default' | 'home';
 }
@@ -71,13 +71,11 @@ const Layout = ({ children, variant = 'default' }: LayoutProps) => {
         Skip to main content
       </a>
       <AnnouncementStrip />
-      {variant !== 'home' && (
-        // `.home-v2` scopes the header's styles; `.site-chrome` makes the wrapper the
-        // sticky element (a sticky child of a header-height wrapper could not stick).
-        <div className="home-v2 site-chrome">
-          <SiteNav variant="solid" />
-        </div>
-      )}
+      {/* `.home-v2` scopes the header's styles; `.site-chrome` makes the wrapper the
+          sticky element (a sticky child of a header-height wrapper could not stick). */}
+      <div className={`home-v2 site-chrome ${variant === 'home' ? 'site-chrome--overlay' : ''}`}>
+        <SiteNav variant={variant === 'home' ? 'overlay' : 'solid'} />
+      </div>
       <main id="main" className="flex-1 w-full" style={{ overflow: 'visible' }} tabIndex={-1}>
         {children}
       </main>

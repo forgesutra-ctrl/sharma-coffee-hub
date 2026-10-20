@@ -58,26 +58,30 @@
 .home-v2 .hero-media { position: absolute; inset: 0; z-index: -3; }
 .home-v2 .hero-shade { position: absolute; inset: 0; background: var(--hv2-hero-gradient); z-index: -2; pointer-events: none; }
 .home-v2 .hero-shade::after { content: ''; position: absolute; inset: 0; background: var(--hv2-bottom-gradient); }
-/* Not in the reference: a short top-down scrim behind the header. The nav sits top right,
-   where the left-to-right shade is weakest (53% of nav-link samples were below 4.5:1 on
-   the poster frame). Short and soft so it reads as the photo darkening at the edge, and
-   desktop only: on phones the header carries no text over the video. */
-@media (min-width: 701px) {
-  .home-v2 .hero-shade::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, hsl(var(--forest-deep) / 0.6), hsl(var(--forest-deep) / 0) 130px); }
-}
 
 /* ---------- Header / nav ---------- */
 /* Three columns so the five links stay centred whatever width the two sides take. */
-.home-v2 .site-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 113px; margin: 0 56px; border-bottom: 1px solid hsl(var(--hero-foreground) / 0.28); gap: 25px; }
+.home-v2 .site-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 113px; margin: 0 56px; border-bottom: 1px solid hsl(var(--hero-foreground) / 0.28); gap: 25px; transition: background-color 0.3s, box-shadow 0.3s; }
 .home-v2 .site-header > .brand { justify-self: start; }
 .home-v2 .site-nav { position: relative; z-index: 10; }
 /* Not in the reference: the solid variant for pages without a hero, modelled on its .shop-header. */
 .home-v2 .site-nav--solid { position: relative; }
-.home-v2 .site-header--solid { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); margin: 0; padding-inline: 56px; transition: background-color 0.3s, box-shadow 0.3s; }
-/* Not in the reference (its header is not sticky): inner pages keep our sticky header,
-   frosting once the page scrolls, as the old Navigation did. Layout wraps it in
-   .home-v2.site-chrome, which is the sticky element. */
+.home-v2 .site-header--solid { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); margin: 0; padding-inline: 56px; }
+/* Not in the reference (its header is not sticky): every page keeps the header reachable,
+   frosting once the page scrolls. Layout wraps it in .home-v2.site-chrome, the sticky
+   element. On the homepage the wrapper is zero-height so the hero runs up underneath the
+   transparent header; past the hero, SiteNav switches it to the solid variant's frost. */
 .home-v2.site-chrome { position: sticky; top: 0; z-index: 40; background: none; }
+.home-v2.site-chrome--overlay { height: 0; color: hsl(var(--hero-foreground)); }
+/* Not in the reference: a short top-down scrim behind the transparent header. The nav sits
+   top right, where the hero's left-to-right shade is weakest (53% of nav-link samples were
+   below 4.5:1 on the poster frame). It travels with the header and fades out once the
+   header frosts, so the two never stack. Desktop only: on phones the header carries no
+   text over the video. */
+@media (min-width: 701px) {
+  .home-v2 .site-nav--overlay::before { content: ''; position: absolute; inset: 0 0 auto; height: 130px; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, hsl(var(--forest-deep) / 0.6), hsl(var(--forest-deep) / 0)); transition: opacity 0.3s; }
+  .home-v2 .site-nav--overlay.is-scrolled::before { opacity: 0; }
+}
 .home-v2 .site-header--solid.is-scrolled { background: hsl(var(--forest) / 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 8px 24px hsl(var(--forest-deep) / 0.18); }
 .home-v2 .brand { display: flex; align-items: center; gap: 12px; font-family: theme('fontFamily.display'); font-size: 30px; line-height: 0.9; font-weight: 500; }
 .home-v2 .brand svg { width: 35px; height: 35px; }

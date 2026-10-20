@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -110,10 +110,13 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Coffee className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Sharma Coffee Works</h1>
+          {/* No site header on this page; the wordmark is the way back to the store. */}
+          <Link to="/" className="group inline-block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Coffee className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-display font-bold text-foreground group-hover:text-primary transition-colors">Sharma Coffee Works</h1>
+          </Link>
           <p className="text-muted-foreground text-sm mt-1">Est. 1987 • Coorg, Karnataka</p>
         </div>
 

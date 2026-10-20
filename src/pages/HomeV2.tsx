@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUpRight, Coffee, Leaf, PackageCheck, Play } from 'lucid
 import { Button } from '@/components/ui/button';
 import { CinematicVideo } from '@/components/home-v2/CinematicVideo';
 import { FilmDialog, type Film } from '@/components/home-v2/FilmDialog';
-import { Brand, SiteNav } from '@/components/home-v2/SiteNav';
+import { Brand } from '@/components/home-v2/SiteNav';
 import { CoffeeSection } from '@/components/home-v2/CoffeeSection';
 import { brewing, brewingPoster, estate, estatePoster, family, familyPoster, roasting } from '@/lib/site-media';
 import '@/components/home-v2/home-v2.css';
@@ -26,19 +26,19 @@ export default function HomeV2() {
   const [root, setRoot] = useState<HTMLElement | null>(null);
   const hero = films[heroFilm] ?? films[0];
 
-  // Rendered inside <Layout variant="home">, which supplies the announcement bar above
-  // this and the shared Footer, ChatBot, back-to-top, cookie banner and Dasara popup.
+  // Rendered inside <Layout variant="home">, which supplies the announcement bar and the
+  // sticky header above this, and the shared Footer, ChatBot, back-to-top, cookie banner and Dasara popup.
   // Layout's own <main> wraps this, hence a <div> here. The footer sits outside this
   // .home-v2 wrapper, so the scoped reference base rules cannot restyle it.
   return (
       <div id="home" className="home-v2" ref={setRoot}>
         <a href="#coffees" className="skip-link">Skip to our coffees</a>
 
-        <section className="hero">
+        {/* Layout's sticky header overlays this section while it is behind it. */}
+        <section className="hero" data-header-overlay>
           {/* Remounted by key so the new film's <source> list is picked up. */}
           <CinematicVideo key={hero.media.url} media={hero.media} poster={hero.poster} label={hero.title} className="hero-media" controls />
           <div className="hero-shade" />
-          <SiteNav variant="overlay" />
 
           <div className="hero-content">
             <p className="eyebrow"><span className="tiny-line" /> ROOTED IN COORG. ROASTED WITH SOUL.</p>
