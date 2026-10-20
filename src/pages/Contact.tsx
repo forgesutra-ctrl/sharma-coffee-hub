@@ -57,13 +57,21 @@ const faqs = [
   },
 ];
 
-type ContactField = 'name' | 'email' | 'subject' | 'message';
+type ContactField = 'name' | 'email' | 'phone' | 'subject' | 'message';
+
+// Optional; matches the contact_messages.phone CHECK: digits with an optional leading +,
+// spaces, dashes or brackets, 7 to 20 characters.
+const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]*[0-9]$/;
 
 function validateContact(data: Record<ContactField, string>) {
   const errors: Partial<Record<ContactField, string>> = {};
   if (!data.name.trim()) errors.name = 'Please enter your name.';
   if (!data.email.trim()) errors.email = 'Please enter your email address.';
   else if (!EMAIL_PATTERN.test(data.email.trim())) errors.email = 'That email address looks incomplete. Check it has an @ and a domain, like name@example.com.';
+  const phone = data.phone.trim();
+  if (phone && (phone.length < 7 || phone.length > 20 || !PHONE_PATTERN.test(phone))) {
+    errors.phone = 'That number does not look right. Use digits, with +91 if you like, or leave it blank.';
+  }
   if (!data.subject.trim()) errors.subject = 'Please add a subject.';
   if (!data.message.trim()) errors.message = 'Please write a message.';
   return errors;
@@ -73,9 +81,12 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     subject: '',
     message: '',
   });
+  // Honeypot: a field people never see. Bots that fill every input fill this one too.
+  const [website, setWebsite] = useState('');
   const [errors, setErrors] = useState<Partial<Record<ContactField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 'sent' only after the row is stored; 'failed' keeps everything the visitor typed.
@@ -101,6 +112,17 @@ export default function Contact() {
       return;
     }
     if (inFlight.current) return; // no double-sends
+
+    if (website.trim()) {
+      // A bot: answer exactly as for a real message, and store nothing.
+      setSentTo(formData.email.trim());
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setWebsite('');
+      setSendState('sent');
+      requestAnimationFrame(() => resultRef.current?.focus());
+      return;
+    }
+
     inFlight.current = true;
     setIsSubmitting(true);
     setSendState('idle');
@@ -109,6 +131,8 @@ export default function Contact() {
     const { error } = await supabase.from('contact_messages').insert({
       name: formData.name.trim(),
       email: formData.email.trim(),
+      // Sent only when given, so the form keeps working if this ships before the phone column.
+      ...(formData.phone.trim() ? { phone: formData.phone.trim() } : {}),
       subject: formData.subject.trim(),
       message: formData.message.trim(),
     });
@@ -120,7 +144,7 @@ export default function Contact() {
       setSendState('failed');
     } else {
       setSentTo(formData.email.trim());
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
       setSendState('sent');
     }
     requestAnimationFrame(() => resultRef.current?.focus());
@@ -190,6 +214,33 @@ export default function Contact() {
                   />
                   <FieldError id="email-error" message={errors.email} />
                 </div>
+              </div>
+
+              <div className="form-field">
+                <Label htmlFor="phone" className="form-label">Phone / WhatsApp (optional)</Label>
+                <Input
+                  {...fieldProps('phone')}
+                  type="tel"
+                  inputMode="tel"
+                  onChange={(e) => update('phone', e.target.value)}
+                  placeholder="+91 98765 43210"
+                  autoComplete="tel"
+                />
+                <FieldError id="phone-error" message={errors.phone} />
+              </div>
+
+              {/* Honeypot: off-screen, out of the tab order and hidden from assistive tech. */}
+              <div className="form-honeypot" aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  id="website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
               </div>
 
               <div className="form-field">

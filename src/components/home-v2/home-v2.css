@@ -629,6 +629,8 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .form-check > button { width: 18px; height: 18px; border-radius: 0; border-color: hsl(var(--forest)); }
 .home-v2 .form-check > button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; box-shadow: none; }
 .home-v2 .form-submit { height: 48px; }
+/* Spam honeypot: off-screen rather than display:none, which some bots skip. */
+.home-v2 .form-honeypot { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
 /* The outcome of a submit, in words and an icon: success replaces the form; failure sits
    above the button and keeps the form filled. */
 .home-v2 .form-result { display: flex; gap: 14px; padding: 20px 22px; border: 1px solid; font-size: 15px; line-height: 1.8; }
