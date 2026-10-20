@@ -1,32 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Menu, X, User, ChevronDown, Search, Phone, Heart, MessageCircle, Home, Store, BookOpen, Coffee, FileText, Mail, HelpCircle, Layers } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, ChevronDown, Search, Heart, MessageCircle } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
-import { useProducts, getUniqueProducts } from '@/hooks/useProducts';
 import { cn } from '@/lib/utils';
 import { setInertSafely } from '@/lib/accessibility';
 import { AnnouncementStrip } from '@/components/home-v2/AnnouncementStrip';
+import { AccountIconLink, AccountMenuLink, CartIconLink, CartMenuLink, PhoneLink, SearchPalette, WhatsAppLink } from '@/components/nav/commerce';
 import sharmaCoffeeLogo from '@/assets/sharma-coffee-logo.png';
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from '@/components/ui/command';
-const searchPages = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Shop', href: '/shop', icon: Store },
-  { name: 'Blog', href: '/blogs', icon: BookOpen },
-  { name: 'Our Story', href: '/about', icon: Coffee },
-  { name: 'Brewing Guide', href: '/brewing-guide', icon: FileText },
-  { name: 'Processing', href: '/processing', icon: Coffee },
-  { name: 'Contact', href: '/contact', icon: Mail },
-  { name: 'FAQ', href: '/faq', icon: HelpCircle },
-];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,21 +14,11 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isMegaMenuHovered, setIsMegaMenuHovered] = useState(false);
-  const {
-    getCartCount
-  } = useCart();
-  const {
-    user
-  } = useAuth();
   const { data: categories } = useCategories();
-  const { data: productsData } = useProducts();
-  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHomePage = location.pathname === '/';
-
-  const products = useMemo(() => (productsData ? getUniqueProducts(productsData) : []), [productsData]);
 
   // Build navigation links dynamically
   const navLinks = [
@@ -158,68 +128,10 @@ export default function Navigation() {
       }
     }, 150);
   };
-  const cartCount = getCartCount();
-
-  const handleSearchSelect = (href: string) => {
-    setSearchOpen(false);
-    navigate(href);
-  };
-
   return (
     <>
       {/* Search dialog — type what you need, go to product or section */}
-      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <CommandInput
-          placeholder="Type what you're looking for — product, category, or page"
-          className="placeholder:text-muted-foreground"
-        />
-        <CommandList>
-          <CommandEmpty>
-            <span className="text-muted-foreground">No matches. Try a product name, category (e.g. coffee, tea), or page name.</span>
-          </CommandEmpty>
-          <CommandGroup heading="Products">
-            {products.map((product) => (
-              <CommandItem
-                key={product.productId}
-                value={`${product.name} ${product.category ?? ''}`}
-                onSelect={() => handleSearchSelect(`/product/${product.slug}`)}
-              >
-                <Store className="mr-2 h-4 w-4 shrink-0" />
-                <span>{product.name}</span>
-                {product.category && (
-                  <span className="ml-2 text-xs text-muted-foreground truncate">{product.category}</span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          {categories && categories.length > 0 && (
-            <CommandGroup heading="Categories">
-              {categories.map((cat) => (
-                <CommandItem
-                  key={cat.id}
-                  value={cat.name}
-                  onSelect={() => handleSearchSelect(`/shop/${cat.slug}`)}
-                >
-                  <Layers className="mr-2 h-4 w-4 shrink-0" />
-                  {cat.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-          <CommandGroup heading="Pages">
-            {searchPages.map((page) => (
-              <CommandItem
-                key={page.href}
-                value={page.name}
-                onSelect={() => handleSearchSelect(page.href)}
-              >
-                <page.icon className="mr-2 h-4 w-4 shrink-0" />
-                {page.name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
+      <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Announcement Bar (shared with the homepage) */}
       <AnnouncementStrip className="z-[200001]" />
@@ -279,27 +191,18 @@ export default function Navigation() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 flex-1 justify-end">
-              <a href="tel:+918762988145" className="hidden md:flex items-center gap-1 hover:text-amber-600 transition text-sm font-semibold">
-                <Phone className="w-4 h-4" />
-                <span className="text-sm font-semibold">8762 988 145</span>
-              </a>
-              <a href="https://wa.me/918762988145" target="_blank" rel="noopener noreferrer" className="hidden md:block hover:text-green-700 transition" title="Chat on WhatsApp">
-                <MessageCircle className="w-5 h-5 text-green-700" />
-              </a>
+              <PhoneLink className="hidden md:flex items-center gap-1 hover:text-amber-600 transition text-sm font-semibold" labelClassName="text-sm font-semibold" />
+              <WhatsAppLink className="hidden md:block hover:text-green-700 transition" />
               <Link to="/brewing-guide" className="hidden sm:flex p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" aria-label="Wishlist">
                 <Heart className="w-5 h-5" />
               </Link>
 
-              <Link to={user ? '/account' : '/auth'} className="p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" aria-label="Account">
-                <User className="w-5 h-5" />
-              </Link>
+              <AccountIconLink className="p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all" />
 
-              <Link to="/cart" className="relative p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all">
-                <ShoppingBag className="w-5 h-5" />
-                {cartCount > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-scale-in">
-                    {cartCount}
-                  </span>}
-              </Link>
+              <CartIconLink
+                className="relative p-2.5 text-foreground/70 hover:text-primary hover:bg-muted/50 rounded-full transition-all"
+                badgeClassName="absolute top-0 right-0 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-scale-in"
+              />
             </div>
           </div>
 
@@ -489,33 +392,17 @@ export default function Navigation() {
 
             {/* Mobile User Actions */}
             <div className="pt-6 mt-auto border-t border-border/30">
-              <Link 
-                to={user ? '/account' : '/auth'} 
-                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" 
+              <AccountMenuLink
+                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
-                style={{ 
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation',
-                }}
-              >
-                <User className="w-5 h-5" />
-                {user ? 'My Account' : 'Sign In'}
-              </Link>
-              <Link 
-                to="/cart" 
-                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors" 
+                style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+              />
+              <CartMenuLink
+                className="flex items-center gap-3 py-3 text-foreground/70 hover:text-primary transition-colors"
+                countClassName="ml-auto px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full"
                 onClick={() => setIsOpen(false)}
-                style={{ 
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation',
-                }}
-              >
-                <ShoppingBag className="w-5 h-5" />
-                Shopping Bag
-                {cartCount > 0 && <span className="ml-auto px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
-                    {cartCount}
-                  </span>}
-              </Link>
+                style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+              />
             </div>
 
               {/* Mobile Contact */}
