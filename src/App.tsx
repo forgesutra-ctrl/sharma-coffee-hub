@@ -43,6 +43,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
 import OrdersPage from "./pages/admin/OrdersPage";
+import EnquiriesPage from "./pages/admin/EnquiriesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import CustomersPage from "./pages/admin/CustomersPage";
@@ -145,6 +146,7 @@ const App = () => {
                 }>
                   <Route index element={<AdminDashboard />} />
                   <Route path="orders" element={<OrdersPage />} />
+                  <Route path="enquiries" element={<EnquiriesPage />} />
                   <Route path="subscriptions" element={<SubscriptionsPage />} />
                   <Route path="products" element={<ProductsPage />} />
                   <Route path="categories" element={<CategoriesPage />} />

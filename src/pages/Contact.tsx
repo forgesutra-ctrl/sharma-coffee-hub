@@ -18,8 +18,11 @@ import {
   Twitter,
   MessageCircle,
   ArrowUpRight,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { PHONE_TEL, WHATSAPP_URL } from '@/components/nav/commerce';
 import { FieldError, EMAIL_PATTERN, focusFirstError } from '@/components/forms/FieldError';
 import '@/components/home-v2/home-v2.css';
 
@@ -75,7 +78,12 @@ export default function Contact() {
   });
   const [errors, setErrors] = useState<Partial<Record<ContactField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 'sent' only after the row is stored; 'failed' keeps everything the visitor typed.
+  const [sendState, setSendState] = useState<'idle' | 'sent' | 'failed'>('idle');
+  const [sentTo, setSentTo] = useState('');
+  const inFlight = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const update = (field: ContactField, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -92,14 +100,30 @@ export default function Contact() {
       requestAnimationFrame(() => focusFirstError(formRef.current));
       return;
     }
+    if (inFlight.current) return; // no double-sends
+    inFlight.current = true;
     setIsSubmitting(true);
+    setSendState('idle');
 
-    // Simulated submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // No .select() after the insert: visitors may write a message but never read one back.
+    const { error } = await supabase.from('contact_messages').insert({
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      subject: formData.subject.trim(),
+      message: formData.message.trim(),
+    });
 
-    toast.success("Message sent! We'll get back to you soon.");
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    inFlight.current = false;
     setIsSubmitting(false);
+    if (error) {
+      console.error('Contact message was not stored:', error);
+      setSendState('failed');
+    } else {
+      setSentTo(formData.email.trim());
+      setFormData({ name: '', email: '', subject: '', message: '' });
+      setSendState('sent');
+    }
+    requestAnimationFrame(() => resultRef.current?.focus());
   };
 
   const fieldProps = (field: ContactField) => ({
@@ -129,6 +153,18 @@ export default function Contact() {
           {/* Contact Form */}
           <div>
             <h2 className="page-heading">Send us a Message</h2>
+            {sendState === 'sent' ? (
+              <div ref={resultRef} tabIndex={-1} role="status" className="form-result form-result--success">
+                <CheckCircle2 aria-hidden />
+                <div>
+                  <p className="form-result-title">Thank you. Your message has reached us.</p>
+                  <p>We'll reply to {sentTo} as soon as we can, usually within a working day.</p>
+                  <button type="button" className="shop-empty-secondary mt-4" onClick={() => setSendState('idle')}>
+                    Send another message
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="form-field">
@@ -179,10 +215,25 @@ export default function Contact() {
                 <FieldError id="message-error" message={errors.message} />
               </div>
 
-              <button type="submit" className="form-submit" disabled={isSubmitting}>
+              {sendState === 'failed' && (
+                <div ref={resultRef} tabIndex={-1} role="alert" className="form-result form-result--error">
+                  <AlertCircle aria-hidden />
+                  <div>
+                    <p className="form-result-title">Your message could not be sent.</p>
+                    <p>
+                      Nothing was lost: what you wrote is still here. Please try again, or reach us
+                      directly on <a href={PHONE_TEL}>+91 8762 988 145</a> or{' '}
+                      <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">WhatsApp</a>.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="form-submit" disabled={isSubmitting} aria-disabled={isSubmitting}>
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
             </form>
+            )}
           </div>
 
           {/* Contact Info */}

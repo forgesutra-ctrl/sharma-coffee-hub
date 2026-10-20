@@ -15,7 +15,8 @@ import {
   Tag,
   BookOpen,
   BarChart3,
-  Repeat
+  Repeat,
+  Inbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -28,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 const allSidebarLinks = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, superAdminOnly: true, staffAllowed: false },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart, superAdminOnly: true, staffAllowed: true },
+  { name: 'Enquiries', href: '/admin/enquiries', icon: Inbox, superAdminOnly: true, staffAllowed: false },
   { name: 'Subscriptions', href: '/admin/subscriptions', icon: Repeat, superAdminOnly: true, staffAllowed: true },
   { name: 'Products', href: '/admin/products', icon: Package, superAdminOnly: true, staffAllowed: false },
   { name: 'Categories', href: '/admin/categories', icon: FolderTree, superAdminOnly: true, staffAllowed: false },

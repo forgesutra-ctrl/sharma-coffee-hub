@@ -554,7 +554,7 @@ body.site-menu-open .chat-launcher { display: none; }
      back link        .page-back                 -> shared with .shop-back
      note / caption   .section-note              -> used as is
      form fields      .form-field, .form-label, .form-input, .form-help, .form-error,
-                      .form-check, .form-submit (-> shared with .shop-empty-primary)
+                      .form-check, .form-result, .form-submit (-> shared with .shop-empty-primary)
      accordion        .page-accordion (Radix Accordion: item, trigger, panel)
      forest band      .page-band, .page-band-actions -> shared with .shop-footer-cta
      item grid        .page-grid                 -> shared with .product-grid
@@ -629,6 +629,18 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .form-check > button { width: 18px; height: 18px; border-radius: 0; border-color: hsl(var(--forest)); }
 .home-v2 .form-check > button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; box-shadow: none; }
 .home-v2 .form-submit { height: 48px; }
+/* The outcome of a submit, in words and an icon: success replaces the form; failure sits
+   above the button and keeps the form filled. */
+.home-v2 .form-result { display: flex; gap: 14px; padding: 20px 22px; border: 1px solid; font-size: 15px; line-height: 1.8; }
+.home-v2 .form-result > svg { width: 20px; height: 20px; flex: none; margin-top: 4px; }
+.home-v2 .form-result:focus { outline: none; }
+.home-v2 .form-result:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.home-v2 .form-result-title { font-weight: 600; color: hsl(var(--foreground)); }
+.home-v2 .form-result a { text-decoration: underline; text-underline-offset: 3px; color: hsl(var(--foreground)); font-weight: 600; }
+.home-v2 .form-result--success { border-color: hsl(var(--forest)); background: hsl(var(--secondary)); color: hsl(var(--foreground)); }
+.home-v2 .form-result--success > svg { color: hsl(var(--forest)); }
+.home-v2 .form-result--error { border-color: hsl(var(--destructive)); border-width: 2px; color: hsl(var(--foreground)); }
+.home-v2 .form-result--error > svg { color: hsl(var(--destructive)); }
 .home-v2 .form-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 .home-v2 .form-submit svg { width: 15px; height: 15px; }
 
