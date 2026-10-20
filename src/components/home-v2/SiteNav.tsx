@@ -99,6 +99,17 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
   const [searchOpen, setSearchOpen] = useState(false);
   const close = () => { setMenuOpen(false); setShopOpen(false); };
 
+  // Solid variant is sticky (Layout) and frosts once the page scrolls, as the old
+  // Navigation did: the store needs the cart reachable without scrolling back up.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (variant !== 'solid') return;
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [variant]);
+
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -115,7 +126,7 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
   return (
     <div className={`site-nav ${variant === 'solid' ? 'site-nav--solid' : ''}`}>
       <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
-      <header className={`site-header ${variant === 'solid' ? 'site-header--solid' : ''}`}>
+      <header className={`site-header ${variant === 'solid' ? 'site-header--solid' : ''} ${scrolled ? 'is-scrolled' : ''}`}>
         <Brand onHome={onHome} />
 
         <nav className="desktop-nav" aria-label="Main navigation">

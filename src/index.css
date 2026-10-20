@@ -544,7 +544,11 @@ html, body {
   padding: 0;
   width: 100%;
   min-height: 100vh;
+  /* clip, not hidden: hidden on html and body makes body a scroll container that never
+     scrolls, which silently disables every position: sticky on the site (the header
+     never stuck). `hidden` stays as the fallback for browsers without clip. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 #root {
@@ -609,25 +613,8 @@ iframe[src*="checkout.razorpay.com"] {
 /* Ensure body/html don't clip Razorpay modal */
 html, body {
   overflow-x: hidden;
+  overflow-x: clip; /* see the html, body rule above: keeps position: sticky working */
   overflow-y: visible !important; /* Allow vertical overflow for modals */
-}
-
-/* Prevent body scroll when mobile menu is open, but allow fixed elements to render */
-body.menu-open {
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
-
-/* Ensure mobile menu can render above everything - override any hiding rules */
-body.menu-open [data-menu-open="true"],
-[data-menu-open="true"] {
-  position: fixed !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 200002 !important;
-  pointer-events: auto !important;
 }
 
 /* Ensure Layout doesn't clip Razorpay */

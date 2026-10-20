@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react';
-import Navigation from './Navigation';
 import { AnnouncementStrip } from '../home-v2/AnnouncementStrip';
+import { SiteNav } from '../home-v2/SiteNav';
+import '../home-v2/home-v2.css';
 import Footer from './Footer';
 import { ChatBot } from '../chat/ChatBot';
 import BackToTop from './BackToTop';
@@ -10,9 +11,9 @@ import DasaraGreeting from './DasaraGreeting';
 interface LayoutProps {
   children: ReactNode;
   /**
-   * `home`: the redesigned homepage renders its own header (SiteNav) inside the hero,
-   * where it overlays the video, so Layout supplies only the announcement bar above it.
-   * Every other page uses the default `Navigation`.
+   * `home`: the homepage renders SiteNav itself, inside the hero, where it overlays the
+   * video, so Layout supplies only the announcement bar above it.
+   * Every other page gets SiteNav's solid variant here, sticky under the bar.
    */
   variant?: 'default' | 'home';
 }
@@ -69,7 +70,14 @@ const Layout = ({ children, variant = 'default' }: LayoutProps) => {
       >
         Skip to main content
       </a>
-      {variant === 'home' ? <AnnouncementStrip /> : <Navigation />}
+      <AnnouncementStrip />
+      {variant !== 'home' && (
+        // `.home-v2` scopes the header's styles; `.site-chrome` makes the wrapper the
+        // sticky element (a sticky child of a header-height wrapper could not stick).
+        <div className="home-v2 site-chrome">
+          <SiteNav variant="solid" />
+        </div>
+      )}
       <main id="main" className="flex-1 w-full" style={{ overflow: 'visible' }} tabIndex={-1}>
         {children}
       </main>

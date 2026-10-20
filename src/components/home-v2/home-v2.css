@@ -73,7 +73,12 @@
 .home-v2 .site-nav { position: relative; z-index: 10; }
 /* Not in the reference: the solid variant for pages without a hero, modelled on its .shop-header. */
 .home-v2 .site-nav--solid { position: relative; }
-.home-v2 .site-header--solid { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); margin: 0; padding-inline: 56px; }
+.home-v2 .site-header--solid { background: hsl(var(--forest)); color: hsl(var(--hero-foreground)); margin: 0; padding-inline: 56px; transition: background-color 0.3s, box-shadow 0.3s; }
+/* Not in the reference (its header is not sticky): inner pages keep our sticky header,
+   frosting once the page scrolls, as the old Navigation did. Layout wraps it in
+   .home-v2.site-chrome, which is the sticky element. */
+.home-v2.site-chrome { position: sticky; top: 0; z-index: 40; background: none; }
+.home-v2 .site-header--solid.is-scrolled { background: hsl(var(--forest) / 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 8px 24px hsl(var(--forest-deep) / 0.18); }
 .home-v2 .brand { display: flex; align-items: center; gap: 12px; font-family: theme('fontFamily.display'); font-size: 30px; line-height: 0.9; font-weight: 500; }
 .home-v2 .brand svg { width: 35px; height: 35px; }
 .home-v2 .brand-sub { display: block; font-family: theme('fontFamily.sans'); font-size: 11px; /* was 8px */ letter-spacing: 3px; margin-top: 10px; }
