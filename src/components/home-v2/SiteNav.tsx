@@ -15,6 +15,7 @@ import {
   WHATSAPP_URL,
   WhatsAppLink,
 } from '@/components/nav/commerce';
+import { InstallAppButton } from '@/components/pwa/InstallPrompt';
 
 // The redesigned site header, in the reference's language with our commerce kept:
 // logo badge left, five links centred, search / account / cart right.
@@ -188,6 +189,7 @@ export function SiteNav({ variant = 'overlay' }: { variant?: 'overlay' | 'solid'
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="mobile-nav-commerce-row">
               <MessageCircle /> Chat on WhatsApp
             </a>
+            <InstallAppButton className="mobile-nav-commerce-row mobile-nav-install" onDone={close} />
           </div>
         </nav>
       )}

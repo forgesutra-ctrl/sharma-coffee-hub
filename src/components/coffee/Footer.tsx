@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import sharmaCoffeeLogo from '@/assets/whatsapp_image_2026-01-13_at_9.28.59_am.jpeg';
+import { InstallAppButton } from '@/components/pwa/InstallPrompt';
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -240,6 +241,8 @@ export default function Footer() {
                     {item.name}
                   </Link>
                 </li>)}
+              {/* Renders nothing unless this browser can install the app. */}
+              <InstallAppButton listItem className="text-hero-foreground/60 hover:text-gold transition-colors text-sm text-left" />
             </ul>
           </div>
 

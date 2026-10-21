@@ -686,6 +686,28 @@ body.site-menu-open .chat-launcher { display: none; }
   .home-v2 .page-grid, .home-v2 .page-grid--3 { grid-template-columns: 1fr; }
 }
 
+/* ---------- Install card (components/pwa/InstallPrompt) ---------- */
+/* Not in the reference: a small cream card above the chat launcher (bottom 24px + 56px).
+   Below dialogs (z-50) so a dialog always wins; the component also hides it while one is open. */
+.home-v2.install-card { position: fixed; right: 16px; bottom: 96px; z-index: 45; width: 340px; max-width: calc(100vw - 32px); background: transparent; }
+.home-v2 .install-card-inner { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); box-shadow: 0 14px 36px hsl(var(--forest-deep) / 0.16); padding: 18px; animation: hv2-rise-in 0.4s ease both; }
+.home-v2 .install-card-head { display: flex; gap: 14px; align-items: flex-start; }
+.home-v2 .install-card-head img { width: 44px; height: 44px; flex: none; border-radius: 50%; } /* the icon is now a flat square tile */
+.home-v2 .install-card-title { font-family: theme('fontFamily.display'); font-size: 20px; line-height: 1.2; color: hsl(var(--foreground)); }
+.home-v2 .install-card-copy { font-size: 13px; line-height: 1.6; color: hsl(var(--muted-foreground)); margin-top: 4px; }
+.home-v2 .install-card-steps { list-style: decimal; margin: 14px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; color: hsl(var(--foreground)); }
+.home-v2 .install-card-steps li { padding-left: 2px; }
+.home-v2 .install-card-share { display: inline-block; width: 17px; height: 17px; vertical-align: -3px; margin-left: 4px; color: hsl(var(--primary)); }
+.home-v2 .install-card-actions { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.home-v2 .install-card-later { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: hsl(var(--foreground)); background: none; border: 0; padding: 12px 4px; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.home-v2 .install-card-debug { margin-top: 12px; padding: 8px 10px; border: 1px dashed hsl(var(--border)); font-size: 12px; line-height: 1.5; color: hsl(var(--foreground)); }
+.home-v2 .install-card-actions .shop-empty-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.home-v2 .install-card-later:hover { color: hsl(var(--primary)); }
+.home-v2 .install-card-later:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+@media (max-width: 420px) {
+  .home-v2.install-card { left: 16px; right: 16px; width: auto; max-width: none; }
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .home-v2 *,
