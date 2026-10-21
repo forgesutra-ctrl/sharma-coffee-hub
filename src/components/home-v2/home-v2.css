@@ -155,7 +155,9 @@ body.site-menu-open .chat-launcher { display: none; }
   /* Not in the reference: a tight shadow so the 15px copy holds over bright patches of
      the video (11.1% of glyph pixels below 4.5:1 at 1280 on the poster frame without it). */
   text-shadow: 0 1px 3px hsl(var(--forest-deep) / 0.5); }
-.home-v2 .hero-film-link { position: absolute; right: 8.5%; bottom: 130px; display: flex; align-items: center; gap: 18px; }
+/* right: the reference's 8.5%, but never less than the video controls' width beside it (they sit
+   20px in, about 68px wide): below about 1035px the film title ran under them. */
+.home-v2 .hero-film-link { position: absolute; right: max(8.5%, 112px); bottom: 130px; display: flex; align-items: center; gap: 18px; }
 .home-v2 .large-play { height: 58px !important; width: 58px !important; flex: none; }
 .home-v2 .hero-film-link .eyebrow { font-size: 11px; /* was 7px */ letter-spacing: 1.8px; }
 .home-v2 .hero-film-link p { font-family: theme('fontFamily.display'); font-size: 23px; margin-top: 3px; }
