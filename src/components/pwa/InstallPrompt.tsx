@@ -15,8 +15,9 @@ import {
 //   offers an Install button that calls the stashed prompt.
 // - iOS and iPadOS never fire it, in any browser, so the card shows the Share-sheet steps
 //   instead. Chrome and Firefox on iOS add to the home screen through the same Share menu.
-// - Shown on its own at most once per 30 days: never when installed, not before 8 seconds,
-//   and not while a dialog, the mobile menu, the cookie banner or the chat panel is open.
+// - Shown on its own at most once per 30 days: never when installed, never alongside a
+//   dialog (Dasara popup), the mobile menu, the cookie banner or the chat panel, and only
+//   after 8 seconds in which none of those was on screen.
 // - No viewport or device gate: desktop Chrome gets the card whenever it fires the event.
 // - ?pwa=debug (testing only) shows the card at once, ignoring the 30-day dismissal and
 //   the delay, and logs whether beforeinstallprompt fired. It never shows when installed.
@@ -91,31 +92,42 @@ export function InstallPrompt() {
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
-    if (debug) {
-      console.info(install.installed
-        ? '[pwa] already installed (standalone): card not shown'
-        : `[pwa] debug: card forced; ${install.isIOS ? 'iOS steps' : 'waiting for beforeinstallprompt (Install stays disabled until it fires)'}`);
-      return;
-    }
-    const timer = window.setTimeout(() => setDelayPassed(true), SHOW_AFTER_MS);
-    return () => window.clearTimeout(timer);
-    // Runs once per page load.
+    if (!debug) return;
+    console.info(install.installed
+      ? '[pwa] already installed (standalone): card not shown'
+      : `[pwa] debug: card forced; ${install.isIOS ? 'iOS steps' : 'waiting for beforeinstallprompt (Install stays disabled until it fires)'}`);
+    // Logged once per page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Asked for from the menu or footer: show the iOS steps now, whatever the snooze says.
   const onDemand = install.iosHelpRequested && install.isIOS;
-  const automatic = eligible && delayPassed && !closed && (install.canPrompt || install.isIOS || debug);
-  const wanted = !install.installed && (onDemand || automatic);
+  // The automatic card could show on this visit (before counting the clear-screen time).
+  const candidate = !install.installed && eligible && !closed && (install.canPrompt || install.isIOS || debug);
+  const wanted = !install.installed && (onDemand || (candidate && delayPassed));
 
-  // While the card is wanted, step aside for any other overlay.
+  // Never two overlays at once. The 8 seconds count only while nothing else is on screen
+  // (Dasara popup, cookie banner, mobile menu, chat panel): the clock starts from zero each
+  // time the screen becomes clear, so a first-time visitor who dismisses the popup sees the
+  // card ~8s later, not the instant the popup closes, and never underneath it. If something
+  // opens while the card is up, the card steps aside and returns when it closes.
   useEffect(() => {
-    if (!wanted) return;
-    const check = () => setBlocked(somethingElseIsOpen());
-    check();
-    const id = window.setInterval(check, 500);
+    if (!candidate && !onDemand) return;
+    let clearSince: number | null = null;
+    const tick = () => {
+      const busy = somethingElseIsOpen();
+      setBlocked(busy);
+      if (busy) {
+        clearSince = null;
+        return;
+      }
+      clearSince ??= Date.now();
+      if (Date.now() - clearSince >= SHOW_AFTER_MS) setDelayPassed(true);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
     return () => window.clearInterval(id);
-  }, [wanted]);
+  }, [candidate, onDemand]);
 
   if (!wanted || blocked) return null;
 
