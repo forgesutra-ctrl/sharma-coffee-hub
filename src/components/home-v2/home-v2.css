@@ -700,6 +700,8 @@ body.site-menu-open .chat-launcher { display: none; }
 .home-v2 .install-card-share { display: inline-block; width: 17px; height: 17px; vertical-align: -3px; margin-left: 4px; color: hsl(var(--primary)); }
 .home-v2 .install-card-actions { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
 .home-v2 .install-card-later { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: hsl(var(--foreground)); background: none; border: 0; padding: 12px 4px; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.home-v2 .install-card-debug { margin-top: 12px; padding: 8px 10px; border: 1px dashed hsl(var(--border)); font-size: 12px; line-height: 1.5; color: hsl(var(--foreground)); }
+.home-v2 .install-card-actions .shop-empty-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .home-v2 .install-card-later:hover { color: hsl(var(--primary)); }
 .home-v2 .install-card-later:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 @media (max-width: 420px) {

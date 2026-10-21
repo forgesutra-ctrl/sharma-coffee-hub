@@ -28,6 +28,9 @@ export default defineConfig({
       injectRegister: "auto",
       injectManifest: { injectionPoint: undefined },
       devOptions: { enabled: false },
+      // Send cookies with the manifest request, so it also loads on login-protected Vercel
+      // previews (without them the manifest is redirected to Vercel's login page).
+      useCredentials: true,
       manifest: {
         id: "/",
         name: "Sharma Coffee Works",

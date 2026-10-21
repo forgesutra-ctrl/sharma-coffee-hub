@@ -1,39 +1,31 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  closeIosHelp,
+  isDebug,
+  promptInstall,
+  requestIosHelp,
+  usePwaInstall,
+  canOfferInstall,
+} from './install-store';
 
-// "Add to home screen" card, bottom right, above the chat launcher. Styled by
-// .install-card in home-v2.css.
+// "Add to home screen" card, bottom right, above the chat launcher (the cup icon: the
+// coffee chat assistant). Styled by .install-card in home-v2.css.
 //
-// - Chrome, Edge and Android fire beforeinstallprompt: the event is stashed and the card
-//   offers an Install button that calls prompt().
+// - Chrome, Edge and Android fire beforeinstallprompt (captured in install-store): the card
+//   offers an Install button that calls the stashed prompt.
 // - iOS and iPadOS never fire it, in any browser, so the card shows the Share-sheet steps
 //   instead. Chrome and Firefox on iOS add to the home screen through the same Share menu.
-// - Never shown when already installed, within 30 days of "Not now", before 8 seconds,
-//   or while a dialog, the mobile menu, the cookie banner or the chat panel is open.
+// - Shown on its own at most once per 30 days: never when installed, not before 8 seconds,
+//   and not while a dialog, the mobile menu, the cookie banner or the chat panel is open.
+// - No viewport or device gate: desktop Chrome gets the card whenever it fires the event.
+// - ?pwa=debug (testing only) shows the card at once, ignoring the 30-day dismissal and
+//   the delay, and logs whether beforeinstallprompt fired. It never shows when installed.
+// - The "Install app" entries in the mobile menu and footer (InstallAppButton) are the
+//   permanent route: they prompt directly, or open this card's iOS steps on demand.
 
 const DISMISSED_KEY = 'pwa-install-dismissed-at';
 const SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
 const SHOW_AFTER_MS = 8000;
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-};
-
-function isInstalled() {
-  try {
-    const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    return window.matchMedia('(display-mode: standalone)').matches || iosStandalone;
-  } catch {
-    return false;
-  }
-}
-
-/** iPhone/iPod/iPad, including iPadOS 13+, which identifies as a Mac but has a touch screen. */
-function isIOS() {
-  const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/i.test(ua)) return true;
-  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-}
 
 function recentlyDismissed() {
   try {
@@ -73,65 +65,74 @@ function ShareIcon() {
   );
 }
 
+/** "Install app" for the mobile menu and footer. Renders nothing when install is not possible. */
+export function InstallAppButton({ className, onDone, listItem = false }: { className?: string; onDone?: () => void; listItem?: boolean }) {
+  const install = usePwaInstall();
+  if (!canOfferInstall(install)) return null;
+  const onClick = async () => {
+    onDone?.();
+    if (install.isIOS) requestIosHelp();
+    else await promptInstall();
+  };
+  const button = (
+    <button type="button" className={className} onClick={onClick}>
+      Install app
+    </button>
+  );
+  return listItem ? <li>{button}</li> : button;
+}
+
 export function InstallPrompt() {
-  const [mode, setMode] = useState<'none' | 'prompt' | 'ios'>('none');
-  const [delayPassed, setDelayPassed] = useState(false);
+  const install = usePwaInstall();
+  const [debug] = useState(isDebug);
+  const [eligible] = useState(() => debug || !recentlyDismissed());
+  const [delayPassed, setDelayPassed] = useState(debug);
+  const [closed, setClosed] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const deferred = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (isInstalled() || recentlyDismissed()) return;
-
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      deferred.current = e as BeforeInstallPromptEvent;
-      setMode('prompt');
-    };
-    const onInstalled = () => {
-      deferred.current = null;
-      setMode('none');
-    };
-    window.addEventListener('beforeinstallprompt', onBeforeInstall);
-    window.addEventListener('appinstalled', onInstalled);
-    if (isIOS()) setMode('ios');
+    if (debug) {
+      console.info(install.installed
+        ? '[pwa] already installed (standalone): card not shown'
+        : `[pwa] debug: card forced; ${install.isIOS ? 'iOS steps' : 'waiting for beforeinstallprompt (Install stays disabled until it fires)'}`);
+      return;
+    }
     const timer = window.setTimeout(() => setDelayPassed(true), SHOW_AFTER_MS);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
-      window.removeEventListener('appinstalled', onInstalled);
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
+    // Runs once per page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // While the card could show, step aside for any other overlay.
+  // Asked for from the menu or footer: show the iOS steps now, whatever the snooze says.
+  const onDemand = install.iosHelpRequested && install.isIOS;
+  const automatic = eligible && delayPassed && !closed && (install.canPrompt || install.isIOS || debug);
+  const wanted = !install.installed && (onDemand || automatic);
+
+  // While the card is wanted, step aside for any other overlay.
   useEffect(() => {
-    if (mode === 'none' || !delayPassed) return;
+    if (!wanted) return;
     const check = () => setBlocked(somethingElseIsOpen());
     check();
     const id = window.setInterval(check, 500);
     return () => window.clearInterval(id);
-  }, [mode, delayPassed]);
+  }, [wanted]);
 
-  if (mode === 'none' || !delayPassed || blocked) return null;
+  if (!wanted || blocked) return null;
+
+  const showSteps = install.isIOS;
 
   const notNow = () => {
-    rememberDismissal();
-    setMode('none');
+    // Closing the on-demand iOS steps is not a dismissal of the automatic card.
+    if (onDemand) closeIosHelp();
+    else rememberDismissal();
+    setClosed(true);
   };
 
-  const install = async () => {
-    const event = deferred.current;
-    if (!event) return;
-    deferred.current = null;
-    try {
-      await event.prompt();
-      const { outcome } = await event.userChoice;
-      // Declining the browser's own dialog counts as "not now".
-      if (outcome === 'dismissed') rememberDismissal();
-    } catch {
-      // The browser refused to show its dialog; do not leave a dead button on screen.
-    }
-    setMode('none');
+  const onInstall = async () => {
+    const outcome = await promptInstall();
+    // Declining the browser's own dialog counts as "not now".
+    if (outcome === 'dismissed') rememberDismissal();
+    setClosed(true);
   };
 
   return (
@@ -145,7 +146,7 @@ export function InstallPrompt() {
           </div>
         </div>
 
-        {mode === 'ios' ? (
+        {showSteps ? (
           <ol className="install-card-steps">
             <li>Tap the Share button <ShareIcon /></li>
             <li>Scroll down and tap “Add to Home Screen”</li>
@@ -153,11 +154,15 @@ export function InstallPrompt() {
           </ol>
         ) : null}
 
+        {debug && !showSteps && !install.canPrompt && (
+          <p className="install-card-debug">Debug: the browser has not offered installation (no beforeinstallprompt yet).</p>
+        )}
+
         <div className="install-card-actions">
-          {mode === 'prompt' && (
-            <button type="button" className="shop-empty-primary" onClick={install}>Install</button>
+          {!showSteps && (
+            <button type="button" className="shop-empty-primary" onClick={onInstall} disabled={!install.canPrompt}>Install</button>
           )}
-          <button type="button" className="install-card-later" onClick={notNow}>Not now</button>
+          <button type="button" className="install-card-later" onClick={notNow}>{onDemand ? 'Close' : 'Not now'}</button>
         </div>
       </div>
     </div>
