@@ -16,23 +16,33 @@ export type MediaAsset = {
   url: string;
   /** H.264 fallback for Safari/iOS. Much larger — only fetched if WebM fails. */
   fallback?: string;
+  /**
+   * Films only: whether the player offers a sound button. Set by hand from measuring the
+   * files (ffprobe, EBU R128), because browsers have no reliable way to tell a page whether a
+   * video has audio. Re-measure if a file in the bucket is replaced.
+   */
+  offerSound?: boolean;
 };
 
 /* ---------- Films ---------- */
 
-/** Hero film: the Coorg estate. */
+/** Hero film: the Coorg estate. Birdsong and two swells: the only film with sound worth offering. */
 export const estate: MediaAsset = {
   url: asset("estate.webm"),
   fallback: asset("coffee_estate.mp4"),
+  offerSound: true,
 };
 
-/** Hero film: the brewing ritual. */
+/** Hero film: the brewing ritual. No audio track in either file. */
 export const brewing: MediaAsset = {
   url: asset("brewing.webm"),
   fallback: asset("coffee_brewing.mp4"),
 };
 
-/** The father-and-son portrait, gently animated. */
+/**
+ * The father-and-son portrait, gently animated. It has an audio track, but only a steady hum
+ * below 1.5 kHz (-51 LUFS, 0.7 LU range), so no sound is offered.
+ */
 export const family: MediaAsset = {
   url: asset("family.webm"),
   fallback: asset("family_portrait.mp4"),
