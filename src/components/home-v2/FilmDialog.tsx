@@ -7,6 +7,9 @@ export type Film = { title: string; subtitle: string; media: MediaAsset; poster:
 
 // Ported from the reference redesign. `container` lets the page portal the dialog
 // inside its `.home-v2` wrapper, so the scoped styles apply to it.
+//
+// Films that do not offer sound (see `offerSound` in site-media.ts) open muted: the family
+// portrait's track is only a hum. The native controls still let a visitor unmute it.
 export function FilmDialog({
   film,
   onClose,
@@ -31,7 +34,7 @@ export function FilmDialog({
             </Dialog.Close>
           </div>
           {film && (
-            <video key={film.media.url} poster={film.poster} controls autoPlay playsInline className="film-dialog-video">
+            <video key={film.media.url} poster={film.poster} controls autoPlay muted={!film.media.offerSound} playsInline className="film-dialog-video">
               <source src={film.media.url} type="video/webm" />
               {film.media.fallback && <source src={film.media.fallback} type="video/mp4" />}
             </video>

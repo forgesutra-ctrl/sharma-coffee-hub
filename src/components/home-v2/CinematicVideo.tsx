@@ -20,6 +20,10 @@ let soundLabelShown = false;
 // for its first few seconds, and the visitor's choice is remembered (see video-sound.ts).
 // The video always starts muted; it is only ever unmuted by a direct gesture on the button,
 // or for a returning visitor who asked for sound, at their first click, tap or key press.
+//
+// Films whose media is not marked `offerSound` (no audio, or nothing worth hearing) get no
+// sound button at all and are never unmuted. A stored preference simply waits for the next
+// film that has sound.
 export function CinematicVideo({
   media,
   poster,
@@ -36,9 +40,10 @@ export function CinematicVideo({
   soundPreference?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const sound = !!media.offerSound;
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
-  const [soundLabel, setSoundLabel] = useState(soundPreference && !soundLabelShown);
+  const [soundLabel, setSoundLabel] = useState(soundPreference && sound && !soundLabelShown);
   const [touch] = useState(() => {
     try {
       return window.matchMedia('(hover: none)').matches;
@@ -49,17 +54,17 @@ export function CinematicVideo({
 
   // The label invites; after a few seconds it fades back to the bare icon.
   useEffect(() => {
-    if (!soundPreference) return;
+    if (!soundPreference || !sound) return;
     soundLabelShown = true;
     const timer = window.setTimeout(() => setSoundLabel(false), SOUND_LABEL_MS);
     return () => window.clearTimeout(timer);
-  }, [soundPreference]);
+  }, [soundPreference, sound]);
 
   // A returning visitor who turned the sound on: unmute once the browser allows it, which is
   // after a click, tap or key press on the page (possibly an earlier one, such as the click
   // that brought them here). Never without a stored preference.
   useEffect(() => {
-    if (!soundPreference || !wantsSound()) return;
+    if (!soundPreference || !sound || !wantsSound()) return;
     const unmute = () => {
       const video = ref.current;
       if (!video) return;
@@ -85,7 +90,7 @@ export function CinematicVideo({
     }
     GESTURE_EVENTS.forEach((type) => window.addEventListener(type, onGesture, options));
     return stop;
-  }, [soundPreference, media.url]);
+  }, [soundPreference, sound, media.url]);
 
   const toggleSound = () => {
     const next = !muted;
@@ -147,21 +152,23 @@ export function CinematicVideo({
           >
             {playing ? <Pause /> : <Play />}
           </Button>
-          <Button
-            variant="film"
-            size="icon"
-            className={soundPreference ? `video-sound ${soundLabel && muted ? 'is-labelled' : ''}` : undefined}
-            title={muted ? 'Unmute video' : 'Mute video'}
-            aria-label={muted ? 'Unmute video' : 'Mute video'}
-            onClick={toggleSound}
-          >
-            {muted ? <VolumeX /> : <Volume2 />}
-            {soundPreference && (
-              <span className="video-sound-label" aria-hidden="true">
-                {touch ? 'Tap for sound' : 'Click for sound'}
-              </span>
-            )}
-          </Button>
+          {sound && (
+            <Button
+              variant="film"
+              size="icon"
+              className={soundPreference ? `video-sound ${soundLabel && muted ? 'is-labelled' : ''}` : undefined}
+              title={muted ? 'Unmute video' : 'Mute video'}
+              aria-label={muted ? 'Unmute video' : 'Mute video'}
+              onClick={toggleSound}
+            >
+              {muted ? <VolumeX /> : <Volume2 />}
+              {soundPreference && (
+                <span className="video-sound-label" aria-hidden="true">
+                  {touch ? 'Tap for sound' : 'Click for sound'}
+                </span>
+              )}
+            </Button>
+          )}
         </div>
       )}
     </div>
