@@ -333,14 +333,21 @@ body.site-menu-open .chat-launcher { display: none; }
 
 /* ---------- ≤700px ---------- */
 @media (max-width: 700px) {
-  .home-v2 .hero { height: calc(100svh - var(--hv2-bar-height)); min-height: 640px; max-height: 900px; }
+  /* Not in the reference: min-height was 640px, but the hero copy (367px from eyebrow to button)
+     at 25% down ran into the film link on any hero under about 755px, i.e. most phones once the
+     browser bars are showing. 712px is the least that fits it with the copy starting under the
+     video controls (see .hero-content below). */
+  .home-v2 .hero { height: calc(100svh - var(--hv2-bar-height)); min-height: 712px; max-height: 900px; }
   .home-v2 .site-header { height: 89px; margin-inline: 22px; }
   .home-v2 .site-header--solid { margin: 0; padding-inline: 22px; }
   .home-v2 .brand { font-size: 25px; gap: 9px; }
   .home-v2 .brand svg { width: 28px; height: 28px; }
   .home-v2 .brand-sub { font-size: 11px; /* was 6px */ letter-spacing: 2.5px; margin-top: 8px; }
   .home-v2 .mobile-nav { left: 22px; right: 22px; }
-  .home-v2 .hero-content { left: 27px; right: 22px; top: 25%; }
+  /* The reference's 25% down on tall heroes (772px and up); on shorter ones the copy rises
+     linearly to sit just under the video controls (152px at 709px), keeping 32px or more
+     between the button and the film link. */
+  .home-v2 .hero-content { left: 27px; right: 22px; top: clamp(152px, calc(65% - 309px), 25%); }
   .home-v2 .hero-content > .eyebrow { font-size: 11px; /* was 7px */ letter-spacing: 1.2px; gap: 7px; }
   .home-v2 .tiny-line { width: 18px; }
   .home-v2 .hero h1 { font-size: 66px; line-height: 0.99; margin: 24px 0 19px; }
