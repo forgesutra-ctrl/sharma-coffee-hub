@@ -37,7 +37,7 @@ export default function HomeV2() {
         {/* Layout's sticky header overlays this section while it is behind it. */}
         <section className="hero" data-header-overlay>
           {/* Remounted by key so the new film's <source> list is picked up. */}
-          <CinematicVideo key={hero.media.url} media={hero.media} poster={hero.poster} label={hero.title} className="hero-media" controls />
+          <CinematicVideo key={hero.media.url} media={hero.media} poster={hero.poster} label={hero.title} className="hero-media" controls soundPreference />
           <div className="hero-shade" />
 
           <div className="hero-content">
